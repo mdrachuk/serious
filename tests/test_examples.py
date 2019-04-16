@@ -1,24 +1,21 @@
 from dataclasses import dataclass
 from typing import Set
 
-from m2 import dataclass_json
+import m2
 
 
-@dataclass_json
 @dataclass(frozen=True)
 class Student:
     id: int = 0
     name: str = ""
 
 
-@dataclass_json
 @dataclass(frozen=True)
 class Professor:
     id: int
     name: str
 
 
-@dataclass_json
 @dataclass(frozen=True)
 class Course:
     id: int
@@ -35,18 +32,21 @@ c = Course(1, 'course', p, {s1})
 
 class TestEncoder:
     def test_student(self):
-        assert s1.to_json() == '{"id": 1, "name": "student"}'
+        assert m2.asjson(s1) == '{"id": 1, "name": "student"}'
 
     def test_professor(self):
-        assert p.to_json() == '{"id": 1, "name": "professor"}'
+        assert m2.asjson(p) == '{"id": 1, "name": "professor"}'
 
     def test_course(self):
-        assert c.to_json() == '{"id": 1, "name": "course", "professor": {"id": 1, "name": "professor"}, "students": [{"id": 1, "name": "student"}]}'
+        assert m2.asjson(c) == '{"id": 1, ' \
+                               '"name": "course", ' \
+                               '"professor": {"id": 1, "name": "professor"}, ' \
+                               '"students": [{"id": 1, "name": "student"}]}'
 
     def test_students_missing(self):
         s1_anon = Student(1, '')
         s2_anon = Student(2, '')
         one = [s1_anon, s2_anon]
         two = [s2_anon, s1_anon]
-        actual = Student.schema().loads('[{"id": 1}, {"id": 2}]', many=True)
+        actual = m2.load(Student).many('[{"id": 1}, {"id": 2}]')
         assert actual == one or actual == two

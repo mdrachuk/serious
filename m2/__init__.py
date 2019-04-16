@@ -1,1 +1,1 @@
-from m2.api import DataClassJsonMixin, dataclass_json
+from m2.api import load, asjson

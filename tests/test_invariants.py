@@ -3,6 +3,8 @@ from collections import deque
 from hypothesis import given
 from hypothesis.strategies import frozensets, integers, lists, one_of, sets, tuples
 
+import m2
+from m2 import load
 from tests.entities import (DataClassWithDeque, DataClassWithFrozenSet,
                             DataClassWithList, DataClassWithOptional,
                             DataClassWithSet, DataClassWithTuple)
@@ -23,4 +25,4 @@ example_input = [1]
 @examples(*[dccons(cons(example_input))
             for dccons, _, cons in dcconss_strategies_conss])
 def test_generic_encode_and_decode_are_inverses(dc):
-    assert dc.from_json(dc.to_json()) == dc
+    assert load(type(dc)).one(m2.asjson(dc)) == dc

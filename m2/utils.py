@@ -1,9 +1,9 @@
 import sys
 from datetime import datetime, timezone
-from typing import Collection, Mapping, Optional
+from typing import Collection, Mapping, Optional, Type
 
 
-def _get_type_cons(type_):
+def _get_constructor(type_: Type) -> Type:
     """More spaghetti logic for 3.6 vs. 3.7"""
     if sys.version_info.minor == 6:
         try:
@@ -81,13 +81,3 @@ def _is_mapping(type_):
 def _is_collection(type_):
     return _issubclass_safe(_get_type_origin(type_), Collection)
 
-
-def _is_nonstr_collection(type_):
-    return (_issubclass_safe(_get_type_origin(type_), Collection)
-            and not _issubclass_safe(type_, str))
-
-
-def _timestamp_to_dt_aware(timestamp: float):
-    tz = datetime.now(timezone.utc).astimezone().tzinfo
-    dt = datetime.fromtimestamp(timestamp, tz=tz)
-    return dt

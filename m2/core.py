@@ -8,16 +8,13 @@ from enum import Enum
 from typing import Collection, Mapping, Union
 from uuid import UUID
 
-from m2.utils import (_get_type_cons, _is_collection, _is_mapping,
-                      _is_optional, _isinstance_safe,
-                      _issubclass_safe)
+from m2.utils import _get_constructor, _is_collection, _is_mapping, _is_optional, _isinstance_safe, _issubclass_safe
 
 JSON = Union[dict, list, str, int, float, bool, None]
 
 
 class _ExtendedEncoder(json.JSONEncoder):
     def default(self, o) -> JSON:
-        result: JSON
         if _isinstance_safe(o, Collection):
             if _isinstance_safe(o, Mapping):
                 result = dict(o)
@@ -154,7 +151,7 @@ def _decode_generic(type_, value, infer_missing):
         # get the constructor if using corresponding generic type in `typing`
         # otherwise fallback on constructing using type_ itself
         try:
-            res = _get_type_cons(type_)(xs)
+            res = _get_constructor(type_)(xs)
         except TypeError:
             res = type_(xs)
     else:  # Optional

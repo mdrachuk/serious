@@ -1,5 +1,6 @@
 from collections import deque
 
+from m2 import load, asjson
 from tests.entities import (DataClassIntImmutableDefault,
                             DataClassMutableDefaultDict,
                             DataClassMutableDefaultList, DataClassWithDeque,
@@ -13,121 +14,142 @@ from tests.entities import (DataClassIntImmutableDefault,
 
 class TestEncoder:
     def test_list(self):
-        assert DataClassWithList([1]).to_json() == '{"xs": [1]}'
+        assert asjson(DataClassWithList([1])) == '{"xs": [1]}'
 
     def test_list_str(self):
-        assert DataClassWithListStr(['1']).to_json() == '{"xs": ["1"]}'
+        assert asjson(DataClassWithListStr(['1'])) == '{"xs": ["1"]}'
 
     def test_dict(self):
-        assert DataClassWithDict({'1': 'a'}).to_json() == '{"kvs": {"1": "a"}}'
+        assert asjson(DataClassWithDict({'1': 'a'})) == '{"kvs": {"1": "a"}}'
 
     def test_dict_int(self):
-        assert DataClassWithDictInt({1: 'a'}).to_json() == '{"kvs": {"1": "a"}}'
+        assert asjson(DataClassWithDictInt({1: 'a'})) == '{"kvs": {"1": "a"}}'
 
     def test_set(self):
-        assert DataClassWithSet({1}).to_json() == '{"xs": [1]}'
+        assert asjson(DataClassWithSet({1})) == '{"xs": [1]}'
 
     def test_tuple(self):
-        assert DataClassWithTuple((1,)).to_json() == '{"xs": [1]}'
+        assert asjson(DataClassWithTuple((1,))) == '{"xs": [1]}'
 
     def test_frozenset(self):
-        assert DataClassWithFrozenSet(frozenset([1])).to_json() == '{"xs": [1]}'
+        assert asjson(DataClassWithFrozenSet(frozenset([1]))) == '{"xs": [1]}'
 
     def test_deque(self):
-        assert DataClassWithDeque(deque([1])).to_json() == '{"xs": [1]}'
+        assert asjson(DataClassWithDeque(deque([1]))) == '{"xs": [1]}'
 
     def test_optional(self):
-        assert DataClassWithOptional(1).to_json() == '{"x": 1}'
-        assert DataClassWithOptional(None).to_json() == '{"x": null}'
+        assert asjson(DataClassWithOptional(1)) == '{"x": 1}'
+        assert asjson(DataClassWithOptional(None)) == '{"x": null}'
 
     def test_optional_str(self):
-        assert DataClassWithOptionalStr('1').to_json() == '{"x": "1"}'
-        assert DataClassWithOptionalStr(None).to_json() == '{"x": null}'
-        assert DataClassWithOptionalStr().to_json() == '{"x": null}'
+        assert asjson(DataClassWithOptionalStr('1')) == '{"x": "1"}'
+        assert asjson(DataClassWithOptionalStr(None)) == '{"x": null}'
+        assert asjson(DataClassWithOptionalStr()) == '{"x": null}'
 
     def test_union_int_none(self):
-        assert DataClassWithUnionIntNone(1).to_json() == '{"x": 1}'
-        assert DataClassWithUnionIntNone(None).to_json() == '{"x": null}'
+        assert asjson(DataClassWithUnionIntNone(1)) == '{"x": 1}'
+        assert asjson(DataClassWithUnionIntNone(None)) == '{"x": null}'
 
     def test_my_collection(self):
-        assert DataClassWithMyCollection(
-            MyCollection([1])).to_json() == '{"xs": [1]}'
+        assert asjson(DataClassWithMyCollection(MyCollection([1]))) == '{"xs": [1]}'
 
     def test_immutable_default(self):
-        assert DataClassIntImmutableDefault().to_json() == '{"x": 0}'
+        assert asjson(DataClassIntImmutableDefault()) == '{"x": 0}'
 
     def test_mutable_default_list(self):
-        assert DataClassMutableDefaultList().to_json() == '{"xs": []}'
+        assert asjson(DataClassMutableDefaultList()) == '{"xs": []}'
 
     def test_mutable_default_dict(self):
-        assert DataClassMutableDefaultDict().to_json() == '{"xs": {}}'
+        assert asjson(DataClassMutableDefaultDict()) == '{"xs": {}}'
 
 
 class TestDecoder:
     def test_list(self):
-        assert (DataClassWithList.from_json('{"xs": [1]}') ==
-                DataClassWithList([1]))
+        actual = load(DataClassWithList).one('{"xs": [1]}')
+        expected = DataClassWithList([1])
+        assert (actual == expected)
 
     def test_list_str(self):
-        assert (DataClassWithListStr.from_json('{"xs": ["1"]}') ==
-                DataClassWithListStr(["1"]))
+        actual = load(DataClassWithListStr).one('{"xs": ["1"]}')
+        expected = DataClassWithListStr(["1"])
+        assert actual == expected
 
     def test_dict(self):
-        assert (DataClassWithDict.from_json('{"kvs": {"1": "a"}}') ==
-                DataClassWithDict({'1': 'a'}))
+        actual = load(DataClassWithDict).one('{"kvs": {"1": "a"}}')
+        expected = DataClassWithDict({'1': 'a'})
+        assert actual == expected
 
     def test_dict_int(self):
-        assert (DataClassWithDictInt.from_json('{"kvs": {"1": "a"}}') ==
-                DataClassWithDictInt({1: 'a'}))
+        actual = load(DataClassWithDictInt).one('{"kvs": {"1": "a"}}')
+        expected = DataClassWithDictInt({1: 'a'})
+        assert actual == expected
 
     def test_set(self):
-        assert (DataClassWithSet.from_json('{"xs": [1]}') ==
-                DataClassWithSet({1}))
+        actual = load(DataClassWithSet).one('{"xs": [1]}')
+        expected = DataClassWithSet({1})
+        assert actual == expected
 
     def test_tuple(self):
-        assert (DataClassWithTuple.from_json('{"xs": [1]}') ==
-                DataClassWithTuple((1,)))
+        actual = load(DataClassWithTuple).one('{"xs": [1]}')
+        expected = DataClassWithTuple((1,))
+        assert actual == expected
 
     def test_frozenset(self):
-        assert (DataClassWithFrozenSet.from_json('{"xs": [1]}') ==
-                DataClassWithFrozenSet(frozenset([1])))
+        actual = load(DataClassWithFrozenSet).one('{"xs": [1]}')
+        expected = DataClassWithFrozenSet(frozenset([1]))
+        assert actual == expected
 
     def test_deque(self):
-        assert (DataClassWithDeque.from_json('{"xs": [1]}') ==
-                DataClassWithDeque(deque([1])))
+        actual = load(DataClassWithDeque).one('{"xs": [1]}')
+        expected = DataClassWithDeque(deque([1]))
+        assert (actual == expected)
 
     def test_optional(self):
-        assert (DataClassWithOptional.from_json('{"x": 1}') ==
-                DataClassWithOptional(1))
-        assert (DataClassWithOptional.from_json('{"x": null}') ==
-                DataClassWithOptional(None))
+        actual1 = load(DataClassWithOptional).one('{"x": 1}')
+        expected1 = DataClassWithOptional(1)
+        assert actual1 == expected1
+
+        actual2 = load(DataClassWithOptional).one('{"x": null}')
+        expected2 = DataClassWithOptional(None)
+        assert actual2 == expected2
 
     def test_optional_str(self):
-        assert (DataClassWithOptionalStr.from_json('{"x": "1"}') ==
-                DataClassWithOptionalStr("1"))
-        assert (DataClassWithOptionalStr.from_json('{"x": null}') ==
-                DataClassWithOptionalStr(None))
-        assert (DataClassWithOptionalStr.from_json('{}', infer_missing=True) ==
-                DataClassWithOptionalStr())
+        actual1 = load(DataClassWithOptionalStr).one('{"x": "1"}')
+        expected1 = DataClassWithOptionalStr("1")
+        assert actual1 == expected1
+
+        actual2 = load(DataClassWithOptionalStr).one('{"x": null}')
+        expected2 = DataClassWithOptionalStr(None)
+        assert actual2 == expected2
+
+        actual3 = load(DataClassWithOptionalStr, infer_missing=True).one('{}')
+        expected3 = DataClassWithOptionalStr()
+        assert actual3 == expected3
 
     def test_my_collection(self):
-        assert (DataClassWithMyCollection.from_json('{"xs": [1]}') ==
-                DataClassWithMyCollection(MyCollection([1])))
+        actual = load(DataClassWithMyCollection).one('{"xs": [1]}')
+        expected = DataClassWithMyCollection(MyCollection([1]))
+        assert actual == expected
 
     def test_immutable_default(self):
-        assert (DataClassIntImmutableDefault.from_json('{"x": 0}')
-                == DataClassIntImmutableDefault())
-        assert (DataClassMutableDefaultList.from_json('{}', infer_missing=True)
-                == DataClassMutableDefaultList())
+        actual1 = load(DataClassIntImmutableDefault).one('{"x": 0}')
+        expected1 = DataClassIntImmutableDefault()
+        assert actual1 == expected1
 
     def test_mutable_default_list(self):
-        assert (DataClassMutableDefaultList.from_json('{"xs": []}')
-                == DataClassMutableDefaultList())
-        assert (DataClassMutableDefaultList.from_json('{}', infer_missing=True)
-                == DataClassMutableDefaultList())
+        expected = DataClassMutableDefaultList()
+
+        actual1 = load(DataClassMutableDefaultList).one('{"xs": []}')
+        assert actual1 == expected
+
+        actual2 = load(DataClassMutableDefaultList, infer_missing=True).one('{}')
+        assert actual2 == expected
 
     def test_mutable_default_dict(self):
-        assert (DataClassMutableDefaultDict.from_json('{"kvs": {}}')
-                == DataClassMutableDefaultDict())
-        assert (DataClassMutableDefaultDict.from_json('{}', infer_missing=True)
-                == DataClassMutableDefaultDict())
+        expected = DataClassMutableDefaultDict()
+
+        actual1 = load(DataClassMutableDefaultDict).one('{"kvs": {}}')
+        assert actual1 == expected
+
+        actual2 = load(DataClassMutableDefaultDict, infer_missing=True).one('{}')
+        assert actual2 == expected

@@ -13,113 +13,111 @@ from uuid import UUID
 
 from marshmallow import fields
 
-from m2 import DataClassJsonMixin, dataclass_json
-
 A = TypeVar('A')
 
 
 @dataclass(frozen=True)
-class DataClassWithList(DataClassJsonMixin):
+class DataClassWithList:
     xs: List[int]
 
 
 @dataclass(frozen=True)
-class DataClassWithListDefaultFactory(DataClassJsonMixin):
+class DataClassWithListDefaultFactory:
     xs: List[int] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
-class DataClassWithListStr(DataClassJsonMixin):
+class DataClassWithListStr:
     xs: List[str]
 
 
 @dataclass(frozen=True)
-class DataClassWithDict(DataClassJsonMixin):
+class DataClassWithDict:
     kvs: Dict[str, str]
 
 
 @dataclass(frozen=True)
-class DataClassWithDictInt(DataClassJsonMixin):
+class DataClassWithDictInt:
     kvs: Dict[int, str]
 
 
 @dataclass(frozen=True)
-class DataClassWithDictDefaultFactory(DataClassJsonMixin):
+class DataClassWithDictDefaultFactory:
     kvs: Dict[str, str] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
-class DataClassWithSet(DataClassJsonMixin):
+class DataClassWithSet:
     xs: Set[int]
 
 
 @dataclass(frozen=True)
-class DataClassWithTuple(DataClassJsonMixin):
+class DataClassWithTuple:
     xs: Tuple[int]
 
 
 @dataclass(frozen=True)
-class DataClassWithFrozenSet(DataClassJsonMixin):
+class DataClassWithFrozenSet:
     xs: FrozenSet[int]
 
 
 @dataclass(frozen=True)
-class DataClassWithDeque(DataClassJsonMixin):
+class DataClassWithDeque:
     xs: Deque[int]
 
 
 @dataclass(frozen=True)
-class DataClassWithOptional(DataClassJsonMixin):
+class DataClassWithOptional:
     x: Optional[int]
 
 
 @dataclass
-class DataClassWithOptionalStr(DataClassJsonMixin):
+class DataClassWithOptionalStr:
     x: Optional[str] = None
 
 
 @dataclass(frozen=True)
-class DataClassWithOptionalNested(DataClassJsonMixin):
+class DataClassWithOptionalNested:
     x: Optional[DataClassWithOptional]
 
 
 @dataclass(frozen=True)
-class DataClassWithUnionIntNone(DataClassJsonMixin):
+class DataClassWithUnionIntNone:
     x: Union[int, None]
 
 
 @dataclass(frozen=True)
-class DataClassWithDataClass(DataClassJsonMixin):
+class DataClassWithDataClass:
     dc_with_list: DataClassWithList
 
 
 @dataclass(frozen=True)
-class DataClassX(DataClassJsonMixin):
+class DataClassX:
     x: int
 
 
 @dataclass(frozen=True)
-class DataClassXs(DataClassJsonMixin):
+class DataClassXs:
     xs: List[DataClassX]
 
 
 @dataclass(frozen=True)
-class DataClassIntImmutableDefault(DataClassJsonMixin):
+class DataClassIntImmutableDefault:
     x: int = 0
 
 
 @dataclass(frozen=True)
-class DataClassBoolImmutableDefault(DataClassJsonMixin):
+class DataClassBoolImmutableDefault:
     x: bool = False
 
 
 @dataclass(frozen=True)
-class DataClassMutableDefaultList(DataClassJsonMixin):
+class DataClassMutableDefaultList:
     xs: List[int] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
-class DataClassMutableDefaultDict(DataClassJsonMixin):
+class DataClassMutableDefaultDict:
     xs: Dict[str, int] = field(default_factory=dict)
 
 
@@ -141,17 +139,15 @@ class MyCollection(Collection[A]):
 
 
 @dataclass(frozen=True)
-class DataClassWithMyCollection(DataClassJsonMixin):
+class DataClassWithMyCollection:
     xs: MyCollection[int]
 
 
-@dataclass_json
 @dataclass
 class DataClassJsonDecorator:
     x: str
 
 
-@dataclass_json
 @dataclass
 class DataClassWithOverride:
     id: float = field(
@@ -160,37 +156,31 @@ class DataClassWithOverride:
         }})
 
 
-@dataclass_json
 @dataclass
 class DataClassWithUuid:
     id: UUID
 
 
-@dataclass_json
 @dataclass
 class DataClassDefaultListStr:
     value: List[str] = field(default_factory=list)
 
 
-@dataclass_json
 @dataclass
 class DataClassChild:
     name: str
 
 
-@dataclass_json
 @dataclass
 class DataClassDefaultOptionalList:
     children: Optional[List[DataClassChild]] = None
 
 
-@dataclass_json
 @dataclass
 class DataClassList:
     children: List[DataClassChild]
 
 
-@dataclass_json
 @dataclass
 class DataClassOptional:
     a: int

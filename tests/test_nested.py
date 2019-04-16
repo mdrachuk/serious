@@ -1,22 +1,28 @@
+import json
+
+from m2 import load, asjson
 from tests.entities import DataClassWithDataClass, DataClassWithList, DataClassX, DataClassXs
 
 
 class TestEncoder:
     def test_nested_dataclass(self):
-        assert (DataClassWithDataClass(DataClassWithList([1])).to_json() ==
-                '{"dc_with_list": {"xs": [1]}}')
+        actual = asjson(DataClassWithDataClass(DataClassWithList([1])))
+        expected = json.dumps({"dc_with_list": {"xs": [1]}})
+        assert actual == expected
 
     def test_nested_list_of_dataclasses(self):
-        assert (DataClassXs([DataClassX(0), DataClassX(1)]).to_json() ==
-                '{"xs": [{"x": 0}, {"x": 1}]}')
+        actual = asjson(DataClassXs([DataClassX(0), DataClassX(1)]))
+        expected = json.dumps({"xs": [{"x": 0}, {"x": 1}]})
+        assert actual == expected
 
 
 class TestDecoder:
     def test_nested_dataclass(self):
-        assert (DataClassWithDataClass.from_json(
-            '{"dc_with_list": {"xs": [1]}}') ==
-                DataClassWithDataClass(DataClassWithList([1])))
+        actual = load(DataClassWithDataClass).one(json.dumps({"dc_with_list": {"xs": [1]}}))
+        expected = DataClassWithDataClass(DataClassWithList([1]))
+        assert actual == expected
 
     def test_nested_list_of_dataclasses(self):
-        assert (DataClassXs.from_json('{"xs": [{"x": 0}, {"x": 1}]}') ==
-                DataClassXs([DataClassX(0), DataClassX(1)]))
+        actual = load(DataClassXs).one(json.dumps({"xs": [{"x": 0}, {"x": 1}]}))
+        expected = DataClassXs([DataClassX(0), DataClassX(1)])
+        assert actual == expected

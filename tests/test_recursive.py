@@ -3,11 +3,11 @@ from typing import Optional
 
 import pytest
 
-from m2 import DataClassJsonMixin
+import m2
 
 
 @dataclass(frozen=True)
-class Tree(DataClassJsonMixin):
+class Tree:
     value: str
     left: Optional['Tree']
     right: Optional['Tree']
@@ -63,8 +63,8 @@ family_tree = Tree(
 class TestRecursive:
     @pytest.mark.skip(msg="feature incomplete")
     def test_tree_encode(self):
-        assert family_tree.to_json(indent=4) == family_tree_json
+        assert m2.asjson(family_tree, indent=4) == family_tree_json
 
     @pytest.mark.skip(msg="feature incomplete")
     def test_tree_decode(self):
-        assert Tree.from_json(family_tree_json) == family_tree
+        assert m2.load(Tree).one(family_tree_json) == family_tree

@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Dict, List
 
-from m2 import dataclass_json
+from m2 import load, asjson
 
 
 class MyEnum(Enum):
@@ -17,7 +17,6 @@ class MyStrEnum(str, Enum):
     STR1 = "str1"
 
 
-@dataclass_json
 @dataclass(frozen=True)
 class DataWithEnum:
     name: str
@@ -37,7 +36,6 @@ d4_float = DataWithEnum('name1', MyEnum.FLOAT1)
 d4_float_json = '{"name": "name1", "my_enum": 1.23}'
 
 
-@dataclass_json
 @dataclass(frozen=True)
 class DataWithStrEnum:
     my_str_enum: MyStrEnum = MyEnum.STR1
@@ -47,7 +45,6 @@ ds = DataWithStrEnum(MyStrEnum.STR1)
 ds_json = '{"my_str_enum": "str1"}'
 
 
-@dataclass_json
 @dataclass(frozen=True)
 class EnumContainer:
     enum_list: List[MyEnum]
@@ -62,49 +59,49 @@ container = EnumContainer(
 
 class TestEncoder:
     def test_data_with_enum(self):
-        assert d1.to_json() == d1_json, f'Actual: {d1.to_json()}, Expected: {d1_json}'
-        assert d3_int.to_json() == d3_int_json, f'Actual: {d3_int.to_json()}, Expected: {d3_int_json}'
-        assert d4_float.to_json() == d4_float_json, f'Actual: {d4_float.to_json()}, Expected: {d4_float_json}'
+        assert asjson(d1) == d1_json, f'Actual: {asjson(d1)}, Expected: {d1_json}'
+        assert asjson(d3_int) == d3_int_json, f'Actual: {asjson(d3_int)}, Expected: {d3_int_json}'
+        assert asjson(d4_float) == d4_float_json, f'Actual: {asjson(d4_float)}, Expected: {d4_float_json}'
 
     def test_data_with_str_enum(self):
-        assert ds.to_json() == ds_json, f'Actual: {ds.to_json()}, Expected: {ds_json}'
+        assert asjson(ds) == ds_json, f'Actual: {asjson(ds)}, Expected: {ds_json}'
 
     def test_data_with_enum_default_value(self):
-        d2_to_json = d2_using_default_value.to_json()
+        d2_to_json = asjson(d2_using_default_value)
         assert d2_to_json == d2_json, f"A default value was not included in the JSON encode. " \
             f"Expected: {d2_json}, Actual: {d2_to_json}"
 
     def test_collection_with_enum(self):
-        assert container.to_json() == container_json
+        assert asjson(container) == container_json
 
 
 class TestDecoder:
     def test_data_with_enum(self):
-        d1_from_json = DataWithEnum.from_json(d1_json)
+        d1_from_json = load(DataWithEnum).one(d1_json)
         assert d1 == d1_from_json
-        assert d1_from_json.to_json() == d1_json
+        assert asjson(d1_from_json) == d1_json
 
-        d3_int_from_json = DataWithEnum.from_json(d3_int_json)
+        d3_int_from_json = load(DataWithEnum).one(d3_int_json)
         assert d3_int == d3_int_from_json
-        assert d3_int_from_json.to_json() == d3_int_json
+        assert asjson(d3_int_from_json) == d3_int_json
 
-        d4_float_from_json = DataWithEnum.from_json(d4_float_json)
+        d4_float_from_json = load(DataWithEnum).one(d4_float_json)
         assert d4_float == d4_float_from_json
-        assert d4_float_from_json.to_json() == d4_float_json
+        assert asjson(d4_float_from_json) == d4_float_json
 
     def test_data_with_str_enum(self):
-        ds_from_json = DataWithStrEnum.from_json(ds_json)
+        ds_from_json = load(DataWithStrEnum).one(ds_json)
         assert ds == ds_from_json
-        assert ds_from_json.to_json() == ds_json
+        assert asjson(ds_from_json) == ds_json
 
     def test_data_with_enum_default_value(self):
-        d2_from_json = DataWithEnum.from_json(d2_json)
+        d2_from_json = load(DataWithEnum).one(d2_json)
         assert d2_using_default_value == d2_from_json
-        json_from_d2 = d2_from_json.to_json()
+        json_from_d2 = asjson(d2_from_json)
         assert json_from_d2 == d2_json, f"A default value was not included in the JSON encode. " \
             f"Expected: {d2_json}, Actual: {json_from_d2}"
 
     def test_collection_with_enum(self):
-        container_from_json = EnumContainer.from_json(container_json)
+        container_from_json = load(EnumContainer).one(container_json)
         assert container == container_from_json
-        assert container_from_json.to_json() == container_json
+        assert asjson(container_from_json) == container_json
