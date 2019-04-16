@@ -2,10 +2,10 @@ import copy
 import json
 import warnings
 from collections import namedtuple
-from dataclasses import MISSING, _is_dataclass_instance, fields, is_dataclass
+from dataclasses import MISSING, _is_dataclass_instance, fields, is_dataclass, dataclass, Field
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Collection, Mapping, Union, get_type_hints
+from typing import Collection, Mapping, Union, get_type_hints, Type, Any, Dict, Iterator
 from uuid import UUID
 
 from m2.utils import _get_constructor, _is_collection, _is_mapping, _is_optional, _isinstance_safe, _issubclass_safe
@@ -31,7 +31,7 @@ class _ExtendedEncoder(json.JSONEncoder):
         return result
 
 
-def _overrides(dc):
+def _overrides(dc: dataclass) -> Dict:
     overrides = {}
     attrs = ['encoder', 'decoder']
     FieldOverride = namedtuple('FieldOverride', attrs)
@@ -45,66 +45,76 @@ def _overrides(dc):
     return overrides
 
 
-def _override(kvs, overrides, attr):
+def _override(data: dict, overrides: dict, override_name: str):
     override_kvs = {}
-    for k, v in kvs.items():
-        if k in overrides and getattr(overrides[k], attr) is not None:
-            override_kvs[k] = getattr(overrides[k], attr)(v)
+    for k, v in data.items():
+        if k in overrides and getattr(overrides[k], override_name) is not None:
+            override_kvs[k] = getattr(overrides[k], override_name)(v)
         else:
             override_kvs[k] = v
     return override_kvs
 
 
-def _decode_dataclass(cls, kvs, infer_missing):
-    if isinstance(kvs, cls):
-        return kvs
+@dataclass
+class _Attr:
+    of: Type[dataclass]
+    name: str
+    type: Type
+    value: Any
+
+
+def _attrs(cls: Type[dataclass], data: dict) -> Iterator[_Attr]:
+    types = get_type_hints(cls)
+    return (_Attr(cls, field.name, types[field.name], value=data[field.name]) for field in fields(cls))
+
+
+def _decode_dataclass(cls: Type[dataclass], data: dict, infer_missing: bool):
     overrides = _overrides(cls)
-    kvs = {} if kvs is None and infer_missing else kvs
-    missing_fields = {field for field in fields(cls) if field.name not in kvs}
-    for field in missing_fields:
+    data = {} if data is None and infer_missing else data
+    for field in _fields_missing_from(data, cls):
         if field.default is not MISSING:
-            kvs[field.name] = field.default
+            data[field.name] = field.default
         elif field.default_factory is not MISSING:
-            kvs[field.name] = field.default_factory()
+            data[field.name] = field.default_factory()
         elif infer_missing:
-            kvs[field.name] = None
+            data[field.name] = None
 
     init_kwargs = {}
-    types = get_type_hints(cls)
-    for field in fields(cls):
-        field_value = kvs[field.name]
-        field_type = types[field.name]
-        print('field_type:', field_type)
-        if field_value is None and not _is_optional(field.type):
-            warning = f'value of non-optional type {field.name} detected when decoding {cls.__name__}'
-            if infer_missing:
-                warnings.warn(
-                    f"Missing {warning} and was defaulted to None by "
-                    f"infer_missing=True. "
-                    f"Set infer_missing=False (the default) to prevent this "
-                    f"behavior.", RuntimeWarning)
-            else:
-                warnings.warn(f"`NoneType` object {warning}.", RuntimeWarning)
-            init_kwargs[field.name] = field_value
-        elif field.name in overrides and overrides[field.name].decoder is not None:
-            init_kwargs[field.name] = overrides[field.name].decoder(field_value)
-        elif is_dataclass(field_type):
-            value = _decode_dataclass(field_type, field_value, infer_missing)
-            init_kwargs[field.name] = value
-
-        elif _is_supported_generic(field_type) and field_type != str:
-            init_kwargs[field.name] = _decode_generic(field_type, field_value, infer_missing)
-        elif _issubclass_safe(field_type, datetime):
-            tz = datetime.now(timezone.utc).astimezone().tzinfo
-            dt = datetime.fromtimestamp(field_value, tz=tz)
-            init_kwargs[field.name] = dt
-        elif _issubclass_safe(field_type, UUID):
-            init_kwargs[field.name] = (field_value
-                                       if isinstance(field_value, UUID)
-                                       else UUID(field_value))
-        else:
-            init_kwargs[field.name] = field_value
+    for attr in _attrs(cls, data):
+        init_kwargs[attr.name] = _decode_attr_value(attr, infer_missing, overrides)
     return cls(**init_kwargs)
+
+
+def _fields_missing_from(data: dict, cls: Type[dataclass]) -> Iterator[Field]:
+    return filter(lambda field: field.name not in data, fields(cls))
+
+
+def _decode_attr_value(attr: _Attr, infer_missing: bool, overrides: dict) -> Any:
+    if attr.value is None and not _is_optional(attr.type):
+        warning = f'value of non-optional type {attr.name} detected when decoding {attr.of.__name__}'
+        if infer_missing:
+            warnings.warn(
+                f"Missing {warning} and was defaulted to None by "
+                f"infer_missing=True. "
+                f"Set infer_missing=False (the default) to prevent this "
+                f"behavior.", RuntimeWarning)
+        else:
+            warnings.warn(f"`NoneType` object {warning}.", RuntimeWarning)
+        return attr.value
+    elif attr.name in overrides and overrides[attr.name].decoder is not None:
+        return overrides[attr.name].decoder(attr.value)
+    elif is_dataclass(attr.type):
+        value = _decode_dataclass(attr.type, attr.value, infer_missing)
+        return value
+    elif _is_supported_generic(attr.type) and attr.type != str:
+        return _decode_generic(attr.type, attr.value, infer_missing)
+    elif _issubclass_safe(attr.type, datetime):
+        tz = datetime.now(timezone.utc).astimezone().tzinfo
+        dt = datetime.fromtimestamp(attr.value, tz=tz)
+        return dt
+    elif _issubclass_safe(attr.type, UUID) and not isinstance(attr.value, UUID):
+        return UUID(attr.value)
+    return attr.value
 
 
 def _is_supported_generic(type_):
