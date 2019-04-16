@@ -5,7 +5,7 @@ from collections import namedtuple
 from dataclasses import MISSING, _is_dataclass_instance, fields, is_dataclass
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Collection, Mapping, Union
+from typing import Collection, Mapping, Union, get_type_hints
 from uuid import UUID
 
 from m2.utils import _get_constructor, _is_collection, _is_mapping, _is_optional, _isinstance_safe, _issubclass_safe
@@ -70,8 +70,11 @@ def _decode_dataclass(cls, kvs, infer_missing):
             kvs[field.name] = None
 
     init_kwargs = {}
+    types = get_type_hints(cls)
     for field in fields(cls):
         field_value = kvs[field.name]
+        field_type = types[field.name]
+        print('field_type:', field_type)
         if field_value is None and not _is_optional(field.type):
             warning = f'value of non-optional type {field.name} detected when decoding {cls.__name__}'
             if infer_missing:
@@ -85,17 +88,17 @@ def _decode_dataclass(cls, kvs, infer_missing):
             init_kwargs[field.name] = field_value
         elif field.name in overrides and overrides[field.name].decoder is not None:
             init_kwargs[field.name] = overrides[field.name].decoder(field_value)
-        elif is_dataclass(field.type):
-            value = _decode_dataclass(field.type, field_value, infer_missing)
+        elif is_dataclass(field_type):
+            value = _decode_dataclass(field_type, field_value, infer_missing)
             init_kwargs[field.name] = value
 
-        elif _is_supported_generic(field.type) and field.type != str:
-            init_kwargs[field.name] = _decode_generic(field.type, field_value, infer_missing)
-        elif _issubclass_safe(field.type, datetime):
+        elif _is_supported_generic(field_type) and field_type != str:
+            init_kwargs[field.name] = _decode_generic(field_type, field_value, infer_missing)
+        elif _issubclass_safe(field_type, datetime):
             tz = datetime.now(timezone.utc).astimezone().tzinfo
             dt = datetime.fromtimestamp(field_value, tz=tz)
             init_kwargs[field.name] = dt
-        elif _issubclass_safe(field.type, UUID):
+        elif _issubclass_safe(field_type, UUID):
             init_kwargs[field.name] = (field_value
                                        if isinstance(field_value, UUID)
                                        else UUID(field_value))

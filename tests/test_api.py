@@ -12,7 +12,8 @@ class TestTypes:
     dc_uuid_json = f'{{"id": "{uuid_s}"}}'
 
     def test_uuid_encode(self):
-        assert m2.asjson(DataClassWithUuid(UUID(self.uuid_s))) == self.dc_uuid_json
+        actual = m2.asjson(DataClassWithUuid(UUID(self.uuid_s)))
+        assert actual == self.dc_uuid_json
 
     def test_uuid_decode(self):
         actual = m2.load(DataClassWithUuid).one(self.dc_uuid_json)

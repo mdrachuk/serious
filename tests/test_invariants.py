@@ -20,9 +20,7 @@ dcconss_strategies_conss = [(DataClassWithList, lists, list),
 example_input = [1]
 
 
-@given(one_of(*[strategy_fn(integers()).map(dccons)
-                for dccons, strategy_fn, _ in dcconss_strategies_conss]))
-@examples(*[dccons(cons(example_input))
-            for dccons, _, cons in dcconss_strategies_conss])
+@given(one_of(*[strategy_fn(integers()).map(dccons) for dccons, strategy_fn, _ in dcconss_strategies_conss]))
+@examples(*[dccons(cons(example_input)) for dccons, _, cons in dcconss_strategies_conss])
 def test_generic_encode_and_decode_are_inverses(dc):
     assert load(type(dc)).one(m2.asjson(dc)) == dc
