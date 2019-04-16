@@ -17,7 +17,6 @@ setup(
     keywords="dataclasses json marshalling",
     install_requires=[
         "dataclasses;python_version=='3.6'",
-        "marshmallow>=3.0.0b20"
     ],
     python_requires=">=3.6",
     extras_require={

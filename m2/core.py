@@ -33,7 +33,7 @@ class _ExtendedEncoder(json.JSONEncoder):
 
 def _overrides(dc):
     overrides = {}
-    attrs = ['encoder', 'decoder', 'mm_field']
+    attrs = ['encoder', 'decoder']
     FieldOverride = namedtuple('FieldOverride', attrs)
     for field in fields(dc):
         # if the field has m2 metadata, we cons a FieldOverride
@@ -73,8 +73,7 @@ def _decode_dataclass(cls, kvs, infer_missing):
     for field in fields(cls):
         field_value = kvs[field.name]
         if field_value is None and not _is_optional(field.type):
-            warning = (f"value of non-optional type {field.name} detected "
-                       f"when decoding {cls.__name__}")
+            warning = f'value of non-optional type {field.name} detected when decoding {cls.__name__}'
             if infer_missing:
                 warnings.warn(
                     f"Missing {warning} and was defaulted to None by "
@@ -85,37 +84,16 @@ def _decode_dataclass(cls, kvs, infer_missing):
                 warnings.warn(f"`NoneType` object {warning}.", RuntimeWarning)
             init_kwargs[field.name] = field_value
         elif field.name in overrides and overrides[field.name].decoder is not None:
-            # FIXME hack
-            if field.type is type(field_value):
-                init_kwargs[field.name] = field_value
-            else:
-                init_kwargs[field.name] = overrides[field.name].decoder(
-                    field_value)
+            init_kwargs[field.name] = overrides[field.name].decoder(field_value)
         elif is_dataclass(field.type):
-            # FIXME this is a band-aid to deal with the value already being
-            # serialized when handling nested marshmallow schema
-            # proper fix is to investigate the marshmallow schema generation
-            # code
-            if is_dataclass(field_value):
-                value = field_value
-            else:
-                value = _decode_dataclass(field.type, field_value,
-                                          infer_missing)
+            value = _decode_dataclass(field.type, field_value, infer_missing)
             init_kwargs[field.name] = value
 
         elif _is_supported_generic(field.type) and field.type != str:
-            init_kwargs[field.name] = _decode_generic(field.type,
-                                                      field_value,
-                                                      infer_missing)
+            init_kwargs[field.name] = _decode_generic(field.type, field_value, infer_missing)
         elif _issubclass_safe(field.type, datetime):
-            # FIXME this is a hack to deal with mm already decoding
-            # the issue is we want to leverage mm fields' missing argument
-            # but need this for the object creation hook
-            if isinstance(field_value, datetime):
-                dt = field_value
-            else:
-                tz = datetime.now(timezone.utc).astimezone().tzinfo
-                dt = datetime.fromtimestamp(field_value, tz=tz)
+            tz = datetime.now(timezone.utc).astimezone().tzinfo
+            dt = datetime.fromtimestamp(field_value, tz=tz)
             init_kwargs[field.name] = dt
         elif _issubclass_safe(field.type, UUID):
             init_kwargs[field.name] = (field_value

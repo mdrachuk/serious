@@ -11,19 +11,12 @@ from typing import (Collection,
                     Union)
 from uuid import UUID
 
-from marshmallow import fields
-
 A = TypeVar('A')
 
 
 @dataclass(frozen=True)
 class DataClassWithList:
     xs: List[int]
-
-
-@dataclass(frozen=True)
-class DataClassWithListDefaultFactory:
-    xs: List[int] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -39,11 +32,6 @@ class DataClassWithDict:
 @dataclass(frozen=True)
 class DataClassWithDictInt:
     kvs: Dict[int, str]
-
-
-@dataclass(frozen=True)
-class DataClassWithDictDefaultFactory:
-    kvs: Dict[str, str] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -107,11 +95,6 @@ class DataClassIntImmutableDefault:
 
 
 @dataclass(frozen=True)
-class DataClassBoolImmutableDefault:
-    x: bool = False
-
-
-@dataclass(frozen=True)
 class DataClassMutableDefaultList:
     xs: List[int] = field(default_factory=list)
 
@@ -149,39 +132,10 @@ class DataClassJsonDecorator:
 
 
 @dataclass
-class DataClassWithOverride:
-    id: float = field(
-        metadata={'m2': {
-            'mm_field': fields.Integer()
-        }})
-
-
-@dataclass
 class DataClassWithUuid:
     id: UUID
 
 
 @dataclass
-class DataClassDefaultListStr:
-    value: List[str] = field(default_factory=list)
-
-
-@dataclass
 class DataClassChild:
     name: str
-
-
-@dataclass
-class DataClassDefaultOptionalList:
-    children: Optional[List[DataClassChild]] = None
-
-
-@dataclass
-class DataClassList:
-    children: List[DataClassChild]
-
-
-@dataclass
-class DataClassOptional:
-    a: int
-    b: Optional[int]
