@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Set
 
-from dataclasses_json import dataclass_json
+from m2 import dataclass_json
 
 
 @dataclass_json

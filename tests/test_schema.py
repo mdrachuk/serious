@@ -1,6 +1,5 @@
 from .entities import DataClassDefaultListStr, DataClassDefaultOptionalList, DataClassList, DataClassOptional
 
-
 test_do_list = """[{}, {"children": [{"name": "a"}, {"name": "b"}]}]"""
 test_list = '[{"children": [{"name": "a"}, {"name": "b"}]}]'
 

@@ -1,17 +1,16 @@
 import copy
 import json
 import warnings
-from enum import Enum
-
+from collections import namedtuple
 from dataclasses import MISSING, _is_dataclass_instance, fields, is_dataclass
 from datetime import datetime, timezone
+from enum import Enum
 from typing import Collection, Mapping, Union
-from collections import namedtuple
 from uuid import UUID
 
-from dataclasses_json.utils import (_get_type_cons, _is_collection, _is_mapping,
-                                    _is_optional, _isinstance_safe,
-                                    _issubclass_safe)
+from m2.utils import (_get_type_cons, _is_collection, _is_mapping,
+                      _is_optional, _isinstance_safe,
+                      _issubclass_safe)
 
 JSON = Union[dict, list, str, int, float, bool, None]
 
@@ -40,11 +39,11 @@ def _overrides(dc):
     attrs = ['encoder', 'decoder', 'mm_field']
     FieldOverride = namedtuple('FieldOverride', attrs)
     for field in fields(dc):
-        # if the field has dataclasses_json metadata, we cons a FieldOverride
+        # if the field has m2 metadata, we cons a FieldOverride
         # so there's a distinction between FieldOverride with all Nones
         # and field that just doesn't appear in overrides
-        if field.metadata is not None and 'dataclasses_json' in field.metadata:
-            metadata = field.metadata['dataclasses_json']
+        if field.metadata is not None and 'm2' in field.metadata:
+            metadata = field.metadata['m2']
             overrides[field.name] = FieldOverride(*map(metadata.get, attrs))
     return overrides
 
@@ -88,8 +87,7 @@ def _decode_dataclass(cls, kvs, infer_missing):
             else:
                 warnings.warn(f"`NoneType` object {warning}.", RuntimeWarning)
             init_kwargs[field.name] = field_value
-        elif (field.name in overrides
-              and overrides[field.name].decoder is not None):
+        elif field.name in overrides and overrides[field.name].decoder is not None:
             # FIXME hack
             if field.type is type(field_value):
                 init_kwargs[field.name] = field_value

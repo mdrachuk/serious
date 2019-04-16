@@ -13,7 +13,7 @@ from uuid import UUID
 
 from marshmallow import fields
 
-from dataclasses_json import DataClassJsonMixin, dataclass_json
+from m2 import DataClassJsonMixin, dataclass_json
 
 A = TypeVar('A')
 
@@ -155,7 +155,7 @@ class DataClassJsonDecorator:
 @dataclass
 class DataClassWithOverride:
     id: float = field(
-        metadata={'dataclasses_json': {
+        metadata={'m2': {
             'mm_field': fields.Integer()
         }})
 

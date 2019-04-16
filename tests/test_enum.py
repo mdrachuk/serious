@@ -1,9 +1,8 @@
+from dataclasses import dataclass
 from enum import Enum
 from typing import Dict, List
 
-from dataclasses import dataclass
-
-from dataclasses_json import dataclass_json
+from m2 import dataclass_json
 
 
 class MyEnum(Enum):
@@ -13,8 +12,10 @@ class MyEnum(Enum):
     INT1 = 1
     FLOAT1 = 1.23
 
+
 class MyStrEnum(str, Enum):
     STR1 = "str1"
+
 
 @dataclass_json
 @dataclass(frozen=True)
@@ -35,13 +36,16 @@ d3_int_json = '{"name": "name1", "my_enum": 1}'
 d4_float = DataWithEnum('name1', MyEnum.FLOAT1)
 d4_float_json = '{"name": "name1", "my_enum": 1.23}'
 
+
 @dataclass_json
 @dataclass(frozen=True)
 class DataWithStrEnum:
     my_str_enum: MyStrEnum = MyEnum.STR1
 
+
 ds = DataWithStrEnum(MyStrEnum.STR1)
 ds_json = '{"my_str_enum": "str1"}'
+
 
 @dataclass_json
 @dataclass(frozen=True)
@@ -68,7 +72,7 @@ class TestEncoder:
     def test_data_with_enum_default_value(self):
         d2_to_json = d2_using_default_value.to_json()
         assert d2_to_json == d2_json, f"A default value was not included in the JSON encode. " \
-                                      f"Expected: {d2_json}, Actual: {d2_to_json}"
+            f"Expected: {d2_json}, Actual: {d2_to_json}"
 
     def test_collection_with_enum(self):
         assert container.to_json() == container_json
@@ -98,7 +102,7 @@ class TestDecoder:
         assert d2_using_default_value == d2_from_json
         json_from_d2 = d2_from_json.to_json()
         assert json_from_d2 == d2_json, f"A default value was not included in the JSON encode. " \
-                                        f"Expected: {d2_json}, Actual: {json_from_d2}"
+            f"Expected: {d2_json}, Actual: {json_from_d2}"
 
     def test_collection_with_enum(self):
         container_from_json = EnumContainer.from_json(container_json)

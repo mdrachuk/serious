@@ -3,7 +3,7 @@ from typing import Optional
 
 import pytest
 
-from dataclasses_json import DataClassJsonMixin
+from m2 import DataClassJsonMixin
 
 
 @dataclass(frozen=True)
@@ -49,29 +49,14 @@ family_tree = Tree(
     "Boy",
     Tree(
         "Ma",
-        Tree(
-            "Maternal Grandma",
-            None,
-            None
-        ),
-        Tree(
-            "Maternal Grandpa",
-            None,
-            None
-        )
+        Tree("Maternal Grandma", None, None),
+        Tree("Maternal Grandpa", None, None)
     ),
-    Tree("Pa",
-         Tree(
-             "Paternal Grandma",
-             None,
-             None
-         ),
-         Tree(
-             "Paternal Grandpa",
-             None,
-             None
-         )
-         )
+    Tree(
+        "Pa",
+        Tree("Paternal Grandma", None, None),
+        Tree("Paternal Grandpa", None, None)
+    ),
 )
 
 

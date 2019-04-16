@@ -1,16 +1,14 @@
 import typing
 import warnings
-
 from dataclasses import MISSING, is_dataclass, fields as dc_fields
 from datetime import datetime
 from uuid import UUID
 
 from marshmallow import fields, Schema, post_load
 
-from dataclasses_json.core import _is_supported_generic, _decode_dataclass
-from dataclasses_json.utils import (_is_collection, _is_optional,
-                                    _issubclass_safe, _timestamp_to_dt_aware)
-
+from m2.core import _is_supported_generic, _decode_dataclass
+from m2.utils import (_is_collection, _is_optional,
+                      _issubclass_safe, _timestamp_to_dt_aware)
 
 
 class _TimestampField(fields.Field):
@@ -46,6 +44,7 @@ TYPES = {
     UUID: fields.UUID
 }
 
+
 def build_type(type_, options, mixin, field, cls):
     def inner(type_, options):
         if is_dataclass(type_):
@@ -70,14 +69,15 @@ def build_type(type_, options, mixin, field, cls):
         warnings.warn(f"Unknown type {type_} at {cls.__name__}.{field.name}: {field.type} "
                       f"It's advised to pass the correct marshmallow type to `mm_field`.")
         return field.Field(**options)
+
     return inner(type_, options)
 
 
 def schema(cls, mixin, infer_missing):
     schema = {}
     for field in dc_fields(cls):
-        if 'dataclasses_json' in (field.metadata or {}):
-            schema[field.name] = field.metadata['dataclasses_json'].get('mm_field')
+        if 'm2' in (field.metadata or {}):
+            schema[field.name] = field.metadata['m2'].get('mm_field')
         else:
             type_ = field.type
             options = {}
@@ -96,7 +96,7 @@ def schema(cls, mixin, infer_missing):
                 options['allow_none'] = True
 
             t = build_type(type_, options, mixin, field, cls)
-            #if type(t) is not fields.Field:  # If we use `isinstance` we would return nothing.
+            # if type(t) is not fields.Field:  # If we use `isinstance` we would return nothing.
             schema[field.name] = t
     return schema
 

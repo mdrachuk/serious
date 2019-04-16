@@ -4,13 +4,13 @@ from dataclasses import dataclass, field
 import pytest
 from marshmallow import fields, ValidationError
 
-from dataclasses_json import DataClassJsonMixin
+from m2 import DataClassJsonMixin
 
 
 @dataclass
 class Car(DataClassJsonMixin):
     license_number: str = field(
-        metadata={'dataclasses_json': {
+        metadata={'m2': {
             'mm_field': fields.String(required=False)}
         })
 
@@ -18,7 +18,7 @@ class Car(DataClassJsonMixin):
 @dataclass
 class StringDate(DataClassJsonMixin):
     string_date: datetime.datetime = field(
-        metadata={'dataclasses_json': {
+        metadata={'m2': {
             'encoder': str,
             'decoder': str,
             'mm_field': fields.String(required=False)}

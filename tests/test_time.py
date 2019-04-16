@@ -1,12 +1,12 @@
-from datetime import datetime, timezone
-from dataclasses import dataclass, field
 import sys
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
 
-from marshmallow import fields
 import pytest
+from marshmallow import fields
 
-from dataclasses_json import dataclass_json
-from dataclasses_json.mm import _IsoField
+from m2 import dataclass_json
+from m2.mm import _IsoField
 
 
 @dataclass_json
@@ -20,7 +20,7 @@ if sys.version_info >= (3, 7):
     @dataclass
     class DataClassWithIsoDatetime:
         created_at: datetime = field(
-            metadata={'dataclasses_json': {
+            metadata={'m2': {
                 'encoder': datetime.isoformat,
                 'decoder': datetime.fromisoformat,
                 'mm_field': fields.DateTime(format='iso')
@@ -31,7 +31,7 @@ if sys.version_info >= (3, 7):
     @dataclass
     class DataClassWithCustomIsoDatetime:
         created_at: datetime = field(
-            metadata={'dataclasses_json': {
+            metadata={'m2': {
                 'encoder': datetime.isoformat,
                 'decoder': datetime.fromisoformat,
                 'mm_field': _IsoField()

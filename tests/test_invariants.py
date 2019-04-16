@@ -1,8 +1,7 @@
 from collections import deque
 
 from hypothesis import given
-from hypothesis.strategies import (frozensets, integers, lists, one_of, sets,
-                                   tuples)
+from hypothesis.strategies import frozensets, integers, lists, one_of, sets, tuples
 
 from tests.entities import (DataClassWithDeque, DataClassWithFrozenSet,
                             DataClassWithList, DataClassWithOptional,

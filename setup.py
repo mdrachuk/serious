@@ -4,17 +4,17 @@ with open('README.md', 'r', encoding='utf8') as f:
     readme = f.read()
 
 setup(
-    name="dataclasses-json",
-    version="0.2.2",
+    name="m2",
+    version="2019.1-dev",
     packages=find_packages(exclude=("tests*",)),
-    author="lidatong",
-    author_email="charles.dt.li@gmail.com",
+    author="mdrachuk",
+    author_email="misha@drach.uk",
     description="Easily serialize dataclasses to and from JSON",
     long_description=readme,
     long_description_content_type='text/markdown',
-    url="https://github.com/lidatong/dataclasses-json",
+    url="https://github.com/mdrachuk/m2",
     license="Unlicense",
-    keywords="dataclasses json",
+    keywords="dataclasses json marshalling",
     install_requires=[
         "dataclasses;python_version=='3.6'",
         "marshmallow>=3.0.0b20"

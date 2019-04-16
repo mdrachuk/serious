@@ -2,9 +2,8 @@ import abc
 import json
 from typing import Any, Callable, List, Optional, Tuple, TypeVar, Union
 
-from dataclasses_json.mm import build_schema
-from dataclasses_json.core import (_ExtendedEncoder, _asdict, _decode_dataclass,
-                                   _overrides, _override)
+from m2.core import _ExtendedEncoder, _asdict, _decode_dataclass
+from m2.mm import build_schema
 
 A = TypeVar('A')
 B = TypeVar('B')
