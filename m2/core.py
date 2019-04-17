@@ -124,7 +124,7 @@ def _decode_attr_value(attr: _Attr, infer_missing: bool, overrides: dict) -> Any
     return attr.value
 
 
-def _is_supported_generic(type_):
+def _is_supported_generic(type_: Type):
     not_str = not _issubclass_safe(type_, str)
     is_enum = _issubclass_safe(type_, Enum)
     return (not_str and _is_collection(type_)) or _is_optional(type_) or is_enum
@@ -163,7 +163,7 @@ def _decode_generic(type_: Type, value: Any, infer_missing: bool) -> Any:
     return res
 
 
-def _decode_dict_keys(key_type: Type, xs, infer_missing: bool):
+def _decode_dict_keys(key_type: Type, xs: Any, infer_missing: bool):
     """
     Because JSON object keys must be strings, we need the extra step of decoding
     them back into the user's chosen python type
@@ -173,7 +173,7 @@ def _decode_dict_keys(key_type: Type, xs, infer_missing: bool):
     return map(key_type, _decode_items(key_type, xs, infer_missing))
 
 
-def _decode_items(type_arg: Type, xs, infer_missing: bool):
+def _decode_items(type_arg: Type, xs: Any, infer_missing: bool):
     """
     This is a tricky situation where we need to check both the annotated
     type info (which is usually a type from `typing`) and check the
@@ -184,8 +184,7 @@ def _decode_items(type_arg: Type, xs, infer_missing: bool):
     hence the check of `is_dataclass(vs)`
     """
     if is_dataclass(type_arg) or is_dataclass(xs):
-        items = (_decode_dataclass(type_arg, x, infer_missing)
-                 for x in xs)
+        items = (_decode_dataclass(type_arg, x, infer_missing) for x in xs)
     elif _is_supported_generic(type_arg):
         items = (_decode_generic(type_arg, x, infer_missing) for x in xs)
     else:
