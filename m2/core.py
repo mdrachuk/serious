@@ -39,7 +39,7 @@ class FieldOverride(NamedTuple):
     decoder: Callable[[str], Any]
 
 
-def _overrides(dc: Union[DataClassType, object]) -> Dict:
+def _overrides(dc: Union[DataClassType, Any]) -> Dict:
     overrides = {}
     attrs: list = ['encoder', 'decoder']
     for field in fields(dc):
