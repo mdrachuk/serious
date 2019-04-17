@@ -1,20 +1,23 @@
 import copy
 import json
 import warnings
-from collections import namedtuple
-from dataclasses import MISSING, _is_dataclass_instance, fields, is_dataclass, dataclass, Field
+from dataclasses import (MISSING, _is_dataclass_instance,  # type: ignore # internal function function
+                         fields, is_dataclass, dataclass, Field)
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Collection, Mapping, Union, get_type_hints, Type, Any, Dict, Iterator
+from typing import Collection, Mapping, Union, get_type_hints, Type, Any, Dict, Iterator, NamedTuple, Callable
 from uuid import UUID
 
 from m2.utils import _get_constructor, _is_collection, _is_mapping, _is_optional, _isinstance_safe, _issubclass_safe
+
+DataClassType = Type[Any]
 
 JSON = Union[dict, list, str, int, float, bool, None]
 
 
 class _ExtendedEncoder(json.JSONEncoder):
     def default(self, o) -> JSON:
+        result: JSON
         if _isinstance_safe(o, Collection):
             if _isinstance_safe(o, Mapping):
                 result = dict(o)
@@ -31,10 +34,14 @@ class _ExtendedEncoder(json.JSONEncoder):
         return result
 
 
-def _overrides(dc: dataclass) -> Dict:
+class FieldOverride(NamedTuple):
+    encoder: Callable[[], str]
+    decoder: Callable[[str], Any]
+
+
+def _overrides(dc: Union[DataClassType, object]) -> Dict:
     overrides = {}
-    attrs = ['encoder', 'decoder']
-    FieldOverride = namedtuple('FieldOverride', attrs)
+    attrs: list = ['encoder', 'decoder']
     for field in fields(dc):
         # if the field has m2 metadata, we cons a FieldOverride
         # so there's a distinction between FieldOverride with all Nones
@@ -57,25 +64,25 @@ def _override(data: dict, overrides: dict, override_name: str):
 
 @dataclass
 class _Attr:
-    of: Type[dataclass]
+    of: DataClassType
     name: str
     type: Type
     value: Any
 
 
-def _attrs(cls: Type[dataclass], data: dict) -> Iterator[_Attr]:
+def _attrs(cls: DataClassType, data: dict) -> Iterator[_Attr]:
     types = get_type_hints(cls)
     return (_Attr(cls, field.name, types[field.name], value=data[field.name]) for field in fields(cls))
 
 
-def _decode_dataclass(cls: Type[dataclass], data: dict, infer_missing: bool):
+def _decode_dataclass(cls: DataClassType, data: dict, infer_missing: bool):
     overrides = _overrides(cls)
     data = {} if data is None and infer_missing else data
     for field in _fields_missing_from(data, cls):
         if field.default is not MISSING:
             data[field.name] = field.default
-        elif field.default_factory is not MISSING:
-            data[field.name] = field.default_factory()
+        elif field.default_factory is not MISSING:  # type: ignore # method is supplied to constructor -> missing self
+            data[field.name] = field.default_factory()  # type: ignore
         elif infer_missing:
             data[field.name] = None
 
@@ -85,12 +92,12 @@ def _decode_dataclass(cls: Type[dataclass], data: dict, infer_missing: bool):
     return cls(**init_kwargs)
 
 
-def _fields_missing_from(data: dict, cls: Type[dataclass]) -> Iterator[Field]:
+def _fields_missing_from(data: dict, cls: DataClassType) -> Iterator[Field]:
     return filter(lambda field: field.name not in data, fields(cls))
 
 
 def _decode_attr_value(attr: _Attr, infer_missing: bool, overrides: dict) -> Any:
-    if attr.value is None and not _is_optional(attr.type):
+    if not _is_optional(attr.type) and attr.value is None:
         warning = f'value of non-optional type {attr.name} detected when decoding {attr.of.__name__}'
         if infer_missing:
             warnings.warn(
@@ -123,7 +130,7 @@ def _is_supported_generic(type_):
     return (not_str and _is_collection(type_)) or _is_optional(type_) or is_enum
 
 
-def _decode_generic(type_, value, infer_missing):
+def _decode_generic(type_: Type, value: Any, infer_missing: bool) -> Any:
     if value is None:
         res = value
     elif _issubclass_safe(type_, Enum):
@@ -156,18 +163,17 @@ def _decode_generic(type_, value, infer_missing):
     return res
 
 
-def _decode_dict_keys(key_type, xs, infer_missing):
+def _decode_dict_keys(key_type: Type, xs, infer_missing: bool):
     """
-    Because JSON object keys must be strs, we need the extra step of decoding
+    Because JSON object keys must be strings, we need the extra step of decoding
     them back into the user's chosen python type
     """
-    # handle NoneType keys... it's weird to type a Dict as NoneType keys
-    # but it's valid...
-    key_type = (lambda x: x) if key_type is type(None) else key_type
+    # Handle NoneType keys. It's weird to type a Dict as NoneType keys but it's valid.
+    key_type = (lambda x: x) if key_type is type(None) else key_type  # type: ignore # a constructor is replaced by noop
     return map(key_type, _decode_items(key_type, xs, infer_missing))
 
 
-def _decode_items(type_arg, xs, infer_missing):
+def _decode_items(type_arg: Type, xs, infer_missing: bool):
     """
     This is a tricky situation where we need to check both the annotated
     type info (which is usually a type from `typing`) and check the
@@ -187,7 +193,7 @@ def _decode_items(type_arg, xs, infer_missing):
     return items
 
 
-def _asdict(obj):
+def _asdict(obj: Any) -> JSON:
     """
     A re-implementation of `asdict` (based on the original in the `dataclasses`
     source) to support arbitrary Collection and Mapping types.

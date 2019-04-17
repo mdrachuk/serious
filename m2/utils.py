@@ -1,5 +1,4 @@
 import sys
-from datetime import datetime, timezone
 from typing import Collection, Mapping, Optional, Type
 
 
@@ -80,4 +79,3 @@ def _is_mapping(type_):
 
 def _is_collection(type_):
     return _issubclass_safe(_get_type_origin(type_), Collection)
-
