@@ -52,7 +52,7 @@ def _overrides(dc: Union[DataClassType, Any]) -> Dict:
     return overrides
 
 
-def _override(data: dict, overrides: dict, override_name: str):
+def _override(data: Mapping, overrides: Mapping, override_name: str):
     override_kvs = {}
     for k, v in data.items():
         if k in overrides and getattr(overrides[k], override_name) is not None:
@@ -70,12 +70,12 @@ class _Attr:
     value: Any
 
 
-def _attrs(cls: DataClassType, data: dict) -> Iterator[_Attr]:
+def _attrs(cls: DataClassType, data: Mapping) -> Iterator[_Attr]:
     types = get_type_hints(cls)
     return (_Attr(cls, field.name, types[field.name], value=data[field.name]) for field in fields(cls))
 
 
-def _decode_dataclass(cls: DataClassType, data: dict, infer_missing: bool):
+def _decode_dataclass(cls: DataClassType, data: Mapping, infer_missing: bool):
     overrides = _overrides(cls)
     data = {} if data is None and infer_missing else data
     for field in _fields_missing_from(data, cls):
@@ -92,11 +92,11 @@ def _decode_dataclass(cls: DataClassType, data: dict, infer_missing: bool):
     return cls(**init_kwargs)
 
 
-def _fields_missing_from(data: dict, cls: DataClassType) -> Iterator[Field]:
+def _fields_missing_from(data: Mapping, cls: DataClassType) -> Iterator[Field]:
     return filter(lambda field: field.name not in data, fields(cls))
 
 
-def _decode_attr_value(attr: _Attr, infer_missing: bool, overrides: dict) -> Any:
+def _decode_attr_value(attr: _Attr, infer_missing: bool, overrides: Mapping) -> Any:
     if not _is_optional(attr.type) and attr.value is None:
         warning = f'value of non-optional type {attr.name} detected when decoding {attr.of.__name__}'
         if infer_missing:

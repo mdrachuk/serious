@@ -1,5 +1,5 @@
 import json
-from typing import Callable, Optional, Tuple, TypeVar, Union, Type, Generic, List, Dict
+from typing import Callable, Optional, Tuple, TypeVar, Union, Type, Generic, Mapping, List
 
 from m2.core import _ExtendedEncoder, _asdict, _decode_dataclass
 
@@ -30,23 +30,28 @@ def asjson(o, *,
 
 
 class DataClassLoader(Generic[T]):
-    def __init__(self, cls: Type[T], format='json', infer_missing=False, **kwargs):
+    def __init__(self, cls: Type[T], infer_missing=False, **kwargs):
         self._cls = cls
-        self._format = format
         self._infer_missing = infer_missing
         self._kwargs = kwargs
 
-    def one(self, json_: str) -> T:
-        kvs = json.loads(json_, **self._kwargs)
-        return self._from_dict(kvs)
+    def from_(self, json_: str) -> T:
+        data = json.loads(json_, **self._kwargs)
+        return self._from_dict(data)
 
-    def many(self, json_: str) -> List[T]:
-        kvs = json.loads(json_, **self._kwargs)
-        return [self._from_dict(each) for each in kvs]
-
-    def _from_dict(self, data: Dict):
+    def _from_dict(self, data: Mapping):
         return _decode_dataclass(self._cls, data, self._infer_missing)
+
+
+class DataClassListLoader(DataClassLoader[T]):
+    def from_(self, json_: str) -> List[T]:
+        data = json.loads(json_, **self._kwargs)
+        return [self._from_dict(each) for each in data]
 
 
 def load(cls: Type[T], **kwargs) -> DataClassLoader[T]:
     return DataClassLoader(cls, **kwargs)
+
+
+def load_all(cls: Type[T], **kwargs) -> DataClassListLoader[T]:
+    return DataClassListLoader(cls, **kwargs)

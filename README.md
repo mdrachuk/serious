@@ -32,7 +32,7 @@ are encoded as `str` (JSON string).
 
 ```python
 from dataclasses import dataclass
-from m2 import asjson, load
+from m2 import asjson, load, load_all
 
 @dataclass
 class Person:
@@ -44,8 +44,8 @@ lidatong = Person('lidatong')
 asjson(lidatong)  # '{"name": "lidatong"}'
 
 # Decoding from JSON
-load(Person).one('{"name": "lidatong"}')  # Person(name='lidatong')
-load(Person).many('[{"name": "lidatong"}, {"name": "mdrachuk"}]')  # [Person(name='lidatong'), Person(name='mdrachuk')]
+load(Person).from_('{"name": "lidatong"}')  # Person(name='lidatong')
+load_all(Person).from_('[{"name": "lidatong"}, {"name": "mdrachuk"}]')  # [Person(name='lidatong'), Person(name='mdrachuk')]
 ```
 
 ## How do I...
@@ -65,7 +65,7 @@ class Student:
     id: int
     name: str = 'student'
 
-m2.load(Student).one('{"id": 1}')  # Student(id=1, name='student')
+m2.load(Student).from_('{"id": 1}')  # Student(id=1, name='student')
 ```
 
 Notice `from_json` filled the field `name` with the specified default 'student'
@@ -83,7 +83,7 @@ class Tutor:
     id: int
     student: Optional[Student]
 
-m2.load(Tutor).one('{"id": 1}')  # Tutor(id=1, student=None)
+m2.load(Tutor).from_('{"id": 1}')  # Tutor(id=1, student=None)
 ```
 
 Personally I recommend you leverage dataclass defaults rather than using 
@@ -140,7 +140,7 @@ boss_json = """
 """.strip()
 
 assert asjson(boss, indent=4) == boss_json
-assert load(Boss).one(boss_json) == boss
+assert load(Boss).from_(boss_json) == boss
 ```
 
 

@@ -65,91 +65,91 @@ class TestEncoder:
 
 class TestDecoder:
     def test_list(self):
-        actual = load(DataClassWithList).one('{"xs": [1]}')
+        actual = load(DataClassWithList).from_('{"xs": [1]}')
         expected = DataClassWithList([1])
         assert (actual == expected)
 
     def test_list_str(self):
-        actual = load(DataClassWithListStr).one('{"xs": ["1"]}')
+        actual = load(DataClassWithListStr).from_('{"xs": ["1"]}')
         expected = DataClassWithListStr(["1"])
         assert actual == expected
 
     def test_dict(self):
-        actual = load(DataClassWithDict).one('{"kvs": {"1": "a"}}')
+        actual = load(DataClassWithDict).from_('{"kvs": {"1": "a"}}')
         expected = DataClassWithDict({'1': 'a'})
         assert actual == expected
 
     def test_dict_int(self):
-        actual = load(DataClassWithDictInt).one('{"kvs": {"1": "a"}}')
+        actual = load(DataClassWithDictInt).from_('{"kvs": {"1": "a"}}')
         expected = DataClassWithDictInt({1: 'a'})
         assert actual == expected
 
     def test_set(self):
-        actual = load(DataClassWithSet).one('{"xs": [1]}')
+        actual = load(DataClassWithSet).from_('{"xs": [1]}')
         expected = DataClassWithSet({1})
         assert actual == expected
 
     def test_tuple(self):
-        actual = load(DataClassWithTuple).one('{"xs": [1]}')
+        actual = load(DataClassWithTuple).from_('{"xs": [1]}')
         expected = DataClassWithTuple((1,))
         assert actual == expected
 
     def test_frozenset(self):
-        actual = load(DataClassWithFrozenSet).one('{"xs": [1]}')
+        actual = load(DataClassWithFrozenSet).from_('{"xs": [1]}')
         expected = DataClassWithFrozenSet(frozenset([1]))
         assert actual == expected
 
     def test_deque(self):
-        actual = load(DataClassWithDeque).one('{"xs": [1]}')
+        actual = load(DataClassWithDeque).from_('{"xs": [1]}')
         expected = DataClassWithDeque(deque([1]))
         assert (actual == expected)
 
     def test_optional(self):
-        actual1 = load(DataClassWithOptional).one('{"x": 1}')
+        actual1 = load(DataClassWithOptional).from_('{"x": 1}')
         expected1 = DataClassWithOptional(1)
         assert actual1 == expected1
 
-        actual2 = load(DataClassWithOptional).one('{"x": null}')
+        actual2 = load(DataClassWithOptional).from_('{"x": null}')
         expected2 = DataClassWithOptional(None)
         assert actual2 == expected2
 
     def test_optional_str(self):
-        actual1 = load(DataClassWithOptionalStr).one('{"x": "1"}')
+        actual1 = load(DataClassWithOptionalStr).from_('{"x": "1"}')
         expected1 = DataClassWithOptionalStr("1")
         assert actual1 == expected1
 
-        actual2 = load(DataClassWithOptionalStr).one('{"x": null}')
+        actual2 = load(DataClassWithOptionalStr).from_('{"x": null}')
         expected2 = DataClassWithOptionalStr(None)
         assert actual2 == expected2
 
-        actual3 = load(DataClassWithOptionalStr, infer_missing=True).one('{}')
+        actual3 = load(DataClassWithOptionalStr, infer_missing=True).from_('{}')
         expected3 = DataClassWithOptionalStr()
         assert actual3 == expected3
 
     def test_my_collection(self):
-        actual = load(DataClassWithMyCollection).one('{"xs": [1]}')
+        actual = load(DataClassWithMyCollection).from_('{"xs": [1]}')
         expected = DataClassWithMyCollection(MyCollection([1]))
         assert actual == expected
 
     def test_immutable_default(self):
-        actual1 = load(DataClassIntImmutableDefault).one('{"x": 0}')
+        actual1 = load(DataClassIntImmutableDefault).from_('{"x": 0}')
         expected1 = DataClassIntImmutableDefault()
         assert actual1 == expected1
 
     def test_mutable_default_list(self):
         expected = DataClassMutableDefaultList()
 
-        actual1 = load(DataClassMutableDefaultList).one('{"xs": []}')
+        actual1 = load(DataClassMutableDefaultList).from_('{"xs": []}')
         assert actual1 == expected
 
-        actual2 = load(DataClassMutableDefaultList, infer_missing=True).one('{}')
+        actual2 = load(DataClassMutableDefaultList, infer_missing=True).from_('{}')
         assert actual2 == expected
 
     def test_mutable_default_dict(self):
         expected = DataClassMutableDefaultDict()
 
-        actual1 = load(DataClassMutableDefaultDict).one('{"kvs": {}}')
+        actual1 = load(DataClassMutableDefaultDict).from_('{"kvs": {}}')
         assert actual1 == expected
 
-        actual2 = load(DataClassMutableDefaultDict, infer_missing=True).one('{}')
+        actual2 = load(DataClassMutableDefaultDict, infer_missing=True).from_('{}')
         assert actual2 == expected

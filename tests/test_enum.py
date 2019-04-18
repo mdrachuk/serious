@@ -77,31 +77,31 @@ class TestEncoder:
 
 class TestDecoder:
     def test_data_with_enum(self):
-        d1_from_json = load(DataWithEnum).one(d1_json)
+        d1_from_json = load(DataWithEnum).from_(d1_json)
         assert d1 == d1_from_json
         assert asjson(d1_from_json) == d1_json
 
-        d3_int_from_json = load(DataWithEnum).one(d3_int_json)
+        d3_int_from_json = load(DataWithEnum).from_(d3_int_json)
         assert d3_int == d3_int_from_json
         assert asjson(d3_int_from_json) == d3_int_json
 
-        d4_float_from_json = load(DataWithEnum).one(d4_float_json)
+        d4_float_from_json = load(DataWithEnum).from_(d4_float_json)
         assert d4_float == d4_float_from_json
         assert asjson(d4_float_from_json) == d4_float_json
 
     def test_data_with_str_enum(self):
-        ds_from_json = load(DataWithStrEnum).one(ds_json)
+        ds_from_json = load(DataWithStrEnum).from_(ds_json)
         assert ds == ds_from_json
         assert asjson(ds_from_json) == ds_json
 
     def test_data_with_enum_default_value(self):
-        d2_from_json = load(DataWithEnum).one(d2_json)
+        d2_from_json = load(DataWithEnum).from_(d2_json)
         assert d2_using_default_value == d2_from_json
         json_from_d2 = asjson(d2_from_json)
         assert json_from_d2 == d2_json, f"A default value was not included in the JSON encode. " \
             f"Expected: {d2_json}, Actual: {json_from_d2}"
 
     def test_collection_with_enum(self):
-        container_from_json = load(EnumContainer).one(container_json)
+        container_from_json = load(EnumContainer).from_(container_json)
         assert container == container_from_json
         assert asjson(container_from_json) == container_json

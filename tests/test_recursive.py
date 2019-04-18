@@ -63,4 +63,4 @@ class TestRecursive:
         assert m2.asjson(family_tree, indent=4) == family_tree_json
 
     def test_tree_decode(self):
-        assert m2.load(Tree).one(family_tree_json) == family_tree
+        assert m2.load(Tree).from_(family_tree_json) == family_tree

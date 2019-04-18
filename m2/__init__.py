@@ -1,1 +1,1 @@
-from m2.api import load, asjson
+from m2.api import asjson, load, load_all

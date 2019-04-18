@@ -48,5 +48,5 @@ class TestEncoder:
         s2_anon = Student(2, '')
         one = [s1_anon, s2_anon]
         two = [s2_anon, s1_anon]
-        actual = m2.load(Student).many('[{"id": 1}, {"id": 2}]')
+        actual = m2.load_all(Student).from_('[{"id": 1}, {"id": 2}]')
         assert actual == one or actual == two

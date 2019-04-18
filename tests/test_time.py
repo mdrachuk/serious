@@ -36,10 +36,10 @@ class TestTime:
         assert m2.asjson(self.dc_ts) == self.dc_ts_json
 
     def test_datetime_decode(self):
-        assert m2.load(DataClassWithDatetime).one(self.dc_ts_json) == self.dc_ts
+        assert m2.load(DataClassWithDatetime).from_(self.dc_ts_json) == self.dc_ts
 
     def test_datetime_override_encode(self):
         assert m2.asjson(self.dc_iso) == self.dc_iso_json
 
     def test_datetime_override_decode(self):
-        assert m2.load(DataClassWithIsoDatetime).one(self.dc_iso_json) == self.dc_iso
+        assert m2.load(DataClassWithIsoDatetime).from_(self.dc_iso_json) == self.dc_iso
