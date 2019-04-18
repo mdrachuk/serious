@@ -15,23 +15,20 @@ DataClassType = Type[Any]
 JSON = Union[dict, list, str, int, float, bool, None]
 
 
-class _ExtendedEncoder(json.JSONEncoder):
+class M2JsonEncoder(json.JSONEncoder):
     def default(self, o) -> JSON:
-        result: JSON
         if _isinstance_safe(o, Collection):
             if _isinstance_safe(o, Mapping):
-                result = dict(o)
+                return dict(o)
             else:
-                result = list(o)
+                return list(o)
         elif _isinstance_safe(o, datetime):
-            result = o.timestamp()
+            return o.timestamp()
         elif _isinstance_safe(o, UUID):
-            result = str(o)
+            return str(o)
         elif _isinstance_safe(o, Enum):
-            result = o.value
-        else:
-            result = json.JSONEncoder.default(self, o)
-        return result
+            return o.value
+        return super().default(self, o)
 
 
 class FieldOverride(NamedTuple):
@@ -192,7 +189,7 @@ def _decode_items(type_arg: Type, xs: Any, infer_missing: bool):
     return items
 
 
-def _asdict(obj: Any) -> JSON:
+def _as_dict_or_list(obj: Any) -> JSON:
     """
     A re-implementation of `asdict` (based on the original in the `dataclasses`
     source) to support arbitrary Collection and Mapping types.
@@ -200,12 +197,12 @@ def _asdict(obj: Any) -> JSON:
     if _is_dataclass_instance(obj):
         result = []
         for f in fields(obj):
-            value = _asdict(getattr(obj, f.name))
+            value = _as_dict_or_list(getattr(obj, f.name))
             result.append((f.name, value))
         return _override(dict(result), _overrides(obj), 'encoder')
     elif isinstance(obj, Mapping):
-        return dict((_asdict(k), _asdict(v)) for k, v in obj.items())
+        return dict((_as_dict_or_list(k), _as_dict_or_list(v)) for k, v in obj.items())
     elif isinstance(obj, Collection) and not isinstance(obj, str):
-        return list(_asdict(v) for v in obj)
+        return list(_as_dict_or_list(v) for v in obj)
     else:
         return copy.deepcopy(obj)
