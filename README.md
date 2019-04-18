@@ -95,7 +95,7 @@ Personally I recommend you leverage dataclass defaults rather than using
 JSON decoding from the field's default value, this will allow you to do so.
 
 
-### Override field decoder/encoder?
+### Override field load/dump?
 
 For example, you might want to encode/decode `datetime` objects using ISO format
 rather than the default `timestamp`.

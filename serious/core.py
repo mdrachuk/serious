@@ -51,7 +51,7 @@ def _overrides(dc: Union[DataClassType, Any]) -> Dict:
         # and field that just doesn't appear in overrides
         if field.metadata is not None and serious in field.metadata:
             metadata = field.metadata[serious]
-            overrides[field.name] = FieldOverride(*map(metadata.get, field_meta))
+            overrides[field.name] = FieldOverride(**{key: value for key, value in metadata.items()})
     return overrides
 
 
