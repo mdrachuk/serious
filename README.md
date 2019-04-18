@@ -27,26 +27,30 @@ are encoded as `str` (JSON string).
 **The [latest release](https://github.com/mdrachuk/serious/releases/latest) is compatible with Python 3.7.**
 
 ## Quickstart
-`pip install dataclasses-json`
+`pip install git+https://github.com/mdrachuk/serious.git`
 
-#### asjson, load
+#### schema.load() and schema.dump()
 
 ```python
 from dataclasses import dataclass
-from serious import asjson, load, load_all
+from serious.json import schema
 
 @dataclass
 class Person:
     name: str
 
 lidatong = Person('lidatong')
+mdrachuk = Person('mdrachuk')
+
+person_schema = schema(Person)
 
 # Encoding to JSON
-asjson(lidatong)  # '{"name": "lidatong"}'
+person_schema.dump(lidatong)  # '{"name": "lidatong"}'
+person_schema.dump_all([mdrachuk, lidatong])  # '[{"name": "mdrachuk"}, {"name": "lidatong"}]'
 
 # Decoding from JSON
-load(Person).from_('{"name": "lidatong"}')  # Person(name='lidatong')
-load_all(Person).from_('[{"name": "lidatong"}, {"name": "mdrachuk"}]')  # [Person(name='lidatong'), Person(name='mdrachuk')]
+person_schema.load('{"name": "lidatong"}')  # Person(name='lidatong')
+person_schema.load_all('[{"name": "mdrachuk"}, {"name": "lidatong"}]')  # [Person(name='mdrachuk'), Person(name='lidatong')]
 ```
 
 ## How do I...
@@ -66,7 +70,7 @@ class Student:
     id: int
     name: str = 'student'
 
-serious.load(Student).from_('{"id": 1}')  # Student(id=1, name='student')
+serious.json.schema(Student).load('{"id": 1}')  # Student(id=1, name='student')
 ```
 
 Notice `from_json` filled the field `name` with the specified default 'student'
@@ -103,7 +107,7 @@ from datetime import datetime
 @dataclass
 class DataClassWithIsoDatetime:
     created_at: datetime = field(
-        metadata={serious: {
+        metadata={'serious': {
             'encoder': datetime.isoformat,
             'decoder': datetime.fromisoformat,
         }})
@@ -113,7 +117,7 @@ class DataClassWithIsoDatetime:
 
 ```python
 from dataclasses import dataclass
-from serious import asjson, load, DumpOptions
+from serious.json import schema, Dumping
 from typing import List
 
 @dataclass(frozen=True)
@@ -139,8 +143,10 @@ boss_json = """
 }
 """.strip()
 
-assert asjson(boss, DumpOptions(indent=4)) == boss_json
-assert load(Boss).from_(boss_json) == boss
+boss_schema = schema(Boss, Dumping(indent=4))
+
+assert boss_schema.dump(boss) == boss_json
+assert boss_schema.load(boss_json) == boss
 ```
 
 

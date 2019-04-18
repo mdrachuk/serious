@@ -1,12 +1,15 @@
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
-import serious
+from serious.json import schema
 
 
 @dataclass
 class DataClassWithDatetime:
     created_at: datetime
+
+
+timestamp_schema = schema(DataClassWithDatetime)
 
 
 @dataclass
@@ -16,6 +19,9 @@ class DataClassWithIsoDatetime:
             'encoder': datetime.isoformat,
             'decoder': datetime.fromisoformat,
         }})
+
+
+iso_schema = schema(DataClassWithIsoDatetime)
 
 
 class TestTime:
@@ -31,13 +37,13 @@ class TestTime:
     dc_iso = DataClassWithIsoDatetime(datetime.fromisoformat(iso))
 
     def test_datetime_encode(self):
-        assert serious.asjson(self.dc_ts) == self.dc_ts_json
+        assert timestamp_schema.dump(self.dc_ts) == self.dc_ts_json
 
     def test_datetime_decode(self):
-        assert serious.load(DataClassWithDatetime).from_(self.dc_ts_json) == self.dc_ts
+        assert timestamp_schema.load(self.dc_ts_json) == self.dc_ts
 
     def test_datetime_override_encode(self):
-        assert serious.asjson(self.dc_iso) == self.dc_iso_json
+        assert iso_schema.dump(self.dc_iso) == self.dc_iso_json
 
     def test_datetime_override_decode(self):
-        assert serious.load(DataClassWithIsoDatetime).from_(self.dc_iso_json) == self.dc_iso
+        assert iso_schema.load(self.dc_iso_json) == self.dc_iso

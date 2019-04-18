@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Dict, List
 
-from serious import load, asjson
+from serious.json import schema
 
 
 class MyEnum(Enum):
@@ -23,6 +23,8 @@ class DataWithEnum:
     my_enum: MyEnum = MyEnum.STR3
 
 
+enum_schema = schema(DataWithEnum)
+
 d1 = DataWithEnum('name1', MyEnum.STR1)
 d1_json = '{"name": "name1", "my_enum": "str1"}'
 
@@ -41,6 +43,8 @@ class DataWithStrEnum:
     my_str_enum: MyStrEnum = MyEnum.STR1
 
 
+str_enum_schema = schema(DataWithStrEnum)
+
 ds = DataWithStrEnum(MyStrEnum.STR1)
 ds_json = '{"my_str_enum": "str1"}'
 
@@ -51,6 +55,8 @@ class EnumContainer:
     dict_enum_value: Dict[str, MyEnum]
 
 
+enum_c_schema = schema(EnumContainer)
+
 container_json = '{"enum_list": ["str3", 1], "dict_enum_value": {"key1str": "str1", "key1float": 1.23}}'
 container = EnumContainer(
     enum_list=[MyEnum.STR3, MyEnum.INT1],
@@ -59,49 +65,50 @@ container = EnumContainer(
 
 class TestEncoder:
     def test_data_with_enum(self):
-        assert asjson(d1) == d1_json, f'Actual: {asjson(d1)}, Expected: {d1_json}'
-        assert asjson(d3_int) == d3_int_json, f'Actual: {asjson(d3_int)}, Expected: {d3_int_json}'
-        assert asjson(d4_float) == d4_float_json, f'Actual: {asjson(d4_float)}, Expected: {d4_float_json}'
+        assert enum_schema.dump(d1) == d1_json, f'Actual: {enum_schema.dump(d1)}, Expected: {d1_json}'
+        assert enum_schema.dump(d3_int) == d3_int_json, f'Actual: {enum_schema.dump(d3_int)}, Expected: {d3_int_json}'
+        assert enum_schema.dump(d4_float) == d4_float_json, (f'Actual: {enum_schema.dump(d4_float)}, '
+                                                             f'Expected: {d4_float_json}')
 
     def test_data_with_str_enum(self):
-        assert asjson(ds) == ds_json, f'Actual: {asjson(ds)}, Expected: {ds_json}'
+        assert str_enum_schema.dump(ds) == ds_json, f'Actual: {str_enum_schema.dump(ds)}, Expected: {ds_json}'
 
     def test_data_with_enum_default_value(self):
-        d2_to_json = asjson(d2_using_default_value)
+        d2_to_json = enum_schema.dump(d2_using_default_value)
         assert d2_to_json == d2_json, f"A default value was not included in the JSON encode. " \
             f"Expected: {d2_json}, Actual: {d2_to_json}"
 
     def test_collection_with_enum(self):
-        assert asjson(container) == container_json
+        assert enum_c_schema.dump(container) == container_json
 
 
 class TestDecoder:
     def test_data_with_enum(self):
-        d1_from_json = load(DataWithEnum).from_(d1_json)
+        d1_from_json = enum_schema.load(d1_json)
         assert d1 == d1_from_json
-        assert asjson(d1_from_json) == d1_json
+        assert enum_schema.dump(d1_from_json) == d1_json
 
-        d3_int_from_json = load(DataWithEnum).from_(d3_int_json)
+        d3_int_from_json = enum_schema.load(d3_int_json)
         assert d3_int == d3_int_from_json
-        assert asjson(d3_int_from_json) == d3_int_json
+        assert enum_schema.dump(d3_int_from_json) == d3_int_json
 
-        d4_float_from_json = load(DataWithEnum).from_(d4_float_json)
+        d4_float_from_json = enum_schema.load(d4_float_json)
         assert d4_float == d4_float_from_json
-        assert asjson(d4_float_from_json) == d4_float_json
+        assert enum_schema.dump(d4_float_from_json) == d4_float_json
 
     def test_data_with_str_enum(self):
-        ds_from_json = load(DataWithStrEnum).from_(ds_json)
+        ds_from_json = str_enum_schema.load(ds_json)
         assert ds == ds_from_json
-        assert asjson(ds_from_json) == ds_json
+        assert str_enum_schema.dump(ds_from_json) == ds_json
 
     def test_data_with_enum_default_value(self):
-        d2_from_json = load(DataWithEnum).from_(d2_json)
+        d2_from_json = enum_schema.load(d2_json)
         assert d2_using_default_value == d2_from_json
-        json_from_d2 = asjson(d2_from_json)
+        json_from_d2 = enum_schema.dump(d2_from_json)
         assert json_from_d2 == d2_json, f"A default value was not included in the JSON encode. " \
             f"Expected: {d2_json}, Actual: {json_from_d2}"
 
     def test_collection_with_enum(self):
-        container_from_json = load(EnumContainer).from_(container_json)
+        container_from_json = enum_c_schema.load(container_json)
         assert container == container_from_json
-        assert asjson(container_from_json) == container_json
+        assert enum_c_schema.dump(container_from_json) == container_json
