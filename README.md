@@ -113,7 +113,7 @@ class DataClassWithIsoDatetime:
 
 ```python
 from dataclasses import dataclass
-from m2 import asjson, load
+from m2 import asjson, load, DumpOptions
 from typing import List
 
 @dataclass(frozen=True)
@@ -139,7 +139,7 @@ boss_json = """
 }
 """.strip()
 
-assert asjson(boss, indent=4) == boss_json
+assert asjson(boss, DumpOptions(indent=4)) == boss_json
 assert load(Boss).from_(boss_json) == boss
 ```
 
