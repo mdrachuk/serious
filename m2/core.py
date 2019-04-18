@@ -5,7 +5,9 @@ from dataclasses import (MISSING, _is_dataclass_instance,  # type: ignore # inte
                          fields, is_dataclass, dataclass, Field)
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Collection, Mapping, Union, get_type_hints, Type, Any, Dict, Iterator, NamedTuple, Callable
+from typing import (Collection, Mapping, Union, get_type_hints,
+                    Type, Any, Dict, Iterator, NamedTuple, Callable,
+                    MutableMapping)
 from uuid import UUID
 
 from m2.utils import _get_constructor, _is_collection, _is_mapping, _is_optional, _isinstance_safe, _issubclass_safe
@@ -28,7 +30,7 @@ class M2JsonEncoder(json.JSONEncoder):
             return str(o)
         elif _isinstance_safe(o, Enum):
             return o.value
-        return super().default(self, o)
+        return super().default(o)
 
 
 class FieldOverride(NamedTuple):
@@ -72,7 +74,7 @@ def _attrs(cls: DataClassType, data: Mapping) -> Iterator[_Attr]:
     return (_Attr(cls, field.name, types[field.name], value=data[field.name]) for field in fields(cls))
 
 
-def _decode_dataclass(cls: DataClassType, data: Mapping, infer_missing: bool):
+def _decode_dataclass(cls: DataClassType, data: MutableMapping, infer_missing: bool):
     overrides = _overrides(cls)
     data = {} if data is None and infer_missing else data
     for field in _fields_missing_from(data, cls):
