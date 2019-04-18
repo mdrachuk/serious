@@ -16,8 +16,8 @@ timestamp_schema = schema(DataClassWithDatetime)
 class DataClassWithIsoDatetime:
     created_at: datetime = field(
         metadata={'serious': {
-            'encoder': datetime.isoformat,
-            'decoder': datetime.fromisoformat,
+            'dump': datetime.isoformat,
+            'load': datetime.fromisoformat,
         }})
 
 

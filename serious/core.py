@@ -1,6 +1,7 @@
 import copy
 import json
 import warnings
+from collections import namedtuple
 from dataclasses import (MISSING, _is_dataclass_instance,  # type: ignore # internal function function
                          fields, is_dataclass, dataclass, Field)
 from datetime import datetime, timezone
@@ -10,10 +11,14 @@ from typing import (Collection, Mapping, Union, get_type_hints,
                     MutableMapping)
 from uuid import UUID
 
-from serious.utils import _get_constructor, _is_collection, _is_mapping, _is_optional, _isinstance_safe, _issubclass_safe
+from serious.utils import (_get_constructor, _is_collection, _is_mapping, _is_optional,
+                           _isinstance_safe, _issubclass_safe)
+
+serious = 'serious'
+FieldMeta = namedtuple('FieldMeta', {'dump', 'load'})
+field_meta = FieldMeta(dump='dump', load='load')
 
 DataClassType = Type[Any]
-
 JSON = Union[dict, list, str, int, float, bool, None]
 
 
@@ -34,20 +39,19 @@ class M2JsonEncoder(json.JSONEncoder):
 
 
 class FieldOverride(NamedTuple):
-    encoder: Callable[[], str]
-    decoder: Callable[[str], Any]
+    dump: Callable[[], str]
+    load: Callable[[str], Any]
 
 
 def _overrides(dc: Union[DataClassType, Any]) -> Dict:
     overrides = {}
-    attrs: list = ['encoder', 'decoder']
     for field in fields(dc):
         # if the field has serious metadata, we cons a FieldOverride
         # so there's a distinction between FieldOverride with all Nones
         # and field that just doesn't appear in overrides
-        if field.metadata is not None and 'serious' in field.metadata:
-            metadata = field.metadata['serious']
-            overrides[field.name] = FieldOverride(*map(metadata.get, attrs))
+        if field.metadata is not None and serious in field.metadata:
+            metadata = field.metadata[serious]
+            overrides[field.name] = FieldOverride(*map(metadata.get, field_meta))
     return overrides
 
 
@@ -107,8 +111,8 @@ def _decode_attr_value(attr: _Attr, infer_missing: bool, overrides: Mapping) -> 
         else:
             warnings.warn(f"`NoneType` object {warning}.", RuntimeWarning)
         return attr.value
-    elif attr.name in overrides and overrides[attr.name].decoder is not None:
-        return overrides[attr.name].decoder(attr.value)
+    elif attr.name in overrides and overrides[attr.name].load is not None:
+        return overrides[attr.name].load(attr.value)
     elif is_dataclass(attr.type):
         value = _decode_dataclass(attr.type, attr.value, infer_missing)
         return value
@@ -197,14 +201,21 @@ def _as_dict_or_list(obj: Any) -> JSON:
     source) to support arbitrary Collection and Mapping types.
     """
     if _is_dataclass_instance(obj):
-        result = []
-        for f in fields(obj):
-            value = _as_dict_or_list(getattr(obj, f.name))
-            result.append((f.name, value))
-        return _override(dict(result), _overrides(obj), 'encoder')
+        return _overriden_dict(obj)
     elif isinstance(obj, Mapping):
         return dict((_as_dict_or_list(k), _as_dict_or_list(v)) for k, v in obj.items())
     elif isinstance(obj, Collection) and not isinstance(obj, str):
         return list(_as_dict_or_list(v) for v in obj)
     else:
         return copy.deepcopy(obj)
+
+
+def _overriden_dict(obj: Any) -> Dict[str, Any]:
+    """
+    A re-implementation of `asdict` (from `dataclasses`) with overrides.
+    """
+    result = []
+    for f in fields(obj):
+        value = _as_dict_or_list(getattr(obj, f.name))
+        result.append((f.name, value))
+    return _override(dict(result), _overrides(obj), field_meta.dump)

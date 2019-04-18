@@ -1,9 +1,9 @@
 import collections
 import json
-from dataclasses import dataclass, field, is_dataclass, fields
-from typing import Optional, Tuple, TypeVar, Type, Generic, List, Any, MutableMapping, Collection, Dict
+from dataclasses import dataclass, field, is_dataclass
+from typing import Optional, Tuple, TypeVar, Type, Generic, List, MutableMapping, Collection
 
-from serious.core import M2JsonEncoder, _decode_dataclass, _override, _overrides, _as_dict_or_list
+from serious.core import M2JsonEncoder, _decode_dataclass, _overriden_dict
 from serious.json.errors import UnexpectedJson
 
 T = TypeVar('T')
@@ -19,17 +19,6 @@ class Dumping:
     @classmethod
     def defaults(cls):
         return cls()
-
-
-def _overriden_dict(obj: Any) -> Dict[str, Any]:
-    """
-    A re-implementation of `asdict` (from `dataclasses`) with overrides.
-    """
-    result = []
-    for f in fields(obj):
-        value = _as_dict_or_list(getattr(obj, f.name))
-        result.append((f.name, value))
-    return _override(dict(result), _overrides(obj), 'encoder')
 
 
 @dataclass(frozen=True)
