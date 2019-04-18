@@ -1,7 +1,6 @@
 import copy
 import json
 import warnings
-from collections import namedtuple
 from dataclasses import (MISSING, _is_dataclass_instance,  # type: ignore # internal function function
                          fields, is_dataclass, dataclass, Field)
 from datetime import datetime, timezone
@@ -15,8 +14,6 @@ from serious.utils import (_get_constructor, _is_collection, _is_mapping, _is_op
                            _isinstance_safe, _issubclass_safe)
 
 serious = 'serious'
-FieldMeta = namedtuple('FieldMeta', {'dump', 'load'})
-field_meta = FieldMeta(dump='dump', load='load')
 
 DataClassType = Type[Any]
 JSON = Union[dict, list, str, int, float, bool, None]
@@ -43,7 +40,7 @@ class FieldOverride(NamedTuple):
     load: Callable[[str], Any]
 
 
-def _overrides(dc: Union[DataClassType, Any]) -> Dict:
+def _overrides(dc: Union[DataClassType, Any]) -> Dict[str, FieldOverride]:
     overrides = {}
     for field in fields(dc):
         # if the field has serious metadata, we cons a FieldOverride
@@ -99,7 +96,7 @@ def _fields_missing_from(data: Mapping, cls: DataClassType) -> Iterator[Field]:
     return filter(lambda field: field.name not in data, fields(cls))
 
 
-def _decode_attr_value(attr: _Attr, infer_missing: bool, overrides: Mapping) -> Any:
+def _decode_attr_value(attr: _Attr, infer_missing: bool, overrides: Dict[str, FieldOverride]) -> Any:
     if not _is_optional(attr.type) and attr.value is None:
         warning = f'value of non-optional type {attr.name} detected when decoding {attr.of.__name__}'
         if infer_missing:
@@ -218,4 +215,4 @@ def _overriden_dict(obj: Any) -> Dict[str, Any]:
     for f in fields(obj):
         value = _as_dict_or_list(getattr(obj, f.name))
         result.append((f.name, value))
-    return _override(dict(result), _overrides(obj), field_meta.dump)
+    return _override(dict(result), _overrides(obj), 'dump')
