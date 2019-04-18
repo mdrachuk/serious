@@ -17,7 +17,7 @@ DataClassType = Type[Any]
 JSON = Union[dict, list, str, int, float, bool, None]
 
 
-class M2JsonEncoder(json.JSONEncoder):
+# class M2JsonEncoder(json.JSONEncoder):
     def default(self, o) -> JSON:
         if _isinstance_safe(o, Collection):
             if _isinstance_safe(o, Mapping):
