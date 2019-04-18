@@ -16,9 +16,9 @@ setup(
     license="Unlicense",
     keywords="dataclasses json marshalling",
     install_requires=[
-        "dataclasses;python_version=='3.6'",
+        "dataclasses;python_version=='3.7'",
     ],
-    python_requires=">=3.6",
+    python_requires=">=3.7",
     extras_require={
         "dev": ["pytest", "mypy", "hypothesis"]
     },

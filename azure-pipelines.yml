@@ -30,5 +30,5 @@ steps:
     displayName: 'pytest'
 
   - script: |
-      mypy
+      mypy m2
     displayName: 'mypy'

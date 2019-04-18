@@ -1,45 +1,12 @@
-import sys
 from typing import Collection, Mapping, Optional, Type
 
 
 def _get_constructor(type_: Type) -> Type:
-    """More spaghetti logic for 3.6 vs. 3.7"""
-    if sys.version_info.minor == 6:
-        try:
-            cons = type_.__extra__
-        except AttributeError:
-            try:
-                cons = type_.__origin__
-            except AttributeError:
-                cons = type_
-            else:
-                cons = type_ if cons is None else cons
-        else:
-            try:
-                cons = type_.__origin__ if cons is None else cons
-            except AttributeError:
-                cons = type_
-    else:
-        cons = type_.__origin__
-    return cons
+    return type_.__origin__
 
 
 def _get_type_origin(type_):
-    """Some spaghetti logic to accommodate differences between 3.6 and 3.7 in
-    the typing api"""
-    try:
-        origin = type_.__origin__
-    except AttributeError:
-        if sys.version_info.minor == 6:
-            try:
-                origin = type_.__extra__
-            except AttributeError:
-                origin = type_
-            else:
-                origin = type_ if origin is None else origin
-        else:
-            origin = type_
-    return origin
+    return getattr(type_, '__origin__', type_)
 
 
 def _hasargs(type_, *args):
