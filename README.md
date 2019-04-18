@@ -1,4 +1,5 @@
 # m²
+[![Build Status](https://dev.azure.com/misha0167/m2/_apis/build/status/mdrachuk.m2?branchName=master)](https://dev.azure.com/misha0167/m2/_build/latest?definitionId=1&branchName=master)
 
 This library provides a simple API for encoding and decoding [dataclasses](https://docs.python.org/3/library/dataclasses.html) to and from JSON.
 
