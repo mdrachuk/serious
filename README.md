@@ -24,7 +24,7 @@ behavior (for example, if you want to use ISO).
 are encoded as `str` (JSON string).
 
 
-**The [latest release](https://github.com/mdrachuk/m2/releases/latest) is compatible with Python 3.7.**
+**The [latest release](https://github.com/mdrachuk/serious/releases/latest) is compatible with Python 3.7.**
 
 ## Quickstart
 `pip install dataclasses-json`
@@ -33,7 +33,7 @@ are encoded as `str` (JSON string).
 
 ```python
 from dataclasses import dataclass
-from m2 import asjson, load, load_all
+from serious import asjson, load, load_all
 
 @dataclass
 class Person:
@@ -66,7 +66,7 @@ class Student:
     id: int
     name: str = 'student'
 
-m2.load(Student).from_('{"id": 1}')  # Student(id=1, name='student')
+serious.load(Student).from_('{"id": 1}')  # Student(id=1, name='student')
 ```
 
 Notice `from_json` filled the field `name` with the specified default 'student'
@@ -83,8 +83,7 @@ necessarily want to assign a default. In that case, you can use the
 class Tutor:
     id: int
     student: Optional[Student]
-
-m2.load(Tutor).from_('{"id": 1}')  # Tutor(id=1, student=None)
+serious.load(Tutor).from_('{"id": 1}')  # Tutor(id=1, student=None)
 ```
 
 Personally I recommend you leverage dataclass defaults rather than using 
@@ -104,7 +103,7 @@ from datetime import datetime
 @dataclass
 class DataClassWithIsoDatetime:
     created_at: datetime = field(
-        metadata={'m2': {
+        metadata={serious: {
             'encoder': datetime.isoformat,
             'decoder': datetime.fromisoformat,
         }})
@@ -114,7 +113,7 @@ class DataClassWithIsoDatetime:
 
 ```python
 from dataclasses import dataclass
-from m2 import asjson, load, DumpOptions
+from serious import asjson, load, DumpOptions
 from typing import List
 
 @dataclass(frozen=True)

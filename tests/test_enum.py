@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Dict, List
 
-from m2 import load, asjson
+from serious import load, asjson
 
 
 class MyEnum(Enum):

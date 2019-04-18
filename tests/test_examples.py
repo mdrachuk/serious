@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Set
 
-import m2
+import serious
 
 
 @dataclass(frozen=True)
@@ -32,13 +32,13 @@ c = Course(1, 'course', p, {s1})
 
 class TestEncoder:
     def test_student(self):
-        assert m2.asjson(s1) == '{"id": 1, "name": "student"}'
+        assert serious.asjson(s1) == '{"id": 1, "name": "student"}'
 
     def test_professor(self):
-        assert m2.asjson(p) == '{"id": 1, "name": "professor"}'
+        assert serious.asjson(p) == '{"id": 1, "name": "professor"}'
 
     def test_course(self):
-        assert m2.asjson(c) == '{"id": 1, ' \
+        assert serious.asjson(c) == '{"id": 1, ' \
                                '"name": "course", ' \
                                '"professor": {"id": 1, "name": "professor"}, ' \
                                '"students": [{"id": 1, "name": "student"}]}'
@@ -48,5 +48,5 @@ class TestEncoder:
         s2_anon = Student(2, '')
         one = [s1_anon, s2_anon]
         two = [s2_anon, s1_anon]
-        actual = m2.load_all(Student).from_('[{"id": 1}, {"id": 2}]')
+        actual = serious.load_all(Student).from_('[{"id": 1}, {"id": 2}]')
         assert actual == one or actual == two

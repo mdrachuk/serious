@@ -1,6 +1,6 @@
 from collections import deque
 
-from m2 import load, asjson
+from serious import load, asjson
 from tests.entities import (DataClassIntImmutableDefault,
                             DataClassMutableDefaultDict,
                             DataClassMutableDefaultList, DataClassWithDeque,

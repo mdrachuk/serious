@@ -1,6 +1,6 @@
 import json
 
-from m2 import load, asjson
+from serious import load, asjson
 from tests.entities import DataClassWithDataClass, DataClassWithList, DataClassX, DataClassXs
 
 

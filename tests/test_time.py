@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
-import m2
+import serious
 
 
 @dataclass
@@ -12,7 +12,7 @@ class DataClassWithDatetime:
 @dataclass
 class DataClassWithIsoDatetime:
     created_at: datetime = field(
-        metadata={'m2': {
+        metadata={'serious': {
             'encoder': datetime.isoformat,
             'decoder': datetime.fromisoformat,
         }})
@@ -31,13 +31,13 @@ class TestTime:
     dc_iso = DataClassWithIsoDatetime(datetime.fromisoformat(iso))
 
     def test_datetime_encode(self):
-        assert m2.asjson(self.dc_ts) == self.dc_ts_json
+        assert serious.asjson(self.dc_ts) == self.dc_ts_json
 
     def test_datetime_decode(self):
-        assert m2.load(DataClassWithDatetime).from_(self.dc_ts_json) == self.dc_ts
+        assert serious.load(DataClassWithDatetime).from_(self.dc_ts_json) == self.dc_ts
 
     def test_datetime_override_encode(self):
-        assert m2.asjson(self.dc_iso) == self.dc_iso_json
+        assert serious.asjson(self.dc_iso) == self.dc_iso_json
 
     def test_datetime_override_decode(self):
-        assert m2.load(DataClassWithIsoDatetime).from_(self.dc_iso_json) == self.dc_iso
+        assert serious.load(DataClassWithIsoDatetime).from_(self.dc_iso_json) == self.dc_iso

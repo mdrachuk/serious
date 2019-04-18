@@ -4,7 +4,7 @@ with open('README.md', 'r', encoding='utf8') as f:
     readme = f.read()
 
 setup(
-    name="m2",
+    name="serious",
     version="2019.1-dev",
     packages=find_packages(exclude=("tests*",)),
     author="mdrachuk",
@@ -12,7 +12,7 @@ setup(
     description="Easily serialize dataclasses to and from JSON",
     long_description=readme,
     long_description_content_type='text/markdown',
-    url="https://github.com/mdrachuk/m2",
+    url="https://github.com/mdrachuk/serious",
     license="Unlicense",
     keywords="dataclasses json marshalling",
     install_requires=[
