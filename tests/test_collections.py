@@ -11,7 +11,7 @@ from tests.entities import (DataClassIntImmutableDefault,
                             DataClassWithSet, DataClassWithTuple,
                             DataClassWithUnionIntNone, MyCollection)
 
-infer_missing = Loading(infer_missing=True)
+allow_missing = Loading(allow_missing=True)
 
 
 class TestEncoder:
@@ -127,7 +127,7 @@ class TestDecoder:
         expected2 = DataClassWithOptionalStr(None)
         assert actual2 == expected2
 
-        actual3 = schema(DataClassWithOptionalStr, load=infer_missing).load('{}')
+        actual3 = schema(DataClassWithOptionalStr, load=allow_missing).load('{}')
         expected3 = DataClassWithOptionalStr()
         assert actual3 == expected3
 
@@ -147,14 +147,14 @@ class TestDecoder:
         actual1 = schema(DataClassMutableDefaultList).load('{"xs": []}')
         assert actual1 == expected
 
-        actual2 = schema(DataClassMutableDefaultList, load=infer_missing).load('{}')
+        actual2 = schema(DataClassMutableDefaultList, load=allow_missing).load('{}')
         assert actual2 == expected
 
     def test_mutable_default_dict(self):
         expected = DataClassMutableDefaultDict()
 
-        actual1 = schema(DataClassMutableDefaultDict).load('{"kvs": {}}')
+        actual1 = schema(DataClassMutableDefaultDict).load('{"xs": {}}')
         assert actual1 == expected
 
-        actual2 = schema(DataClassMutableDefaultDict, load=infer_missing).load('{}')
+        actual2 = schema(DataClassMutableDefaultDict, load=allow_missing).load('{}')
         assert actual2 == expected

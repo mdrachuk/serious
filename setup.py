@@ -5,7 +5,7 @@ with open('README.md', 'r', encoding='utf8') as f:
 
 setup(
     name="serious",
-    version="2019.1-dev-2",
+    version="2019.1.dev3",
     packages=find_packages(exclude=("tests*",)),
     author="mdrachuk",
     author_email="misha@drach.uk",

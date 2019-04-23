@@ -1,4 +1,4 @@
-from typing import Collection, Mapping, Optional, Type
+from typing import Collection, Mapping, Type
 
 
 def _get_constructor(type_: Type) -> Type:
@@ -27,22 +27,13 @@ def _isinstance_safe(o, t):
         return result
 
 
-def _issubclass_safe(cls, classinfo):
-    try:
-        result = issubclass(cls, classinfo)
-    except Exception:
-        return False
-    else:
-        return result
-
-
 def _is_optional(type_):
-    return _issubclass_safe(type_, Optional) or _hasargs(type_, type(None))
+    return _hasargs(type_, type(None))
 
 
 def _is_mapping(type_):
-    return _issubclass_safe(_get_type_origin(type_), Mapping)
+    return issubclass(_get_type_origin(type_), Mapping)
 
 
 def _is_collection(type_):
-    return _issubclass_safe(_get_type_origin(type_), Collection)
+    return issubclass(_get_type_origin(type_), Collection)

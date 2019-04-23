@@ -2,12 +2,11 @@ from uuid import UUID
 
 import pytest
 
-import serious
 from serious.json import schema, Loading
 from tests.entities import (DataClassJsonDecorator, DataClassWithDataClass, DataClassWithOptional,
                             DataClassWithOptionalNested, DataClassWithUuid)
 
-infer_missing = Loading(infer_missing=True)
+allow_missing = Loading(allow_missing=True)
 
 
 class TestTypes:
@@ -26,23 +25,23 @@ class TestTypes:
 
 class TestInferMissing:
     def test_infer_missing(self):
-        actual = schema(DataClassWithOptional, load=infer_missing).load('{}')
+        actual = schema(DataClassWithOptional, load=allow_missing).load('{}')
         assert actual == DataClassWithOptional(None)
 
     def test_infer_missing_is_recursive(self):
-        actual = schema(DataClassWithOptionalNested, load=infer_missing).load('{"x": {}}')
+        actual = schema(DataClassWithOptionalNested, load=allow_missing).load('{"x": {}}')
         expected = DataClassWithOptionalNested(DataClassWithOptional(None))
         assert actual == expected
 
     def test_infer_missing_terminates_at_first_missing(self):
-        actual = schema(DataClassWithOptionalNested, load=infer_missing).load('{"x": null}')
+        actual = schema(DataClassWithOptionalNested, load=allow_missing).load('{"x": null}')
         assert actual == DataClassWithOptionalNested(None)
 
 
 class TestWarnings:
     def test_warns_when_nonoptional_field_is_missing_with_infer_missing(self):
         with pytest.warns(RuntimeWarning, match='Missing value'):
-            schema(DataClassWithDataClass, load=infer_missing).load('{"dc_with_list": {}}')
+            schema(DataClassWithDataClass, load=allow_missing).load('{"dc_with_list": {}}')
 
     def test_warns_when_required_field_is_none(self):
         with pytest.warns(RuntimeWarning, match='`NoneType` object'):

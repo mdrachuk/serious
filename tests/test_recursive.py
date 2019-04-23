@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import Optional
 
@@ -7,8 +9,8 @@ from serious.json import schema, Dumping
 @dataclass(frozen=True)
 class Tree:
     value: str
-    left: Optional['Tree']
-    right: Optional['Tree']
+    left: Optional[Tree]
+    right: Optional[Tree]
 
 
 family_tree_json = """

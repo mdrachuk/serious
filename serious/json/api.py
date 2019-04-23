@@ -1,9 +1,9 @@
 import collections
 import json
 from dataclasses import dataclass, field, is_dataclass
-from typing import Optional, Tuple, TypeVar, Type, Generic, List, MutableMapping, Collection
+from typing import Optional, Tuple, TypeVar, Type, Generic, List, MutableMapping, Collection, Any
 
-from serious.core import M2JsonEncoder, _decode_dataclass, _overriden_dict
+from serious.serialization import DataClassPlainDictSerializer
 from serious.json.errors import UnexpectedJson
 
 T = TypeVar('T')
@@ -11,9 +11,7 @@ T = TypeVar('T')
 
 @dataclass(frozen=True)
 class Dumping:
-    encoder: Type[json.JSONEncoder] = M2JsonEncoder
     indent: Optional[int] = None
-    separators: Optional[Tuple[str, str]] = None
     encoder_options: dict = field(default_factory=dict)
 
     @classmethod
@@ -23,7 +21,8 @@ class Dumping:
 
 @dataclass(frozen=True)
 class Loading:
-    infer_missing: bool = False
+    allow_missing: bool = False
+    allow_unexpected: bool = False
     decoder_options: dict = field(default_factory=dict)
 
     @classmethod
@@ -45,18 +44,28 @@ class JsonSchema(Generic[T]):
         self._cls = cls
         self._dump = dump
         self._load = load
+        self._serializer = DataClassPlainDictSerializer(cls, self._load.allow_missing, self._load.allow_unexpected)
 
     def dump(self, o: T) -> str:
         _check_isinstance(o, self._cls)
-        return self._dump_any(_overriden_dict(o))
+        return self._dump_any(self._serializer.dump(o))
 
     def dump_all(self, items: Collection[T]) -> str:
-        dict_items = [_check_isinstance(_overriden_dict(o), self._cls) for o in items]
+        dict_items = [self._serializer.dump(_check_isinstance(o, self._cls)) for o in items]
         return self._dump_any(dict_items)
+
+    def load(self, json_: str) -> T:
+        data: MutableMapping = json.loads(json_, **self._load.decoder_options)
+        self._check_that_loading_an_object(data)
+        return self._from_dict(data)
+
+    def load_all(self, json_: str) -> List[T]:
+        data: Collection = json.loads(json_, **self._load.decoder_options)
+        self._check_that_loading_a_list(data)
+        return [self._from_dict(each) for each in data]
 
     def _dump_any(self, dict_items):
         return json.dumps(dict_items,
-                          cls=self._dump.encoder,
                           skipkeys=False,
                           ensure_ascii=False,
                           check_circular=True,
@@ -67,28 +76,24 @@ class JsonSchema(Generic[T]):
                           sort_keys=False,
                           **self._dump.encoder_options)
 
-    def load(self, json_: str) -> T:
-        data: MutableMapping = json.loads(json_, **self._load.decoder_options)
+    def _check_that_loading_an_object(self, data):
         if not isinstance(data, collections.Mapping):
             if isinstance(data, collections.Collection):
                 raise UnexpectedJson(f'Expecting a single object in JSON, got a collection instead. '
                                      f'Use #load_all(cls) instead of #load(cls) '
                                      f'to decode an array of {self._cls} dataclasses.')
             raise UnexpectedJson(f'Expecting a single {self._cls} object encoded in JSON.')
-        return self._from_dict(data)
 
-    def load_all(self, json_: str) -> List[T]:
-        data: Collection = json.loads(json_, **self._load.decoder_options)
+    def _check_that_loading_a_list(self, data: Any):
         if not isinstance(data, collections.Collection):
             raise UnexpectedJson(f'Expecting an array of {self._cls} objects encoded in JSON.')
         if isinstance(data, collections.Mapping):
             raise UnexpectedJson(f'Expecting an array of objects encoded in JSON, got a mapping instead.'
                                  f'Use #load(cls) instead of #load_all(cls) '
                                  f'to decode a single {self._cls} dataclasses.')
-        return [self._from_dict(each) for each in data]
 
     def _from_dict(self, data: MutableMapping):
-        return _decode_dataclass(self._cls, data, self._load.infer_missing)
+        return self._serializer.load(data)
 
 
 def schema(cls: Type[T],

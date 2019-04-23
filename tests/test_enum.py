@@ -75,8 +75,8 @@ class TestEncoder:
 
     def test_data_with_enum_default_value(self):
         d2_to_json = enum_schema.dump(d2_using_default_value)
-        assert d2_to_json == d2_json, f"A default value was not included in the JSON encode. " \
-            f"Expected: {d2_json}, Actual: {d2_to_json}"
+        assert d2_to_json == d2_json, (f"A default value was not included in the JSON encode."
+                                       f"Expected: {d2_json}, Actual: {d2_to_json}")
 
     def test_collection_with_enum(self):
         assert enum_c_schema.dump(container) == container_json
@@ -105,8 +105,8 @@ class TestDecoder:
         d2_from_json = enum_schema.load(d2_json)
         assert d2_using_default_value == d2_from_json
         json_from_d2 = enum_schema.dump(d2_from_json)
-        assert json_from_d2 == d2_json, f"A default value was not included in the JSON encode. " \
-            f"Expected: {d2_json}, Actual: {json_from_d2}"
+        assert json_from_d2 == d2_json, (f"A default value was not included in the JSON encode. "
+                                         f"Expected: {d2_json}, Actual: {json_from_d2}")
 
     def test_collection_with_enum(self):
         container_from_json = enum_c_schema.load(container_json)
