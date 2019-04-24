@@ -1,29 +1,181 @@
+from __future__ import annotations
+
+import abc
 from dataclasses import (fields, is_dataclass, dataclass, Field, MISSING, replace)
 from datetime import datetime, timezone
 from enum import Enum
-from typing import (Mapping, Union, Type, Any, Dict, Iterator, NamedTuple, Callable,
-                    get_type_hints, Generic, TypeVar, List, _GenericAlias, Collection)
+from typing import (Mapping, Type, Any, Dict, Iterator, Callable,  # type: ignore # _GenericAlias exists!
+                    get_type_hints, Generic, TypeVar, _GenericAlias, List)
 from uuid import UUID
 
-from serious.utils import (_is_collection, _is_mapping, _is_optional)
+from serious.errors import LoadError, DumpError, UnexpectedItem, MissingField
+from serious.utils import (_is_collection, _is_mapping, _is_optional, DataClass, Primitive)
+
+local_tz = datetime.now(timezone.utc).astimezone().tzinfo
 
 serious = 'serious'
 
-DataClass = Any
-JSON = Union[Mapping, List, str, int, float, bool, None]
+DumpF = Callable[[Any], Primitive]
+LoadF = Callable[[Primitive], Any]
 
 
-class FieldSerializer(NamedTuple):
-    dump: Callable[[Any], JSON]
-    load: Callable[[JSON], Any]
+class _SerializationContext:
+    def __init__(self,
+                 cls: Type[DataClass],
+                 field_serializers: Dict[str, FieldSerializer],
+                 _root: _SerializationContext = None):
+        self._cls = cls
+        self._field_serializers = field_serializers
+        self._stack: List[str] = list()
+        self._root: _SerializationContext = _root or self
+
+    def enter(self, name: str):
+        self._stack.append(name)
+
+    def exit(self):
+        self._stack.pop()
+
+    @property
+    def is_root(self) -> bool:
+        return self._root is self
 
 
-noop_serializer = FieldSerializer(load=lambda o: o, dump=lambda o: o)
-uuid_serializer = FieldSerializer(load=UUID, dump=lambda o: str(o))
-datetime_timestamp_serializer = FieldSerializer(
-    load=lambda o: datetime.fromtimestamp(o, datetime.now(timezone.utc).astimezone().tzinfo),
-    dump=lambda o: o.timestamp()
-)
+class FieldSerializer(abc.ABC):
+    def __init__(self, attr: _Attr):
+        self._attr = attr
+
+    @property
+    def attr(self):
+        return self._attr
+
+    @abc.abstractmethod
+    def dump(self, value: Any, ctx: _DumpContext) -> Primitive:
+        pass
+
+    @abc.abstractmethod
+    def load(self, value: Primitive, ctx: _LoadContext) -> Any:
+        pass
+
+
+def with_stack(serializer: FieldSerializer):
+    def _wrap(f):
+        def __wrap(value, ctx: _SerializationContext):
+            ctx.enter(f'.{serializer.attr.name}')
+            result = f(value, ctx)
+            ctx.exit()
+            return result
+
+        return __wrap
+
+    setattr(serializer, 'dump', _wrap(serializer.dump))
+    setattr(serializer, 'load', _wrap(serializer.load))
+    return serializer
+
+
+class DirectFieldSerializer(FieldSerializer):
+    def __init__(self, attr: _Attr, dump: DumpF, load: LoadF):
+        super().__init__(attr)
+        self._dump = dump
+        self._load = load
+
+    def dump(self, value: Any, ctx: _DumpContext) -> Primitive:
+        return self._dump(value)
+
+    def load(self, value: Primitive, ctx: _LoadContext) -> Any:
+        return self._load(value)
+
+
+class CollectionFieldSerializer(FieldSerializer):
+    def __init__(self, attr: _Attr, item_serializer: FieldSerializer):
+        super().__init__(attr)
+        self._dump_item = item_serializer.dump
+        self._load_item = item_serializer.load
+
+    def dump(self, value: Any, ctx: _DumpContext) -> Primitive:
+        return [self.dump_item(i, item, ctx) for i, item in enumerate(value)]
+
+    def load(self, value: Primitive, ctx: _LoadContext) -> Any:
+        items = [self.load_item(i, item, ctx) for i, item in enumerate(value)]  # type: ignore # value is a collection
+        return self._attr.type.__origin__(items)
+
+    def dump_item(self, i: int, value: Any, ctx: _DumpContext):
+        ctx.enter(f'[{i}]')
+        result = self._dump_item(value, ctx)
+        ctx.exit()
+        return result
+
+    def load_item(self, i: int, value: Primitive, ctx: _LoadContext):
+        ctx.enter(f'[{i}]')
+        result = self._load_item(value, ctx)
+        ctx.exit()
+        return result
+
+
+class DataclassFieldSerializer(FieldSerializer):
+    def __init__(self, attr: _Attr, serializer: PrimitiveSerializer):
+        super().__init__(attr)
+        self._serializer = serializer
+
+    def dump(self, value: Any, ctx: _DumpContext) -> Primitive:
+        return self._serializer.dump(value, ctx)
+
+    def load(self, value: Primitive, ctx: _LoadContext) -> Any:
+        return self._serializer.load(value, ctx)  # type: ignore # type: ignore # value always a mapping
+
+
+class DictFieldSerializer(FieldSerializer):
+    def __init__(self, attr: _Attr, key_serializer: FieldSerializer, value_serializer: FieldSerializer):
+        super().__init__(attr)
+        self._dump_key = key_serializer.dump
+        self._load_key = key_serializer.load
+        self._dump_value = value_serializer.dump
+        self._load_value = value_serializer.load
+
+    def dump(self, d: Any, ctx: _DumpContext) -> Primitive:
+        return {self.dump_key(key, ctx): self.dump_value(key, value, ctx) for key, value in d.items()}
+
+    def load(self, data: Primitive, ctx: _LoadContext) -> Any:
+        items = {
+            self.load_key(key, ctx): self.load_value(key, value, ctx)
+            for key, value in data.items()  # type: ignore # data is always a dict
+        }
+        return self.attr.type.__origin__(items)
+
+    def dump_value(self, key: str, value: Any, ctx: _DumpContext) -> Primitive:
+        ctx.enter(f'[{key}]')
+        result = self._dump_value(value, ctx)
+        ctx.exit()
+        return result
+
+    def load_value(self, key: str, value: Primitive, ctx: _LoadContext) -> Any:
+        ctx.enter(f'[{key}]')
+        result = self._load_value(value, ctx)
+        ctx.exit()
+        return result
+
+    def dump_key(self, key: Any, ctx: _DumpContext) -> str:
+        ctx.enter(f'${key}')
+        result = str(self._dump_key(key, ctx))
+        ctx.exit()
+        return result
+
+    def load_key(self, key: str, ctx: _LoadContext) -> Any:
+        ctx.enter(f'${key}')
+        result = self._load_key(key, ctx)
+        ctx.exit()
+        return result
+
+
+class OptionalFieldSerializer(FieldSerializer):
+    def __init__(self, attr: _Attr, serializer: FieldSerializer):
+        super().__init__(attr)
+        self._serializer = serializer
+
+    def dump(self, value: Any, ctx: _DumpContext) -> Primitive:
+        return None if value is None else self._serializer.dump(value, ctx)
+
+    def load(self, value: Primitive, ctx: _LoadContext) -> Any:
+        return None if value is None else self._serializer.load(value, ctx)
 
 
 @dataclass(frozen=True)
@@ -49,7 +201,9 @@ def _attrs(cls: Type[DataClass]) -> Iterator[_Attr]:
 
 def _fields_missing_from(data: Mapping, cls: Type[DataClass]) -> Iterator[Field]:
     def _is_missing(field: Field) -> bool:
-        return field.name not in data and field.default is MISSING and field.default_factory is MISSING
+        return field.name not in data \
+               and field.default is MISSING \
+               and field.default_factory is MISSING  # type: ignore # default factory is an unbound function
 
     return filter(_is_missing, fields(cls))
 
@@ -57,20 +211,94 @@ def _fields_missing_from(data: Mapping, cls: Type[DataClass]) -> Iterator[Field]
 T = TypeVar('T')
 
 
-class DataClassPlainDictSerializer(Generic[T]):
-    def __init__(self, cls: Type[T], allow_missing, allow_unexpected, _registry=None):
+class PrimitiveSerializer(Generic[T]):
+    def __init__(self,
+                 cls: Type[T],
+                 allow_missing: bool,
+                 allow_unexpected: bool,
+                 _registry: Dict[Type[DataClass], PrimitiveSerializer] = None):
         self._cls = cls
         self._allow_missing = allow_missing
         self._allow_unexpected = allow_unexpected
         self._serializer_registry = {cls: self} if _registry is None else _registry
-        self._field_serializers = self._field_serializers(cls)
+        self._field_serializers = self._build_field_serializers(cls)
 
-    def _child_serializer(self, cls: Type[DataClass]):
+    def _child_serializer(self, cls: Type[DataClass]) -> PrimitiveSerializer:
         if cls in self._serializer_registry:
             return self._serializer_registry[cls]
-        new_serializer = DataClassPlainDictSerializer(cls, self._allow_missing, self._allow_unexpected)
+        new_serializer = PrimitiveSerializer(cls, self._allow_missing, self._allow_unexpected)
         self._serializer_registry[cls] = new_serializer
         return new_serializer
+
+    def load(self, data: Mapping, ctx: _LoadContext = None) -> T:
+        load = _LoadContext(
+            self._cls, self._field_serializers, ctx,
+            allow_missing=self._allow_missing,
+            allow_unexpected=self._allow_unexpected
+        )
+        return load.load(data)
+
+    def dump(self, o: T, ctx: _DumpContext = None) -> Dict[str, Any]:
+        dump = _DumpContext(self._cls, self._field_serializers, ctx)
+        return dump.dump(o)
+
+    def _build_field_serializers(self, cls: Type[DataClass]) -> Dict[str, FieldSerializer]:
+        return {attr.name: self._new_field_serializer(attr) for attr in _attrs(cls)}
+
+    def _new_field_serializer(self, attr, track=True) -> FieldSerializer:
+        serializer = self._untracked_field_serializer(attr)
+        if track:
+            serializer = with_stack(serializer)
+        return serializer
+
+    def _untracked_field_serializer(self, attr) -> FieldSerializer:
+        if attr.contains_serious_metadata:
+            return DirectFieldSerializer(attr, load=attr.serious_metadata['load'], dump=attr.serious_metadata['dump'])
+        if isinstance(attr.type, _GenericAlias):
+            if _is_optional(attr.type):
+                present_serializer = self._new_field_serializer(replace(attr, type=attr.type.__args__[0]), track=False)
+                return OptionalFieldSerializer(attr, present_serializer)
+            elif _is_collection(attr.type):
+                if _is_mapping(attr.type):
+                    key_serializer = self._new_field_serializer(replace(attr, type=attr.type.__args__[0]), track=False)
+                    val_serializer = self._new_field_serializer(replace(attr, type=attr.type.__args__[1]), track=False)
+                    return DictFieldSerializer(attr, key_serializer, val_serializer)
+                else:  # is list/set/tuple/etc
+                    item_serializer = self._new_field_serializer(replace(attr, type=attr.type.__args__[0]), track=False)
+                    return CollectionFieldSerializer(attr, item_serializer)
+        elif issubclass(attr.type, (str, int, float, bool)):
+            return DirectFieldSerializer(attr, load=attr.type, dump=attr.type)
+        elif is_dataclass(attr.type):
+            dataclass_serializer = self._child_serializer(attr.type)
+            return DataclassFieldSerializer(attr, dataclass_serializer)
+        elif issubclass(attr.type, datetime):
+            return DirectFieldSerializer(
+                attr,
+                load=lambda o: datetime.fromtimestamp(o, local_tz),
+                dump=lambda o: o.timestamp()
+            )
+        elif issubclass(attr.type, UUID):
+            return DirectFieldSerializer(attr, load=UUID, dump=lambda o: str(o))
+        elif issubclass(attr.type, Enum):
+            return DirectFieldSerializer(attr, load=attr.type, dump=lambda o: o.value)
+        raise Exception(f'{attr.type} is unsupported')
+
+
+class _LoadContext(_SerializationContext):
+    _root: _LoadContext
+
+    def __init__(
+            self,
+            cls: Type[DataClass],
+            field_serializers: Dict[str, FieldSerializer],
+            _root: _LoadContext = None,
+            *,
+            allow_missing: bool,
+            allow_unexpected: bool
+    ):
+        super().__init__(cls, field_serializers, _root)
+        self._allow_missing = allow_missing
+        self._allow_unexpected = allow_unexpected
 
     def load(self, data: Mapping) -> T:
         if not isinstance(data, Mapping):
@@ -83,61 +311,38 @@ class DataClassPlainDictSerializer(Generic[T]):
             _check_for_missing(self._cls, mut_data)
         if not self._allow_unexpected:
             _check_for_unexpected(self._cls, mut_data)
-        init_kwargs = {
-            key: serializer.load(mut_data[key])
-            for key, serializer in self._field_serializers.items()
-            if key in mut_data
-        }
+        try:
+            init_kwargs = {
+                key: serializer.load(mut_data[key], self._root)
+                for key, serializer in self._field_serializers.items()
+                if key in mut_data
+            }
+        except Exception as e:
+            if not self.is_root:
+                raise
+            raise LoadError(self._cls, self._stack, data) from e
         return self._cls(**init_kwargs)
 
+
+class _DumpContext(_SerializationContext):
+    _root: _DumpContext
+
     def dump(self, o: T) -> Dict[str, Any]:
-        return {key: serializer.dump(getattr(o, key)) for key, serializer in self._field_serializers.items()}
-
-    def _field_serializers(self, cls: Type[DataClass]) -> Dict[str, FieldSerializer]:
-        return {attr.name: self._field_serializer(attr) for attr in _attrs(cls)}
-
-    def _field_serializer(self, attr):
-        if attr.contains_serious_metadata:
-            return FieldSerializer(load=attr.serious_metadata['load'], dump=attr.serious_metadata['dump'])
-        if isinstance(attr.type, _GenericAlias):
-            if _is_optional(attr.type):
-                present_s = self._field_serializer(replace(attr, type=attr.type.__args__[0]))
-                return FieldSerializer(
-                    load=lambda x: None if x is None else present_s.load(x),
-                    dump=lambda x: None if x is None else present_s.dump(x)
-                )
-            elif _is_collection(attr.type):
-                if _is_mapping(attr.type):
-                    key_s = self._field_serializer(replace(attr, type=attr.type.__args__[0]))
-                    item_s = self._field_serializer(replace(attr, type=attr.type.__args__[1]))
-                    return FieldSerializer(
-                        load=lambda d: attr.type.__origin__(
-                            {key_s.load(key): item_s.load(value) for key, value in d.items()}),
-                        dump=lambda d: {key_s.dump(key): item_s.dump(value) for key, value in d.items()}
-                    )
-                else:  # is list/set/tuple/etc
-                    item_s = self._field_serializer(replace(attr, type=attr.type.__args__[0]))
-                    return FieldSerializer(
-                        load=lambda items: attr.type.__origin__([item_s.load(item) for item in items]),
-                        dump=lambda items: [item_s.dump(item) for item in items]
-                    )
-        elif issubclass(attr.type, (str, int, float, bool)):
-            return FieldSerializer(load=attr.type, dump=attr.type)
-        elif is_dataclass(attr.type):
-            dataclass_s = self._child_serializer(attr.type)
-            return FieldSerializer(load=dataclass_s.load, dump=dataclass_s.dump)
-        elif issubclass(attr.type, datetime):
-            return datetime_timestamp_serializer
-        elif issubclass(attr.type, UUID):
-            return uuid_serializer
-        elif issubclass(attr.type, Enum):
-            return FieldSerializer(load=attr.type, dump=lambda o: o.value)
-        raise Exception(f'{attr.type} is unsupported')
+        try:
+            result = {
+                key: serializer.dump(getattr(o, key), self._root)
+                for key, serializer in self._field_serializers.items()
+            }
+        except Exception as e:
+            if not self.is_root:
+                raise
+            raise DumpError(o, self._stack) from e
+        return result
 
 
 def _check_for_missing(cls: Type[DataClass], data: Mapping) -> None:
     missing_fields = _fields_missing_from(data, cls)
-    first_missing_field = next(missing_fields, MISSING)
+    first_missing_field: Any = next(missing_fields, MISSING)
     if first_missing_field is not MISSING:
         field_names = {first_missing_field.name} | {field.name for field in missing_fields}
         raise MissingField(field_names, cls)
@@ -149,27 +354,3 @@ def _check_for_unexpected(cls: Type[DataClass], data: Mapping) -> None:
     unexpected_fields = data_keys - field_names
     if any(unexpected_fields):
         raise UnexpectedItem(unexpected_fields, cls)
-
-
-class UnexpectedItem(Exception):
-    def __init__(self, fields: Collection[str], cls: Type[DataClass]):
-        if len(fields) == 1:
-            field = next(iter(fields))
-            message = f'Unexpected field "{field}" in loaded {_class_path(cls)}'
-        else:
-            message = f'Unexpected fields {fields} in loaded {_class_path(cls)}'
-        super().__init__(message)
-
-
-class MissingField(Exception):
-    def __init__(self, fields: Collection[str], cls: Type[DataClass]):
-        if len(fields) == 1:
-            field = next(iter(fields))
-            message = f'Missing field "{field}" in loaded {_class_path(cls)}'
-        else:
-            message = f'Missing fields {fields} in loaded {_class_path(cls)}'
-        super().__init__(message)
-
-
-def _class_path(cls):
-    return f'{cls.__module__}.{cls.__qualname__}'

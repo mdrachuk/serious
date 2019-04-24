@@ -1,4 +1,7 @@
-from typing import Collection, Mapping, Type
+from typing import Collection, Mapping, Type, Any, Union, List
+
+DataClass = Any
+Primitive = Union[Mapping, List, str, int, float, bool, None]
 
 
 def _get_constructor(type_: Type) -> Type:
@@ -37,3 +40,7 @@ def _is_mapping(type_):
 
 def _is_collection(type_):
     return issubclass(_get_type_origin(type_), Collection)
+
+
+def _class_path(cls):
+    return f'{cls.__module__}.{cls.__qualname__}'
