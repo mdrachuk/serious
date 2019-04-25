@@ -4,7 +4,7 @@ from dataclasses import dataclass, field, is_dataclass
 from typing import Optional, TypeVar, Type, Generic, List, MutableMapping, Collection, Any
 
 from serious.json.errors import UnexpectedJson
-from serious.serialization import PrimitiveSerializer
+from serious.serialization import SeriousSerializer
 
 T = TypeVar('T')
 
@@ -44,7 +44,7 @@ class JsonSchema(Generic[T]):
         self._cls = cls
         self._dump = dump
         self._load = load
-        self._serializer = PrimitiveSerializer(cls, self._load.allow_missing, self._load.allow_unexpected)
+        self._serializer = SeriousSerializer(cls, self._load.allow_missing, self._load.allow_unexpected)
 
     def dump(self, o: T) -> str:
         _check_isinstance(o, self._cls)

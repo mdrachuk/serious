@@ -1,7 +1,7 @@
 from dataclasses import dataclass, is_dataclass
 from typing import TypeVar, Type, Generic, List, Collection, Dict, Iterable, Any, Mapping
 
-from serious.serialization import PrimitiveSerializer
+from serious.serialization import SeriousSerializer
 
 T = TypeVar('T')
 
@@ -38,7 +38,7 @@ class DictSchema(Generic[T]):
         self._cls = cls
         self._dump = dump
         self._load = load
-        self._serializer = PrimitiveSerializer(cls, self._load.allow_missing, self._load.allow_unexpected)
+        self._serializer = SeriousSerializer(cls, self._load.allow_missing, self._load.allow_unexpected)
 
     def dump(self, o: T) -> Dict[str, Any]:
         _check_isinstance(o, self._cls)
