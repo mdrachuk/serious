@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import abc
+import copy
+from contextlib import contextmanager
 from dataclasses import (fields, is_dataclass, dataclass, Field, MISSING, replace)
 from datetime import datetime, timezone
 from enum import Enum
@@ -24,10 +26,10 @@ class _SerializationContext:
         self._stack: List[str] = list()
         self._root: _SerializationContext = _root or self
 
+    @contextmanager
     def enter(self, name: str):
         self._stack.append(name)
-
-    def exit(self):
+        yield
         self._stack.pop()
 
     @property
@@ -47,6 +49,13 @@ class FieldSerializer(abc.ABC):
     def __init__(self, attr: _Attr):
         self._attr = attr
 
+    def with_stack(self):
+        entry = f'.{self.attr.name}'
+        serializer = copy.copy(self)
+        setattr(serializer, 'dump', with_stack(self.dump, entry))
+        setattr(serializer, 'load', with_stack(self.load, entry))
+        return serializer
+
     @property
     def attr(self):
         return self._attr
@@ -60,19 +69,16 @@ class FieldSerializer(abc.ABC):
         pass
 
 
-def with_stack(serializer: FieldSerializer):
-    def _wrap(f):
-        def __wrap(value, ctx: _SerializationContext):
-            ctx.enter(f'.{serializer.attr.name}')
-            result = f(value, ctx)
-            ctx.exit()
-            return result
+def with_stack(f: Callable, entry: str = None, entry_factory: Callable = None):
+    if (not entry and not entry_factory) or (entry and entry_factory):
+        raise Exception('Only one of entry and entry_factory is expected')
 
-        return __wrap
+    def _wrap(*args):
+        ctx: _SerializationContext = args[-1]
+        with ctx.enter(entry or entry_factory()):
+            return f(*args)
 
-    setattr(serializer, 'dump', _wrap(serializer.dump))
-    setattr(serializer, 'load', _wrap(serializer.load))
-    return serializer
+    return _wrap
 
 
 class DirectFieldSerializer(FieldSerializer):
@@ -94,6 +100,15 @@ class CollectionFieldSerializer(FieldSerializer):
         self._dump_item = item_serializer.dump
         self._load_item = item_serializer.load
 
+    def with_stack(self):
+        serializer = super().with_stack()
+
+        item_entry = lambda i, *_: f'[{i}]'
+        setattr(serializer, 'dump_item', with_stack(self.dump_item, entry_factory=item_entry))
+        setattr(serializer, 'load_item', with_stack(self.load_item, entry_factory=item_entry))
+
+        return serializer
+
     def dump(self, value: Any, ctx: _SerializationContext) -> Primitive:
         return [self.dump_item(i, item, ctx) for i, item in enumerate(value)]
 
@@ -102,16 +117,10 @@ class CollectionFieldSerializer(FieldSerializer):
         return self._attr.type.__origin__(items)
 
     def dump_item(self, i: int, value: Any, ctx: _SerializationContext):
-        ctx.enter(f'[{i}]')
-        result = self._dump_item(value, ctx)
-        ctx.exit()
-        return result
+        return self._dump_item(value, ctx)
 
     def load_item(self, i: int, value: Primitive, ctx: _SerializationContext):
-        ctx.enter(f'[{i}]')
-        result = self._load_item(value, ctx)
-        ctx.exit()
-        return result
+        return self._load_item(value, ctx)
 
 
 class DataclassFieldSerializer(FieldSerializer):
@@ -134,6 +143,19 @@ class DictFieldSerializer(FieldSerializer):
         self._dump_value = value_serializer.dump
         self._load_value = value_serializer.load
 
+    def with_stack(self):
+        serializer = super().with_stack()
+
+        value_entry = lambda key, *_: f'[{key}]'
+        setattr(serializer, 'dump_value', with_stack(self.dump_value, entry_factory=value_entry))
+        setattr(serializer, 'load_value', with_stack(self.load_value, entry_factory=value_entry))
+
+        key_entry = lambda key, *_: f'${key}'
+        setattr(serializer, 'dump_key', with_stack(self.dump_key, entry_factory=key_entry))
+        setattr(serializer, 'load_key', with_stack(self.load_key, entry_factory=key_entry))
+
+        return serializer
+
     def dump(self, d: Any, ctx: _SerializationContext) -> Primitive:
         return {self.dump_key(key, ctx): self.dump_value(key, value, ctx) for key, value in d.items()}
 
@@ -145,28 +167,16 @@ class DictFieldSerializer(FieldSerializer):
         return self.attr.type.__origin__(items)
 
     def dump_value(self, key: str, value: Any, ctx: _SerializationContext) -> Primitive:
-        ctx.enter(f'[{key}]')
-        result = self._dump_value(value, ctx)
-        ctx.exit()
-        return result
+        return self._dump_value(value, ctx)
 
     def load_value(self, key: str, value: Primitive, ctx: _SerializationContext) -> Any:
-        ctx.enter(f'[{key}]')
-        result = self._load_value(value, ctx)
-        ctx.exit()
-        return result
+        return self._load_value(value, ctx)
 
     def dump_key(self, key: Any, ctx: _SerializationContext) -> str:
-        ctx.enter(f'${key}')
-        result = str(self._dump_key(key, ctx))
-        ctx.exit()
-        return result
+        return str(self._dump_key(key, ctx))
 
     def load_key(self, key: str, ctx: _SerializationContext) -> Any:
-        ctx.enter(f'${key}')
-        result = self._load_key(key, ctx)
-        ctx.exit()
-        return result
+        return self._load_key(key, ctx)
 
 
 class OptionalFieldSerializer(FieldSerializer):
@@ -277,7 +287,7 @@ class PrimitiveSerializer(Generic[T]):
     def _new_field_serializer(self, attr, track=True) -> FieldSerializer:
         serializer = self._untracked_field_serializer(attr)
         if track:
-            serializer = with_stack(serializer)
+            serializer = serializer.with_stack()
         return serializer
 
     def _untracked_field_serializer(self, attr) -> FieldSerializer:
