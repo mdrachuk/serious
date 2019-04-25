@@ -4,13 +4,13 @@ from serious.utils import DataClass, _class_path
 
 
 class SerializationError(Exception):
-    def __init__(self, cls: Type[DataClass], serializer_stack: List[str]):
+    def __init__(self, cls: Type[DataClass], serializer_stack: Collection[str]):
         self._cls = cls
         self._path = self.__parse_stack(serializer_stack)
         super().__init__(self._message())
 
     @staticmethod
-    def __parse_stack(serializer_stack: List[str]) -> str:
+    def __parse_stack(serializer_stack: Collection[str]) -> str:
         if len(serializer_stack) == 0:
             return ''
         return ''.join(serializer_stack)[1:]
@@ -20,7 +20,7 @@ class SerializationError(Exception):
 
 
 class LoadError(SerializationError):
-    def __init__(self, cls: DataClass, serializer_stack: List[str], data: Mapping):
+    def __init__(self, cls: DataClass, serializer_stack: Collection[str], data: Mapping):
         self._data = data
         super().__init__(cls, serializer_stack)
 
@@ -29,7 +29,7 @@ class LoadError(SerializationError):
 
 
 class DumpError(SerializationError):
-    def __init__(self, obj: DataClass, serializer_stack: List[str]):
+    def __init__(self, obj: DataClass, serializer_stack: Collection[str]):
         self._object = obj
         super().__init__(type(obj), serializer_stack)
 
