@@ -46,14 +46,14 @@ class _SerializationContext:
 
 
 class FieldSerializer(abc.ABC):
-    def __init__(self, attr: _Attr):
+    def __init__(self, attr: Attr):
         self._attr = attr
 
     def with_stack(self):
         entry = f'.{self.attr.name}'
         serializer = copy.copy(self)
-        setattr(serializer, 'dump', with_stack(self.dump, entry))
         setattr(serializer, 'load', with_stack(self.load, entry))
+        setattr(serializer, 'dump', with_stack(self.dump, entry))
         return serializer
 
     @property
@@ -82,61 +82,61 @@ def with_stack(f: Callable, entry: str = None, entry_factory: Callable = None):
 
 
 class DirectFieldSerializer(FieldSerializer):
-    def __init__(self, attr: _Attr, dump: DumpF, load: LoadF):
+    def __init__(self, attr: Attr, load: LoadF, dump: DumpF):
         super().__init__(attr)
-        self._dump = dump
         self._load = load
-
-    def dump(self, value: Any, ctx: _SerializationContext) -> Primitive:
-        return self._dump(value)
+        self._dump = dump
 
     def load(self, value: Primitive, ctx: _SerializationContext) -> Any:
         return self._load(value)
 
+    def dump(self, value: Any, ctx: _SerializationContext) -> Primitive:
+        return self._dump(value)
+
 
 class CollectionFieldSerializer(FieldSerializer):
-    def __init__(self, attr: _Attr, item_serializer: FieldSerializer):
+    def __init__(self, attr: Attr, item_serializer: FieldSerializer):
         super().__init__(attr)
-        self._dump_item = item_serializer.dump
         self._load_item = item_serializer.load
+        self._dump_item = item_serializer.dump
 
     def with_stack(self):
         serializer = super().with_stack()
 
         item_entry = lambda i, *_: f'[{i}]'
-        setattr(serializer, 'dump_item', with_stack(self.dump_item, entry_factory=item_entry))
         setattr(serializer, 'load_item', with_stack(self.load_item, entry_factory=item_entry))
+        setattr(serializer, 'dump_item', with_stack(self.dump_item, entry_factory=item_entry))
 
         return serializer
-
-    def dump(self, value: Any, ctx: _SerializationContext) -> Primitive:
-        return [self.dump_item(i, item, ctx) for i, item in enumerate(value)]
 
     def load(self, value: Primitive, ctx: _SerializationContext) -> Any:
         items = [self.load_item(i, item, ctx) for i, item in enumerate(value)]  # type: ignore # value is a collection
         return self._attr.type.__origin__(items)
 
-    def dump_item(self, i: int, value: Any, ctx: _SerializationContext):
-        return self._dump_item(value, ctx)
+    def dump(self, value: Any, ctx: _SerializationContext) -> Primitive:
+        return [self.dump_item(i, item, ctx) for i, item in enumerate(value)]
 
     def load_item(self, i: int, value: Primitive, ctx: _SerializationContext):
         return self._load_item(value, ctx)
 
+    def dump_item(self, i: int, value: Any, ctx: _SerializationContext):
+        return self._dump_item(value, ctx)
+
 
 class DataclassFieldSerializer(FieldSerializer):
-    def __init__(self, attr: _Attr, serializer: PrimitiveSerializer):
+    def __init__(self, attr: Attr, serializer: PrimitiveSerializer):
         super().__init__(attr)
         self._serializer = serializer
-
-    def dump(self, value: Any, ctx: _SerializationContext) -> Primitive:
-        return self._serializer.dump(value, ctx)
 
     def load(self, value: Primitive, ctx: _SerializationContext) -> Any:
         return self._serializer.load(value, ctx)  # type: ignore # type: ignore # value always a mapping
 
+    def dump(self, value: Any, ctx: _SerializationContext) -> Primitive:
+        return self._serializer.dump(value, ctx)
+
 
 class DictFieldSerializer(FieldSerializer):
-    def __init__(self, attr: _Attr, key_serializer: FieldSerializer, value_serializer: FieldSerializer):
+    def __init__(self, attr: Attr, key_serializer: FieldSerializer, value_serializer: FieldSerializer):
         super().__init__(attr)
         self._dump_key = key_serializer.dump
         self._load_key = key_serializer.load
@@ -156,9 +156,6 @@ class DictFieldSerializer(FieldSerializer):
 
         return serializer
 
-    def dump(self, d: Any, ctx: _SerializationContext) -> Primitive:
-        return {self.dump_key(key, ctx): self.dump_value(key, value, ctx) for key, value in d.items()}
-
     def load(self, data: Primitive, ctx: _SerializationContext) -> Any:
         items = {
             self.load_key(key, ctx): self.load_value(key, value, ctx)
@@ -166,21 +163,24 @@ class DictFieldSerializer(FieldSerializer):
         }
         return self.attr.type.__origin__(items)
 
-    def dump_value(self, key: str, value: Any, ctx: _SerializationContext) -> Primitive:
-        return self._dump_value(value, ctx)
+    def dump(self, d: Any, ctx: _SerializationContext) -> Primitive:
+        return {self.dump_key(key, ctx): self.dump_value(key, value, ctx) for key, value in d.items()}
 
     def load_value(self, key: str, value: Primitive, ctx: _SerializationContext) -> Any:
         return self._load_value(value, ctx)
 
-    def dump_key(self, key: Any, ctx: _SerializationContext) -> str:
-        return str(self._dump_key(key, ctx))
+    def dump_value(self, key: str, value: Any, ctx: _SerializationContext) -> Primitive:
+        return self._dump_value(value, ctx)
 
     def load_key(self, key: str, ctx: _SerializationContext) -> Any:
         return self._load_key(key, ctx)
 
+    def dump_key(self, key: Any, ctx: _SerializationContext) -> str:
+        return str(self._dump_key(key, ctx))
+
 
 class OptionalFieldSerializer(FieldSerializer):
-    def __init__(self, attr: _Attr, serializer: FieldSerializer):
+    def __init__(self, attr: Attr, serializer: FieldSerializer):
         super().__init__(attr)
         self._serializer = serializer
 
@@ -192,7 +192,7 @@ class OptionalFieldSerializer(FieldSerializer):
 
 
 @dataclass(frozen=True)
-class _Attr:
+class Attr:
     of: Type[DataClass]
     name: str
     type: Type
@@ -207,9 +207,9 @@ class _Attr:
         return self.metadata[serious]
 
 
-def _attrs(cls: Type[DataClass]) -> Iterator[_Attr]:
+def _attrs(cls: Type[DataClass]) -> Iterator[Attr]:
     types = get_type_hints(cls)
-    return (_Attr(cls, f.name, types[f.name], f.metadata) for f in fields(cls))
+    return (Attr(cls, f.name, types[f.name], f.metadata) for f in fields(cls))
 
 
 def _fields_missing_from(data: Mapping, cls: Type[DataClass]) -> Iterator[Field]:
@@ -236,7 +236,7 @@ class PrimitiveSerializer(Generic[T]):
         self._serializer_registry = {cls: self} if _registry is None else _registry
         self._field_serializers = self._build_field_serializers(cls)
 
-    def _child_serializer(self, cls: Type[DataClass]) -> PrimitiveSerializer:
+    def child_serializer(self, cls: Type[DataClass]) -> PrimitiveSerializer:
         if cls in self._serializer_registry:
             return self._serializer_registry[cls]
         new_serializer = PrimitiveSerializer(cls, self._allow_missing, self._allow_unexpected)
@@ -282,45 +282,113 @@ class PrimitiveSerializer(Generic[T]):
         return result
 
     def _build_field_serializers(self, cls: Type[DataClass]) -> Dict[str, FieldSerializer]:
-        return {attr.name: self._new_field_serializer(attr) for attr in _attrs(cls)}
+        return {attr.name: self.field_serializer(attr) for attr in _attrs(cls)}
 
-    def _new_field_serializer(self, attr, track=True) -> FieldSerializer:
+    def field_serializer(self, attr, track=True) -> FieldSerializer:
         serializer = self._untracked_field_serializer(attr)
         if track:
             serializer = serializer.with_stack()
         return serializer
 
-    def _untracked_field_serializer(self, attr) -> FieldSerializer:
-        if attr.contains_serious_metadata:
-            return DirectFieldSerializer(attr, load=attr.serious_metadata['load'], dump=attr.serious_metadata['dump'])
-        if isinstance(attr.type, _GenericAlias):
-            if _is_optional(attr.type):
-                present_serializer = self._new_field_serializer(replace(attr, type=attr.type.__args__[0]), track=False)
-                return OptionalFieldSerializer(attr, present_serializer)
-            elif _is_collection(attr.type):
-                if _is_mapping(attr.type):
-                    key_serializer = self._new_field_serializer(replace(attr, type=attr.type.__args__[0]), track=False)
-                    val_serializer = self._new_field_serializer(replace(attr, type=attr.type.__args__[1]), track=False)
-                    return DictFieldSerializer(attr, key_serializer, val_serializer)
-                else:  # is list/set/tuple/etc
-                    item_serializer = self._new_field_serializer(replace(attr, type=attr.type.__args__[0]), track=False)
-                    return CollectionFieldSerializer(attr, item_serializer)
-        elif issubclass(attr.type, (str, int, float, bool)):
-            return DirectFieldSerializer(attr, load=attr.type, dump=attr.type)
-        elif is_dataclass(attr.type):
-            dataclass_serializer = self._child_serializer(attr.type)
-            return DataclassFieldSerializer(attr, dataclass_serializer)
-        elif issubclass(attr.type, datetime):
-            return DirectFieldSerializer(
-                attr,
-                load=lambda o: datetime.fromtimestamp(o, local_tz),
-                dump=lambda o: o.timestamp()
-            )
-        elif issubclass(attr.type, UUID):
-            return DirectFieldSerializer(attr, load=UUID, dump=lambda o: str(o))
-        elif issubclass(attr.type, Enum):
-            return DirectFieldSerializer(attr, load=attr.type, dump=lambda o: o.value)
-        raise Exception(f'{attr.type} is unsupported')
+    def _untracked_field_serializer(self, attr: Attr) -> FieldSerializer:
+        options = (option.factory(attr, self) for option in serializer_options if option.fits(attr))
+        serializer = next(options, None)
+        if serializer is None:
+            raise Exception(f'{attr.type} is unsupported')
+        return serializer
+
+
+@dataclass(frozen=True)
+class SerializerOption:
+    fits: Callable[[Attr], bool]
+    factory: Callable[[Attr, PrimitiveSerializer], FieldSerializer]
+
+
+metadata_serializer = SerializerOption(
+    fits=lambda attr: attr.contains_serious_metadata,
+    factory=lambda attr, sr: DirectFieldSerializer(attr,
+                                                   load=attr.serious_metadata['load'],
+                                                   dump=attr.serious_metadata['dump'])
+)
+
+
+def _optional_serializer_factory(attr: Attr, sr: PrimitiveSerializer) -> FieldSerializer:
+    present_serializer = sr.field_serializer(replace(attr, type=attr.type.__args__[0]), track=False)
+    return OptionalFieldSerializer(attr, present_serializer)
+
+
+optional_serializer = SerializerOption(
+    fits=lambda attr: isinstance(attr.type, _GenericAlias) and _is_optional(attr.type),
+    factory=_optional_serializer_factory
+)
+
+
+def _mapping_serializer_factory(attr: Attr, sr: PrimitiveSerializer) -> FieldSerializer:
+    key_serializer = sr.field_serializer(replace(attr, type=attr.type.__args__[0]), track=False)
+    val_serializer = sr.field_serializer(replace(attr, type=attr.type.__args__[1]), track=False)
+    return DictFieldSerializer(attr, key_serializer, val_serializer)
+
+
+mapping_serializer = SerializerOption(
+    fits=lambda attr: isinstance(attr.type, _GenericAlias) and _is_mapping(attr.type),
+    factory=_mapping_serializer_factory
+)
+
+
+def _collection_serializer_factory(attr: Attr, sr: PrimitiveSerializer) -> FieldSerializer:
+    item_serializer = sr.field_serializer(replace(attr, type=attr.type.__args__[0]), track=False)
+    return CollectionFieldSerializer(attr, item_serializer)
+
+
+collection_serializer = SerializerOption(
+    fits=lambda attr: isinstance(attr.type, _GenericAlias) and _is_collection(attr.type),
+    factory=_collection_serializer_factory
+)
+
+primitive_serializer = SerializerOption(
+    fits=lambda attr: issubclass(attr.type, (str, int, float, bool)),
+    factory=lambda attr, sr: DirectFieldSerializer(attr, load=attr.type, dump=attr.type)
+)
+
+
+def _dataclass_serializer_factory(attr: Attr, sr: PrimitiveSerializer) -> FieldSerializer:
+    dc_serializer = sr.child_serializer(attr.type)
+    return DataclassFieldSerializer(attr, dc_serializer)
+
+
+dataclass_serializer = SerializerOption(
+    fits=lambda attr: is_dataclass(attr.type),
+    factory=_dataclass_serializer_factory
+)
+
+datettime_timestamp_serializer = SerializerOption(
+    fits=lambda attr: issubclass(attr.type, datetime),
+    factory=lambda attr, sr: DirectFieldSerializer(attr,
+                                                   load=lambda o: datetime.fromtimestamp(o, local_tz),
+                                                   dump=lambda o: o.timestamp())
+)
+
+uuid_serializer = SerializerOption(
+    fits=lambda attr: issubclass(attr.type, UUID),
+    factory=lambda attr, sr: DirectFieldSerializer(attr, load=UUID, dump=lambda o: str(o))
+)
+
+enum_serializer = SerializerOption(
+    fits=lambda attr: issubclass(attr.type, Enum),
+    factory=lambda attr, sr: DirectFieldSerializer(attr, load=attr.type, dump=lambda o: o.value)
+)
+
+serializer_options = [
+    metadata_serializer,
+    optional_serializer,
+    mapping_serializer,
+    collection_serializer,
+    primitive_serializer,
+    dataclass_serializer,
+    datettime_timestamp_serializer,
+    uuid_serializer,
+    enum_serializer
+]
 
 
 def _check_for_missing(cls: Type[DataClass], data: Mapping) -> None:
