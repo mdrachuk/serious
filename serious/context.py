@@ -25,4 +25,4 @@ class SerializationContext:
 
     @property
     def stack(self) -> Tuple[str, ...]:
-        return tuple(self.stack)
+        return tuple(self._stack)
