@@ -10,7 +10,7 @@ from serious.field_serializers import (FieldSerializer, DirectFieldSerializer, O
                                        MetadataFieldSerializer)
 from serious.utils import _is_optional, _is_mapping, _is_collection
 
-if False:  # For referencing typings
+if False:  # To reference in typings
     from serious.serialization import SeriousSerializer
 
 local_tz = datetime.now(timezone.utc).astimezone().tzinfo

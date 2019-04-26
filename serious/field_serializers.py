@@ -6,7 +6,7 @@ from serious.attr import Attr
 from serious.context import SerializationContext
 from serious.utils import Primitive
 
-if False:  # For referencing typings
+if False:  # To reference in typings
     from serious.serialization import SeriousSerializer
 
 DumpF = Callable[[Any], Primitive]
