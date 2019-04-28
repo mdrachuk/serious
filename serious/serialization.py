@@ -6,8 +6,8 @@ from typing import Mapping, Type, Any, Dict, Iterator, Generic, TypeVar, List
 from serious.attr import Attr
 from serious.context import SerializationContext
 from serious.errors import LoadError, DumpError, UnexpectedItem, MissingField
-from serious.serializer_options import SerializerOption
 from serious.field_serializers import FieldSerializer
+from serious.serializer_options import SerializerOption
 from serious.utils import DataClass
 
 T = TypeVar('T')
@@ -35,7 +35,9 @@ class SeriousSerializer(Generic[T]):
         return new_serializer
 
     def load(self, data: Mapping, _ctx: SerializationContext = None) -> T:
-        _ctx = _ctx or SerializationContext()
+        root = _ctx is None
+        if root:
+            _ctx = SerializationContext()
         if not isinstance(data, Mapping):
             raise Exception(f'Invalid data for {self._cls}')
         mut_data = dict(data)
@@ -48,29 +50,29 @@ class SeriousSerializer(Generic[T]):
             _check_for_unexpected(self._cls, mut_data)
         try:
             init_kwargs = {
-                key: serializer.load(mut_data[key], _ctx.root)
+                key: serializer.load(mut_data[key], _ctx)
                 for key, serializer in self._field_serializers.items()
                 if key in mut_data
             }
         except Exception as e:
-            if not _ctx.is_root:
-                raise
-            raise LoadError(self._cls, _ctx.stack, data) from e
-        result = self._cls(**init_kwargs)  # type: ignore # not an object
-        return result
+            if root:
+                raise LoadError(self._cls, _ctx.stack, data) from e
+            raise
+        return self._cls(**init_kwargs)  # type: ignore # not an object
 
-    def dump(self, o: T, ctx: SerializationContext = None) -> Dict[str, Any]:
-        ctx = ctx or SerializationContext()
+    def dump(self, o: T, _ctx: SerializationContext = None) -> Dict[str, Any]:
+        root = _ctx is None
+        if root:
+            _ctx = SerializationContext()
         try:
-            result = {
-                key: serializer.dump(getattr(o, key), ctx.root)
+            return {
+                key: serializer.dump(getattr(o, key), _ctx)
                 for key, serializer in self._field_serializers.items()
             }
         except Exception as e:
-            if not ctx.is_root:
-                raise
-            raise DumpError(o, ctx.stack) from e
-        return result
+            if root:
+                raise DumpError(o, _ctx.stack) from e
+            raise
 
     def _build_field_serializers(self, cls: Type[DataClass]) -> Dict[str, FieldSerializer]:
         return {attr.name: self.field_serializer(attr) for attr in Attr.list(cls)}
