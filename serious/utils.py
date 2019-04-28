@@ -1,11 +1,7 @@
-from typing import Collection, Mapping, Type, Any, Union, List
+from typing import Collection, Mapping, Any, Union, List
 
 DataClass = Any
 Primitive = Union[Mapping, List, str, int, float, bool, None]
-
-
-def _get_constructor(type_: Type) -> Type:
-    return type_.__origin__
 
 
 def _get_type_origin(type_):
@@ -13,21 +9,7 @@ def _get_type_origin(type_):
 
 
 def _hasargs(type_, *args):
-    try:
-        res = all(arg in type_.__args__ for arg in args)
-    except AttributeError:
-        return False
-    else:
-        return res
-
-
-def _isinstance_safe(o, t):
-    try:
-        result = isinstance(o, t)
-    except Exception:
-        return False
-    else:
-        return result
+    return all(arg in type_.__args__ for arg in args)
 
 
 def _is_optional(type_):
