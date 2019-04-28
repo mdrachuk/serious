@@ -2,6 +2,7 @@ from uuid import UUID
 
 import pytest
 
+from serious.errors import LoadError
 from serious.json import schema, Loading
 from tests.entities import (DataClassJsonDecorator, DataClassWithDataClass, DataClassWithOptional,
                             DataClassWithOptionalNested, DataClassWithUuid)
@@ -38,20 +39,12 @@ class TestInferMissing:
         assert actual == DataClassWithOptionalNested(None)
 
 
-class TestWarnings:
-    def test_warns_when_nonoptional_field_is_missing_with_infer_missing(self):
-        with pytest.warns(RuntimeWarning, match='Missing value'):
-            schema(DataClassWithDataClass, load=allow_missing).load('{"dc_with_list": {}}')
-
-    def test_warns_when_required_field_is_none(self):
-        with pytest.warns(RuntimeWarning, match='`NoneType` object'):
-            schema(DataClassWithDataClass).load('{"dc_with_list": null}')
-
-
 class TestErrors:
     def test_error_when_nonoptional_field_is_missing(self):
-        with pytest.raises(KeyError):
+        with pytest.raises(LoadError) as exc_info:
             schema(DataClassWithDataClass).load('{"dc_with_list": {}}')
+        assert 'dc_with_list' in exc_info.value.message
+        assert 'xs' in exc_info.value.message
 
 
 class TestDecorator:
