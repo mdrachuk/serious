@@ -94,7 +94,7 @@ def _check_for_missing(cls: Type[DataClass], data: Mapping) -> None:
     first_missing_field: Any = next(missing_fields, MISSING)
     if first_missing_field is not MISSING:
         field_names = {first_missing_field.name} | {field.name for field in missing_fields}
-        raise MissingField(field_names, cls)
+        raise MissingField(cls, data, field_names)
 
 
 def _check_for_unexpected(cls: Type[DataClass], data: Mapping) -> None:
@@ -102,7 +102,7 @@ def _check_for_unexpected(cls: Type[DataClass], data: Mapping) -> None:
     data_keys = set(data.keys())
     unexpected_fields = data_keys - field_names
     if any(unexpected_fields):
-        raise UnexpectedItem(unexpected_fields, cls)
+        raise UnexpectedItem(cls, data, unexpected_fields)
 
 
 def _fields_missing_from(data: Mapping, cls: Type[DataClass]) -> Iterator[Field]:

@@ -4,10 +4,11 @@ import pytest
 
 from serious.errors import LoadError
 from serious.json import schema, Loading
-from tests.entities import (DataClassJsonDecorator, DataClassWithDataClass, DataClassWithOptional,
+from tests.entities import (DataClassWithDataClass, DataClassWithOptional,
                             DataClassWithOptionalNested, DataClassWithUuid)
 
 allow_missing = Loading(allow_missing=True)
+allow_unexpected = Loading(allow_unexpected=True)
 
 
 class TestTypes:
@@ -24,32 +25,49 @@ class TestTypes:
         assert actual == DataClassWithUuid(UUID(self.uuid_s))
 
 
-class TestInferMissing:
-    def test_infer_missing(self):
+class TestAllowMissing:
+    def test_allow_missing(self):
         actual = schema(DataClassWithOptional, load=allow_missing).load('{}')
         assert actual == DataClassWithOptional(None)
 
-    def test_infer_missing_is_recursive(self):
+    def test_allow_unexpectetd_is_recursive(self):
         actual = schema(DataClassWithOptionalNested, load=allow_missing).load('{"x": {}}')
         expected = DataClassWithOptionalNested(DataClassWithOptional(None))
         assert actual == expected
 
-    def test_infer_missing_terminates_at_first_missing(self):
+    def test_allow_missing_terminates_at_first_missing(self):
         actual = schema(DataClassWithOptionalNested, load=allow_missing).load('{"x": null}')
         assert actual == DataClassWithOptionalNested(None)
 
+    def test_error_when_missing_required(self):
+        with pytest.raises(LoadError) as exc_info:
+            schema(DataClassWithDataClass, load=Loading(allow_missing=False)).load('{"dc_with_list": {}}')
+        assert 'dc_with_list' in exc_info.value.message
+        assert 'xs' in exc_info.value.message
 
-class TestErrors:
-    def test_error_when_nonoptional_field_is_missing(self):
+    def test_error_when_missing_required_by_default(self):
         with pytest.raises(LoadError) as exc_info:
             schema(DataClassWithDataClass).load('{"dc_with_list": {}}')
         assert 'dc_with_list' in exc_info.value.message
         assert 'xs' in exc_info.value.message
 
 
-class TestDecorator:
-    def test_decorator(self):
-        json_s = '{"x": "x"}'
-        s = schema(DataClassJsonDecorator)
-        o = s.load(json_s)
-        assert s.dump(o) == json_s
+class TestAllowUnexpected:
+    def test_allow_unexpected(self):
+        actual = schema(DataClassWithOptional, load=allow_unexpected).load('{"x": null, "y": true}')
+        assert actual == DataClassWithOptional(None)
+
+    def test_allow_unexpected_is_recursive(self):
+        actual = schema(DataClassWithOptionalNested, load=allow_unexpected).load('{"x": {"x": null, "y": "test"}}')
+        expected = DataClassWithOptionalNested(DataClassWithOptional(None))
+        assert actual == expected
+
+    def test_error_when_unexpected(self):
+        with pytest.raises(LoadError) as exc_info:
+            schema(DataClassWithOptional, load=Loading(allow_unexpected=False)).load('{"x": 1, "y": 1}')
+        assert '"y"' in exc_info.value.message
+
+    def test_error_when_unexpected_by_default(self):
+        with pytest.raises(LoadError) as exc_info:
+            schema(DataClassWithOptional).load('{"x": 1, "y": 1}')
+        assert '"y"' in exc_info.value.message

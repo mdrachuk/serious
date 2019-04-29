@@ -44,21 +44,29 @@ class DumpError(SerializationError):
         return f'Failed to dump "{self._path}" of {self._object}: {self.__cause__}'
 
 
-class UnexpectedItem(Exception):
-    def __init__(self, fields: Collection[str], cls: Type[DataClass]):
-        if len(fields) == 1:
-            field = next(iter(fields))
-            message = f'Unexpected field "{field}" in loaded {_class_path(cls)}'
+class UnexpectedItem(LoadError):
+    def __init__(self, cls: Type[DataClass], data, fields: Collection[str]):
+        super().__init__(cls, [], data)
+        self._fields = fields
+
+    @property
+    def message(self):
+        if len(self._fields) == 1:
+            field = next(iter(self._fields))
+            return f'Unexpected field "{field}" in loaded {_class_path(self._cls)}'
         else:
-            message = f'Unexpected fields {fields} in loaded {_class_path(cls)}'
-        super().__init__(message)
+            return f'Unexpected fields {self._fields} in loaded {_class_path(self._cls)}'
 
 
-class MissingField(Exception):
-    def __init__(self, fields: Collection[str], cls: Type[DataClass]):
-        if len(fields) == 1:
-            field = next(iter(fields))
-            message = f'Missing field "{field}" in loaded {_class_path(cls)}'
+class MissingField(LoadError):
+    def __init__(self, cls: Type[DataClass], data, fields: Collection[str]):
+        super().__init__(cls, [], data)
+        self._fields = fields
+
+    @property
+    def message(self):
+        if len(self._fields) == 1:
+            field = next(iter(self._fields))
+            return f'Missing field "{field}" in loaded {_class_path(self._cls)}'
         else:
-            message = f'Missing fields {fields} in loaded {_class_path(cls)}'
-        super().__init__(message)
+            return f'Missing fields {self._fields} in loaded {_class_path(self._cls)}'
