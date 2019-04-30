@@ -1,14 +1,5 @@
 from dataclasses import dataclass, field
-from typing import (Collection,
-                    Deque,
-                    Dict,
-                    FrozenSet,
-                    List,
-                    Optional,
-                    Set,
-                    Tuple,
-                    TypeVar,
-                    Union)
+from typing import Collection, Deque, Dict, FrozenSet, List, Optional, Set, Tuple, TypeVar, Union, NoReturn
 from uuid import UUID
 
 A = TypeVar('A')
@@ -108,8 +99,8 @@ class MyCollection(Collection[A]):
     def __init__(self, xs: Collection[A]) -> None:
         self.xs = xs
 
-    def __contains__(self, item):
-        return False
+    def __contains__(self, item) -> NoReturn:
+        return item in self.xs
 
     def __iter__(self):
         return iter(self.xs)
