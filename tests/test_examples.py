@@ -1,13 +1,13 @@
 from dataclasses import dataclass
 from typing import Set
 
-from serious.json import schema
+from serious.json import schema, Loading
 
 
 @dataclass(frozen=True)
 class Student:
     id: int = 0
-    name: str = ""
+    name: str = "student"
 
 
 @dataclass(frozen=True)
@@ -44,9 +44,9 @@ class TestEncoder:
                                          '"students": [{"id": 1, "name": "student"}]}'
 
     def test_students_missing(self):
-        s1_anon = Student(1, '')
-        s2_anon = Student(2, '')
+        s1_anon = Student(1, 'student')
+        s2_anon = Student(2, 'student')
         one = [s1_anon, s2_anon]
         two = [s2_anon, s1_anon]
-        actual = schema(Student).load_all('[{"id": 1}, {"id": 2}]')
+        actual = schema(Student, load=Loading(allow_missing=True)).load_all('[{"id": 1}, {"id": 2}]')
         assert actual == one or actual == two

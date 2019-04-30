@@ -1,4 +1,4 @@
-# `serious`
+#serious
 [![Build Status](https://dev.azure.com/misha-drachuk/serious/_apis/build/status/mdrachuk.serious?branchName=master)](https://dev.azure.com/misha-drachuk/serious/_build/latest?definitionId=1&branchName=master)
 
 This library provides a simple API for encoding and decoding [dataclasses](https://docs.python.org/3/library/dataclasses.html) to and from JSON.
@@ -65,20 +65,20 @@ corresponding field is missing from the JSON you're decoding.
 **Decode JSON with missing field**
 
 ```python
+from dataclasses import dataclass
+from serious.json import schema, Loading
+ 
 @dataclass
 class Student:
     id: int
     name: str = 'student'
 
-serious.json.schema(Student).load('{"id": 1}')  # Student(id=1, name='student')
+schema(Student, load=Loading(allow_missing=True)).load('{"id": 1}')  # Student(id=1, name='student')
 ```
 
-Notice `from_json` filled the field `name` with the specified default 'student'
-when it was missing from the JSON.
+Notice that `name` got default value `student` when it was missing from the JSON.
 
-Sometimes you have fields that are typed as `Optional`, but you don't 
-necessarily want to assign a default. In that case, you can use the 
-`infer_missing` kwarg to make `from_json` infer the missing field value as `None`.
+If the default is missing 
 
 **Decode optional field without default**
 

@@ -90,7 +90,7 @@ class SeriousSerializer(Generic[T]):
 
 
 def _check_for_missing(cls: Type[DataClass], data: Mapping) -> None:
-    missing_fields = _fields_missing_from(data, cls)
+    missing_fields = filter(lambda f: f.name not in data, fields(cls))
     first_missing_field: Any = next(missing_fields, MISSING)
     if first_missing_field is not MISSING:
         field_names = {first_missing_field.name} | {field.name for field in missing_fields}

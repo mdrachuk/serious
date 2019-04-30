@@ -5,7 +5,7 @@ with open('README.md', 'r', encoding='utf8') as f:
 
 setup(
     name="serious",
-    version="2019.4.dev6",
+    version="2019.4.dev7",
     packages=find_packages(exclude=("tests*",)),
     author="mdrachuk",
     author_email="misha@drach.uk",
@@ -14,7 +14,7 @@ setup(
     long_description_content_type='text/markdown',
     url="https://github.com/mdrachuk/serious",
     license="Unlicense",
-    keywords="dataclasses json marshalling",
+    keywords="dataclasses json serialization",
     install_requires=[
         "dataclasses;python_version=='3.7'",
     ],
