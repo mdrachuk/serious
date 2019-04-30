@@ -31,4 +31,13 @@ steps:
 
   - script: |
       mypy serious
-    displayName: 'mypy'
+    displayName: 'Check typings with mypy'
+
+  - task: DownloadSecureFile@1
+    inputs:
+      secureFile: .pypirc
+
+  - script: |
+      python setup.py sdist bdist_wheel
+      twine upload dist/* --config-file ./.pypirc
+    displayName: 'Publish to PyPI'

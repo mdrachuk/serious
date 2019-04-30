@@ -24,10 +24,10 @@ behavior (for example, if you want to use ISO).
 are encoded as `str` (JSON string).
 
 
-**The [latest release](https://github.com/mdrachuk/serious/releases/latest) is compatible with Python 3.7.**
+**Compatible with Python 3.7.**
 
 ## Quickstart
-`pip install git+https://github.com/mdrachuk/serious.git`
+`pip install serious`
 
 #### schema.load() and schema.dump()
 
@@ -87,7 +87,8 @@ necessarily want to assign a default. In that case, you can use the
 class Tutor:
     id: int
     student: Optional[Student]
-serious.load(Tutor).from_('{"id": 1}')  # Tutor(id=1, student=None)
+
+serious.json.schema(Tutor).load('{"id": 1}')  # Tutor(id=1, student=None)
 ```
 
 Personally I recommend you leverage dataclass defaults rather than using 
