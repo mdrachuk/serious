@@ -1,4 +1,4 @@
-#serious
+# serious
 [![Build Status](https://dev.azure.com/misha-drachuk/serious/_apis/build/status/mdrachuk.serious?branchName=master)](https://dev.azure.com/misha-drachuk/serious/_build/latest?definitionId=1&branchName=master)
 
 This library provides a simple API for encoding and decoding [dataclasses](https://docs.python.org/3/library/dataclasses.html) to and from JSON.
