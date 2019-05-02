@@ -1,6 +1,6 @@
 from collections import deque
 
-from serious.json import json_schema, Loading
+from serious.json import json_schema
 from tests.entities import (DataClassIntImmutableDefault,
                             DataClassMutableDefaultDict,
                             DataClassMutableDefaultList, DataClassWithDeque,
@@ -10,8 +10,6 @@ from tests.entities import (DataClassIntImmutableDefault,
                             DataClassWithOptional, DataClassWithOptionalStr,
                             DataClassWithSet, DataClassWithTuple,
                             DataClassWithUnionIntNone, MyCollection)
-
-allow_missing = Loading(allow_missing=True)
 
 
 class TestEncoder:
@@ -56,7 +54,8 @@ class TestEncoder:
         assert s.dump(DataClassWithUnionIntNone(None)) == '{"x": null}'
 
     def test_my_collection(self):
-        assert json_schema(DataClassWithMyCollection).dump(DataClassWithMyCollection(MyCollection([1]))) == '{"xs": [1]}'
+        assert json_schema(DataClassWithMyCollection).dump(
+            DataClassWithMyCollection(MyCollection([1]))) == '{"xs": [1]}'
 
     def test_immutable_default(self):
         assert json_schema(DataClassIntImmutableDefault).dump(DataClassIntImmutableDefault()) == '{"x": 0}'
@@ -127,7 +126,7 @@ class TestDecoder:
         expected2 = DataClassWithOptionalStr(None)
         assert actual2 == expected2
 
-        actual3 = json_schema(DataClassWithOptionalStr, load=allow_missing).load('{}')
+        actual3 = json_schema(DataClassWithOptionalStr, allow_missing=True).load('{}')
         expected3 = DataClassWithOptionalStr()
         assert actual3 == expected3
 
@@ -147,7 +146,7 @@ class TestDecoder:
         actual1 = json_schema(DataClassMutableDefaultList).load('{"xs": []}')
         assert actual1 == expected
 
-        actual2 = json_schema(DataClassMutableDefaultList, load=allow_missing).load('{}')
+        actual2 = json_schema(DataClassMutableDefaultList, allow_missing=True).load('{}')
         assert actual2 == expected
 
     def test_mutable_default_dict(self):
@@ -156,5 +155,5 @@ class TestDecoder:
         actual1 = json_schema(DataClassMutableDefaultDict).load('{"xs": {}}')
         assert actual1 == expected
 
-        actual2 = json_schema(DataClassMutableDefaultDict, load=allow_missing).load('{}')
+        actual2 = json_schema(DataClassMutableDefaultDict, allow_missing=True).load('{}')
         assert actual2 == expected

@@ -2,13 +2,24 @@ from uuid import UUID
 
 import pytest
 
-from serious.dict import dict_schema, Loading
+from serious.dict import dict_schema
 from serious.errors import LoadError
 from tests.entities import (DataClassWithDataClass, DataClassWithOptional,
                             DataClassWithOptionalNested, DataClassWithUuid)
 
-allow_missing = Loading(allow_missing=True)
-allow_unexpected = Loading(allow_unexpected=True)
+
+class TestDefaults:
+    def test_dump(self):
+        pass
+
+    def test_load(self):
+        pass
+
+    def test_dump_many(self):
+        pass
+
+    def test_load_many(self):
+        pass
 
 
 class TestTypes:
@@ -28,16 +39,16 @@ class TestTypes:
 
 class TestAllowMissing:
     def test_allow_missing(self):
-        actual = dict_schema(DataClassWithOptional, load=allow_missing).load({})
+        actual = dict_schema(DataClassWithOptional, allow_missing=True).load({})
         assert actual == DataClassWithOptional(None)
 
     def test_allow_missing_is_recursive(self):
-        actual = dict_schema(DataClassWithOptionalNested, load=allow_missing).load({"x": {}})
+        actual = dict_schema(DataClassWithOptionalNested, allow_missing=True).load({"x": {}})
         expected = DataClassWithOptionalNested(DataClassWithOptional(None))
         assert actual == expected
 
     def test_allow_missing_terminates_at_first_missing(self):
-        actual = dict_schema(DataClassWithOptionalNested, load=allow_missing).load({"x": None})
+        actual = dict_schema(DataClassWithOptionalNested, allow_missing=True).load({"x": None})
         assert actual == DataClassWithOptionalNested(None)
 
     def test_error_when_missing_required(self):
@@ -49,17 +60,17 @@ class TestAllowMissing:
 
 class TestAllowUnexpected:
     def test_allow_unexpected(self):
-        actual = dict_schema(DataClassWithOptional, load=allow_unexpected).load({"x": None, "y": True})
+        actual = dict_schema(DataClassWithOptional, allow_unexpected=True).load({"x": None, "y": True})
         assert actual == DataClassWithOptional(None)
 
     def test_allow_unexpected_is_recursive(self):
-        actual = dict_schema(DataClassWithOptionalNested, load=allow_unexpected).load({"x": {"x": None, "y": "test"}})
+        actual = dict_schema(DataClassWithOptionalNested, allow_unexpected=True).load({"x": {"x": None, "y": "test"}})
         expected = DataClassWithOptionalNested(DataClassWithOptional(None))
         assert actual == expected
 
     def test_error_when_unexpected(self):
         with pytest.raises(LoadError) as exc_info:
-            dict_schema(DataClassWithOptional, load=Loading(allow_unexpected=False)).load({"x": 1, "y": 1})
+            dict_schema(DataClassWithOptional, allow_unexpected=False).load({"x": 1, "y": 1})
         assert '"y"' in exc_info.value.message
 
     def test_error_when_unexpected_by_default(self):

@@ -3,12 +3,9 @@ from uuid import UUID
 import pytest
 
 from serious.errors import LoadError
-from serious.json import json_schema, Loading
+from serious.json import json_schema
 from tests.entities import (DataClassWithDataClass, DataClassWithOptional,
                             DataClassWithOptionalNested, DataClassWithUuid)
-
-allow_missing = Loading(allow_missing=True)
-allow_unexpected = Loading(allow_unexpected=True)
 
 
 class TestTypes:
@@ -27,21 +24,21 @@ class TestTypes:
 
 class TestAllowMissing:
     def test_allow_missing(self):
-        actual = json_schema(DataClassWithOptional, load=allow_missing).load('{}')
+        actual = json_schema(DataClassWithOptional, allow_missing=True).load('{}')
         assert actual == DataClassWithOptional(None)
 
     def test_allow_unexpectetd_is_recursive(self):
-        actual = json_schema(DataClassWithOptionalNested, load=allow_missing).load('{"x": {}}')
+        actual = json_schema(DataClassWithOptionalNested, allow_missing=True).load('{"x": {}}')
         expected = DataClassWithOptionalNested(DataClassWithOptional(None))
         assert actual == expected
 
     def test_allow_missing_terminates_at_first_missing(self):
-        actual = json_schema(DataClassWithOptionalNested, load=allow_missing).load('{"x": null}')
+        actual = json_schema(DataClassWithOptionalNested, allow_missing=True).load('{"x": null}')
         assert actual == DataClassWithOptionalNested(None)
 
     def test_error_when_missing_required(self):
         with pytest.raises(LoadError) as exc_info:
-            json_schema(DataClassWithDataClass, load=Loading(allow_missing=False)).load('{"dc_with_list": {}}')
+            json_schema(DataClassWithDataClass, allow_missing=False).load('{"dc_with_list": {}}')
         assert 'dc_with_list' in exc_info.value.message
         assert 'xs' in exc_info.value.message
 
@@ -54,17 +51,17 @@ class TestAllowMissing:
 
 class TestAllowUnexpected:
     def test_allow_unexpected(self):
-        actual = json_schema(DataClassWithOptional, load=allow_unexpected).load('{"x": null, "y": true}')
+        actual = json_schema(DataClassWithOptional, allow_unexpected=True).load('{"x": null, "y": true}')
         assert actual == DataClassWithOptional(None)
 
     def test_allow_unexpected_is_recursive(self):
-        actual = json_schema(DataClassWithOptionalNested, load=allow_unexpected).load('{"x": {"x": null, "y": "test"}}')
+        actual = json_schema(DataClassWithOptionalNested, allow_unexpected=True).load('{"x": {"x": null, "y": "test"}}')
         expected = DataClassWithOptionalNested(DataClassWithOptional(None))
         assert actual == expected
 
     def test_error_when_unexpected(self):
         with pytest.raises(LoadError) as exc_info:
-            json_schema(DataClassWithOptional, load=Loading(allow_unexpected=False)).load('{"x": 1, "y": 1}')
+            json_schema(DataClassWithOptional, allow_unexpected=False).load('{"x": 1, "y": 1}')
         assert '"y"' in exc_info.value.message
 
     def test_error_when_unexpected_by_default(self):

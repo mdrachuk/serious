@@ -46,11 +46,11 @@ schema = json_schema(Person)
 
 # Encoding to JSON
 schema.dump(lidatong)  # '{"name": "lidatong"}'
-schema.dump_all([mdrachuk, lidatong])  # '[{"name": "mdrachuk"}, {"name": "lidatong"}]'
+schema.dump_many([mdrachuk, lidatong])  # '[{"name": "mdrachuk"}, {"name": "lidatong"}]'
 
 # Decoding from JSON
 schema.load('{"name": "lidatong"}')  # Person(name='lidatong')
-schema.load_all('[{"name": "mdrachuk"}, {"name": "lidatong"}]')  # [Person(name='mdrachuk'), Person(name='lidatong')]
+schema.load_many('[{"name": "mdrachuk"}, {"name": "lidatong"}]')  # [Person(name='mdrachuk'), Person(name='lidatong')]
 ```
 
 ## How do I...
@@ -66,14 +66,14 @@ corresponding field is missing from the JSON you're decoding.
 
 ```python
 from dataclasses import dataclass
-from serious.json import json_schema, Loading
+from serious.json import json_schema
  
 @dataclass
 class Student:
     id: int
     name: str = 'student'
 
-json_schema(Student, load=Loading(allow_missing=True)).load('{"id": 1}')  # Student(id=1, name='student')
+json_schema(Student, allow_missing=True).load('{"id": 1}')  # Student(id=1, name='student')
 ```
 
 Notice that `name` got default value `student` when it was missing from the JSON.
@@ -144,7 +144,7 @@ boss_json = """
 }
 """.strip()
 
-schema = json_schema(Boss, Dumping(indent=4))
+schema = json_schema(Boss, indent=4)
 
 assert schema.dump(boss) == boss_json
 assert schema.load(boss_json) == boss

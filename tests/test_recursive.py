@@ -62,7 +62,7 @@ family_tree = Tree(
 
 class TestRecursive:
     def test_tree_encode(self):
-        assert json_schema(Tree, Dumping(indent=4)).dump(family_tree) == family_tree_json
+        assert json_schema(Tree, indent=4).dump(family_tree) == family_tree_json
 
     def test_tree_decode(self):
         assert json_schema(Tree).load(family_tree_json) == family_tree

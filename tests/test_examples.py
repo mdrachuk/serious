@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Set
 
-from serious.json import json_schema, Loading
+from serious.json import json_schema
 
 
 @dataclass(frozen=True)
@@ -39,14 +39,14 @@ class TestEncoder:
 
     def test_course(self):
         assert json_schema(Course).dump(c) == '{"id": 1, ' \
-                                         '"name": "course", ' \
-                                         '"professor": {"id": 1, "name": "professor"}, ' \
-                                         '"students": [{"id": 1, "name": "student"}]}'
+                                              '"name": "course", ' \
+                                              '"professor": {"id": 1, "name": "professor"}, ' \
+                                              '"students": [{"id": 1, "name": "student"}]}'
 
     def test_students_missing(self):
         s1_anon = Student(1, 'student')
         s2_anon = Student(2, 'student')
         one = [s1_anon, s2_anon]
         two = [s2_anon, s1_anon]
-        actual = json_schema(Student, load=Loading(allow_missing=True)).load_all('[{"id": 1}, {"id": 2}]')
+        actual = json_schema(Student, allow_missing=True).load_many('[{"id": 1}, {"id": 2}]')
         assert actual == one or actual == two
