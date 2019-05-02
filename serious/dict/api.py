@@ -57,7 +57,7 @@ class DictSchema(Generic[T]):
         return self._serializer.load(data)
 
 
-def schema(cls: Type[T],
-           dump: Dumping = Dumping.defaults(),
-           load: Loading = Loading.defaults()) -> DictSchema[T]:
+def dict_schema(cls: Type[T],
+                dump: Dumping = Dumping.defaults(),
+                load: Loading = Loading.defaults()) -> DictSchema[T]:
     return DictSchema(cls, dump, load)

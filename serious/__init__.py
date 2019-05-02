@@ -1,1 +1,1 @@
-from serious import json
+from serious import dict, json

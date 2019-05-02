@@ -33,7 +33,7 @@ are encoded as `str` (JSON string).
 
 ```python
 from dataclasses import dataclass
-from serious.json import schema
+from serious.json import json_schema
 
 @dataclass
 class Person:
@@ -42,15 +42,15 @@ class Person:
 lidatong = Person('lidatong')
 mdrachuk = Person('mdrachuk')
 
-person_schema = schema(Person)
+schema = json_schema(Person)
 
 # Encoding to JSON
-person_schema.dump(lidatong)  # '{"name": "lidatong"}'
-person_schema.dump_all([mdrachuk, lidatong])  # '[{"name": "mdrachuk"}, {"name": "lidatong"}]'
+schema.dump(lidatong)  # '{"name": "lidatong"}'
+schema.dump_all([mdrachuk, lidatong])  # '[{"name": "mdrachuk"}, {"name": "lidatong"}]'
 
 # Decoding from JSON
-person_schema.load('{"name": "lidatong"}')  # Person(name='lidatong')
-person_schema.load_all('[{"name": "mdrachuk"}, {"name": "lidatong"}]')  # [Person(name='mdrachuk'), Person(name='lidatong')]
+schema.load('{"name": "lidatong"}')  # Person(name='lidatong')
+schema.load_all('[{"name": "mdrachuk"}, {"name": "lidatong"}]')  # [Person(name='mdrachuk'), Person(name='lidatong')]
 ```
 
 ## How do I...
@@ -66,14 +66,14 @@ corresponding field is missing from the JSON you're decoding.
 
 ```python
 from dataclasses import dataclass
-from serious.json import schema, Loading
+from serious.json import json_schema, Loading
  
 @dataclass
 class Student:
     id: int
     name: str = 'student'
 
-schema(Student, load=Loading(allow_missing=True)).load('{"id": 1}')  # Student(id=1, name='student')
+json_schema(Student, load=Loading(allow_missing=True)).load('{"id": 1}')  # Student(id=1, name='student')
 ```
 
 Notice that `name` got default value `student` when it was missing from the JSON.
@@ -88,7 +88,7 @@ class Tutor:
     id: int
     student: Optional[Student]
 
-serious.json.schema(Tutor).load('{"id": 1}')  # Tutor(id=1, student=None)
+serious.json.json_schema(Tutor).load('{"id": 1}')  # Tutor(id=1, student=None)
 ```
 
 Personally I recommend you leverage dataclass defaults rather than using 
@@ -118,7 +118,7 @@ class DataClassWithIsoDatetime:
 
 ```python
 from dataclasses import dataclass
-from serious.json import schema, Dumping
+from serious.json import json_schema, Dumping
 from typing import List
 
 @dataclass(frozen=True)
@@ -144,10 +144,10 @@ boss_json = """
 }
 """.strip()
 
-boss_schema = schema(Boss, Dumping(indent=4))
+schema = json_schema(Boss, Dumping(indent=4))
 
-assert boss_schema.dump(boss) == boss_json
-assert boss_schema.load(boss_json) == boss
+assert schema.dump(boss) == boss_json
+assert schema.load(boss_json) == boss
 ```
 
 

@@ -96,7 +96,7 @@ class JsonSchema(Generic[T]):
         return self._serializer.load(data)
 
 
-def schema(cls: Type[T],
-           dump: Dumping = Dumping.defaults(),
-           load: Loading = Loading.defaults()) -> JsonSchema[T]:
+def json_schema(cls: Type[T],
+                dump: Dumping = Dumping.defaults(),
+                load: Loading = Loading.defaults()) -> JsonSchema[T]:
     return JsonSchema(cls, dump, load)

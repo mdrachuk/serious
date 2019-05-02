@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Set
 
-from serious.json import schema, Loading
+from serious.json import json_schema, Loading
 
 
 @dataclass(frozen=True)
@@ -32,13 +32,13 @@ c = Course(1, 'course', p, {s1})
 
 class TestEncoder:
     def test_student(self):
-        assert schema(Student).dump(s1) == '{"id": 1, "name": "student"}'
+        assert json_schema(Student).dump(s1) == '{"id": 1, "name": "student"}'
 
     def test_professor(self):
-        assert schema(Professor).dump(p) == '{"id": 1, "name": "professor"}'
+        assert json_schema(Professor).dump(p) == '{"id": 1, "name": "professor"}'
 
     def test_course(self):
-        assert schema(Course).dump(c) == '{"id": 1, ' \
+        assert json_schema(Course).dump(c) == '{"id": 1, ' \
                                          '"name": "course", ' \
                                          '"professor": {"id": 1, "name": "professor"}, ' \
                                          '"students": [{"id": 1, "name": "student"}]}'
@@ -48,5 +48,5 @@ class TestEncoder:
         s2_anon = Student(2, 'student')
         one = [s1_anon, s2_anon]
         two = [s2_anon, s1_anon]
-        actual = schema(Student, load=Loading(allow_missing=True)).load_all('[{"id": 1}, {"id": 2}]')
+        actual = json_schema(Student, load=Loading(allow_missing=True)).load_all('[{"id": 1}, {"id": 2}]')
         assert actual == one or actual == two

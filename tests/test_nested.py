@@ -1,10 +1,10 @@
 import json
 
-from serious.json import schema
+from serious.json import json_schema
 from tests.entities import DataClassWithDataClass, DataClassWithList, DataClassX, DataClassXs
 
-dcwdc = schema(DataClassWithDataClass)
-dcxs = schema(DataClassXs)
+dcwdc = json_schema(DataClassWithDataClass)
+dcxs = json_schema(DataClassXs)
 
 
 class TestEncoder:

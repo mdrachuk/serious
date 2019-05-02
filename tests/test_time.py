@@ -1,15 +1,12 @@
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
-from serious.json import schema
+from serious.json import json_schema
 
 
 @dataclass
 class DataClassWithDatetime:
     created_at: datetime
-
-
-timestamp_schema = schema(DataClassWithDatetime)
 
 
 @dataclass
@@ -21,7 +18,8 @@ class DataClassWithIsoDatetime:
         }})
 
 
-iso_schema = schema(DataClassWithIsoDatetime)
+timestamp_schema = json_schema(DataClassWithDatetime)
+iso_schema = json_schema(DataClassWithIsoDatetime)
 
 
 class TestTime:

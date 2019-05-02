@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Dict, List
 
-from serious.json import schema
+from serious.json import json_schema
 
 
 class MyEnum(Enum):
@@ -23,7 +23,7 @@ class DataWithEnum:
     my_enum: MyEnum = MyEnum.STR3
 
 
-enum_schema = schema(DataWithEnum)
+enum_schema = json_schema(DataWithEnum)
 
 d1 = DataWithEnum('name1', MyEnum.STR1)
 d1_json = '{"name": "name1", "my_enum": "str1"}'
@@ -43,7 +43,7 @@ class DataWithStrEnum:
     my_str_enum: MyStrEnum = MyEnum.STR1
 
 
-str_enum_schema = schema(DataWithStrEnum)
+str_enum_schema = json_schema(DataWithStrEnum)
 
 ds = DataWithStrEnum(MyStrEnum.STR1)
 ds_json = '{"my_str_enum": "str1"}'
@@ -55,7 +55,7 @@ class EnumContainer:
     dict_enum_value: Dict[str, MyEnum]
 
 
-enum_c_schema = schema(EnumContainer)
+enum_c_schema = json_schema(EnumContainer)
 
 container_json = '{"enum_list": ["str3", 1], "dict_enum_value": {"key1str": "str1", "key1float": 1.23}}'
 container = EnumContainer(
