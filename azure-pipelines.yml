@@ -33,10 +33,6 @@ steps:
       mypy serious
     displayName: 'Check typings with mypy'
 
-  - task: DownloadSecureFile@1
-    inputs:
-      secureFile: .pypirc
-
   - script: |
       pip install setuptools wheel
       python setup.py sdist bdist_wheel
