@@ -7,6 +7,7 @@ from serious.attr import Attr
 from serious.context import SerializationContext
 from serious.errors import LoadError, DumpError, UnexpectedItem, MissingField
 from serious.field_serializers import FieldSerializer
+from serious.preconditions import _check_present
 from serious.serializer_options import SerializerOption
 from serious.utils import DataClass
 
@@ -77,18 +78,15 @@ class SeriousSerializer(Generic[T]):
     def _build_field_serializers(self, cls: Type[DataClass]) -> Dict[str, FieldSerializer]:
         return {attr.name: self.field_serializer(attr) for attr in Attr.list(cls)}
 
-    def field_serializer(self, attr, track=True) -> FieldSerializer:
-        serializer = self._untracked_field_serializer(attr)
-        if track:
-            serializer = serializer.with_stack()
-        return serializer
+    def field_serializer(self, attr: Attr, tracked: bool = True) -> FieldSerializer:
+        optional = self._get_serializer(attr)
+        serializer = _check_present(optional, f'Type "{attr.type}" is not supported')
+        return serializer.with_stack() if tracked else serializer
 
-    def _untracked_field_serializer(self, attr: Attr) -> FieldSerializer:
+    def _get_serializer(self, attr: Attr) -> Optional[FieldSerializer]:
         options = (option.factory(attr, self) for option in self._serializers if option.fits(attr))  # type: ignore
-        serializer: Optional[FieldSerializer] = next(options, None)
-        if serializer is None:
-            raise TypeError(f'{attr.type} is unsupported')
-        return serializer
+        optional = next(options, None)
+        return optional
 
 
 def _check_for_missing(cls: Type[DataClass], data: Mapping) -> None:

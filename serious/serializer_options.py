@@ -38,23 +38,23 @@ class SerializerOption:
         ]
 
 
-def _optional_sr_factory(attr: Attr, sr: 'SeriousSerializer') -> FieldSerializer:
-    present_sr = sr.field_serializer(replace(attr, type=attr.type.__args__[0]), track=False)
+def _optional_sr_factory(attr: Attr, sr: SeriousSerializer) -> FieldSerializer:
+    present_sr = sr.field_serializer(replace(attr, type=attr.type.__args__[0]), tracked=False)
     return OptionalFieldSerializer(attr, present_sr)
 
 
-def _mapping_sr_factory(attr: Attr, sr: 'SeriousSerializer') -> FieldSerializer:
-    key_sr = sr.field_serializer(replace(attr, type=attr.type.__args__[0]), track=False)
-    val_sr = sr.field_serializer(replace(attr, type=attr.type.__args__[1]), track=False)
+def _mapping_sr_factory(attr: Attr, sr: SeriousSerializer) -> FieldSerializer:
+    key_sr = sr.field_serializer(replace(attr, type=attr.type.__args__[0]), tracked=False)
+    val_sr = sr.field_serializer(replace(attr, type=attr.type.__args__[1]), tracked=False)
     return DictFieldSerializer(attr, key=key_sr, value=val_sr)
 
 
-def _collection_sr_factory(attr: Attr, sr: 'SeriousSerializer') -> FieldSerializer:
-    item_sr = sr.field_serializer(replace(attr, type=attr.type.__args__[0]), track=False)
+def _collection_sr_factory(attr: Attr, sr: SeriousSerializer) -> FieldSerializer:
+    item_sr = sr.field_serializer(replace(attr, type=attr.type.__args__[0]), tracked=False)
     return CollectionFieldSerializer(attr, each=item_sr)
 
 
-def _dataclass_sr_factory(attr: Attr, sr: 'SeriousSerializer') -> FieldSerializer:
+def _dataclass_sr_factory(attr: Attr, sr: SeriousSerializer) -> FieldSerializer:
     dataclass_sr = sr.child_serializer(attr.type)
     return DataclassFieldSerializer(attr, dataclass_sr)
 

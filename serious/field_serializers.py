@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import abc
 import copy
 from typing import Callable, Any
@@ -17,7 +19,7 @@ class FieldSerializer(abc.ABC):
     def __init__(self, attr: Attr):
         self._attr = attr
 
-    def with_stack(self):
+    def with_stack(self) -> FieldSerializer:
         entry = f'.{self.attr.name}'
         serializer = copy.copy(self)
         setattr(serializer, 'load', with_stack(self.load, entry))
@@ -37,7 +39,7 @@ class FieldSerializer(abc.ABC):
         pass
 
 
-def with_stack(f: Callable, entry: str = None, entry_factory: Callable = None):
+def with_stack(f: Callable, entry: str = None, entry_factory: Callable = None) -> Callable:
     if (not entry and not entry_factory) or (entry and entry_factory):
         raise Exception('Only one of entry and entry_factory is expected')
 

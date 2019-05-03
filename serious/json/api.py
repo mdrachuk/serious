@@ -28,7 +28,7 @@ class Dumping:
 class JsonSchema(Generic[T]):
 
     def __init__(self, cls: Type[T], serializers: Iterable[SerializerOption], load: Loading, dump: Dumping):
-        self._cls = _check_is_dataclass(cls)
+        self._cls = _check_is_dataclass(cls, 'Serious can only operate on dataclasses.')
         self._load = load
         self._dump = dump
         self._serializer = SeriousSerializer(
