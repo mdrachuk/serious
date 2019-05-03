@@ -17,7 +17,7 @@ LoadF = Callable[[Primitive], Any]
 
 
 class FieldSerializer(abc.ABC):
-    def __init__(self, attr: Attr):
+    def __init__(self, attr: Attr, *args):
         self._attr = attr
 
     def with_stack(self) -> FieldSerializer:
