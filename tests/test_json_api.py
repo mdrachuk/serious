@@ -8,6 +8,23 @@ from tests.entities import (DataClassWithDataClass, DataClassWithOptional,
                             DataClassWithOptionalNested, DataClassWithUuid)
 
 
+class TestDefaults:
+    def test_dump(self):
+        pass
+
+    def test_load(self):
+        pass
+
+    def test_dump_many(self):
+        pass
+
+    def test_load_many(self):
+        pass
+
+    def test_serializers(self):
+        pass
+
+
 class TestTypes:
     uuid_s = 'd1d61dd7-c036-47d3-a6ed-91cc2e885fc8'
     dc_uuid_json = f'{{"id": "{uuid_s}"}}'
