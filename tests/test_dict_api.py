@@ -1,25 +1,88 @@
+from dataclasses import dataclass
+from typing import Optional, Any
 from uuid import UUID
 
 import pytest
 
-from serious.dict import dict_schema
+from serious.context import SerializationContext
+from serious.dict import dict_schema, Dumping, Loading
+from serious.dict.api import DictSchema
 from serious.errors import LoadError
+from serious.field_serializers import FieldSerializer
+from serious.serializer_options import SerializerOption
+from serious.utils import Primitive
 from tests.entities import (DataClassWithDataClass, DataClassWithOptional,
                             DataClassWithOptionalNested, DataClassWithUuid)
 
 
+@dataclass
+class UserId:
+    value: int
+
+
+@dataclass(frozen=True)
+class User:
+    id: UserId
+    username: str
+    password: str
+    age: Optional[int]
+
+
+class UserIdSerializer(FieldSerializer):
+    def dump(self, value: Any, ctx: SerializationContext) -> Primitive:
+        return value.value
+
+    def load(self, value: Primitive, ctx: SerializationContext) -> Any:
+        return UserId(value)
+
+
 class TestDefaults:
-    def test_dump(self):
-        pass
+    schema = dict_schema(User)
+
+    def test_invalid_class(self):
+        with pytest.raises(TypeError):
+            DictSchema(dict, [], Loading(), Dumping())
 
     def test_load(self):
-        pass
-
-    def test_dump_many(self):
-        pass
+        user = self.schema.load({'id': {'value': 0}, 'username': 'admin', 'password': 'admin', 'age': None})
+        assert user == User(id=UserId(0), username='admin', password='admin', age=None)
 
     def test_load_many(self):
-        pass
+        expected = [User(id=UserId(0), username='admin', password='admin', age=None),
+                    User(id=UserId(1), username='root', password='root123', age=23)]
+        data = [{'id': {'value': 0}, 'username': 'admin', 'password': 'admin', 'age': None},
+                {'id': {'value': 1}, 'username': 'root', 'password': 'root123', 'age': 23}]
+        actual = self.schema.load_many(data)
+        assert actual == expected
+
+    def test_dump(self):
+        user = User(id=UserId(0), username='admin', password='admin', age=None)
+        d = self.schema.dump(user)
+        assert d == {'id': {'value': 0}, 'username': 'admin', 'password': 'admin', 'age': None}
+
+    def test_dump_many(self):
+        user1 = User(id=UserId(0), username='admin', password='admin', age=None)
+        user2 = User(id=UserId(1), username='root', password='root123', age=23)
+        expected = [{'id': {'value': 0}, 'username': 'admin', 'password': 'admin', 'age': None},
+                    {'id': {'value': 1}, 'username': 'root', 'password': 'root123', 'age': 23}]
+        actual = self.schema.dump_many([user1, user2])
+        assert actual == expected
+
+
+class TestSerializer:
+    serializers = SerializerOption.defaults()
+    serializers.insert(0, SerializerOption(lambda attr: attr.type is UserId, factory=UserIdSerializer))
+    schema = DictSchema(User, serializers, Loading(), Dumping())
+
+    def test_load(self):
+        actual = self.schema.load({'id': 0, 'username': 'admin', 'password': 'admin', 'age': None})
+        expected = User(id=UserId(0), username='admin', password='admin', age=None)
+        assert actual == expected
+
+    def test_dump(self):
+        actual = self.schema.dump(User(id=UserId(0), username='admin', password='admin', age=None))
+        expected = {'id': 0, 'username': 'admin', 'password': 'admin', 'age': None}
+        assert actual == expected
 
 
 class TestTypes:

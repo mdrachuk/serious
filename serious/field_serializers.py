@@ -1,9 +1,12 @@
+from __future__ import annotations
+
 import abc
 import copy
-from typing import Callable, Any
+from typing import Callable, Any, Optional
 
 from serious.attr import Attr
 from serious.context import SerializationContext
+from serious.preconditions import _check_exactly_one_present
 from serious.utils import Primitive
 
 if False:  # To reference in typings
@@ -14,10 +17,10 @@ LoadF = Callable[[Primitive], Any]
 
 
 class FieldSerializer(abc.ABC):
-    def __init__(self, attr: Attr):
+    def __init__(self, attr: Attr, *args):
         self._attr = attr
 
-    def with_stack(self):
+    def with_stack(self) -> FieldSerializer:
         entry = f'.{self.attr.name}'
         serializer = copy.copy(self)
         setattr(serializer, 'load', with_stack(self.load, entry))
@@ -37,9 +40,8 @@ class FieldSerializer(abc.ABC):
         pass
 
 
-def with_stack(f: Callable, entry: str = None, entry_factory: Callable = None):
-    if (not entry and not entry_factory) or (entry and entry_factory):
-        raise Exception('Only one of entry and entry_factory is expected')
+def with_stack(f: Callable, entry: Optional[str] = None, entry_factory: Optional[Callable] = None) -> Callable:
+    _check_exactly_one_present(entry, entry_factory, message='Exactly one of entry and entry_factory is expected')
 
     def _wrap(*args):
         ctx: SerializationContext = args[-1]
