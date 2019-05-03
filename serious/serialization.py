@@ -7,7 +7,7 @@ from serious.attr import Attr
 from serious.context import SerializationContext
 from serious.errors import LoadError, DumpError, UnexpectedItem, MissingField
 from serious.field_serializers import FieldSerializer
-from serious.preconditions import _check_present
+from serious.preconditions import _check_present, _check_is_instance
 from serious.serializer_options import SerializerOption
 from serious.utils import DataClass
 
@@ -38,10 +38,9 @@ class SeriousSerializer(Generic[T]):
         return new_serializer
 
     def load(self, data: Mapping, _ctx: Optional[SerializationContext] = None) -> T:
+        _check_is_instance(data, Mapping, f'Invalid data for {self._cls}')  # type: ignore
         root = _ctx is None
         ctx: SerializationContext = SerializationContext() if root else _ctx  # type: ignore # checked above
-        if not isinstance(data, Mapping):
-            raise Exception(f'Invalid data for {self._cls}')
         mut_data = dict(data)
         if self._allow_missing:
             for field in _fields_missing_from(mut_data, self._cls):
@@ -63,6 +62,7 @@ class SeriousSerializer(Generic[T]):
         return self._cls(**init_kwargs)  # type: ignore # not an object
 
     def dump(self, o: T, _ctx: Optional[SerializationContext] = None) -> Dict[str, Any]:
+        _check_is_instance(o, self._cls)
         root = _ctx is None
         ctx: SerializationContext = SerializationContext() if root else _ctx  # type: ignore # checked above
         try:
