@@ -8,7 +8,7 @@ from typing import TypeVar, Type
 T = TypeVar('T')
 
 
-def _check_isinstance(value: T, type_: Type[T]) -> T:
+def _check_is_instance(value: T, type_: Type[T]) -> T:
     """Checks the value type, raising a TypeError.
     :return: provided value
     """

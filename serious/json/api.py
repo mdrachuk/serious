@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from typing import Optional, TypeVar, Type, Generic, List, MutableMapping, Collection, Iterable
 
 from serious.json.preconditions import _check_that_loading_an_object, _check_that_loading_a_list
-from serious.preconditions import _check_isinstance, _check_is_dataclass
+from serious.preconditions import _check_is_instance, _check_is_dataclass
 from serious.serialization import SeriousSerializer
 from serious.serializer_options import SerializerOption
 
@@ -49,11 +49,11 @@ class JsonSchema(Generic[T]):
         return [self._from_dict(each) for each in data]
 
     def dump(self, o: T) -> str:
-        _check_isinstance(o, self._cls)
+        _check_is_instance(o, self._cls)
         return self._dump_any(self._serializer.dump(o))
 
     def dump_many(self, items: Collection[T]) -> str:
-        dict_items = [self._serializer.dump(_check_isinstance(o, self._cls)) for o in items]
+        dict_items = [self._serializer.dump(_check_is_instance(o, self._cls)) for o in items]
         return self._dump_any(dict_items)
 
     def _from_dict(self, data: MutableMapping):

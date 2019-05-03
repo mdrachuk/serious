@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TypeVar, Type, Generic, List, Collection, Dict, Iterable, Any, Mapping
 
-from serious.preconditions import _check_isinstance, _check_is_dataclass
+from serious.preconditions import _check_is_instance, _check_is_dataclass
 from serious.serialization import SeriousSerializer
 from serious.serializer_options import SerializerOption
 
@@ -41,11 +41,11 @@ class DictSchema(Generic[T]):
         return [self._from_dict(each) for each in items]
 
     def dump(self, o: T) -> Dict[str, Any]:
-        _check_isinstance(o, self._cls)
+        _check_is_instance(o, self._cls)
         return self._serializer.dump(o)
 
     def dump_many(self, items: Collection[T]) -> List[Dict[str, Any]]:
-        return [self._serializer.dump(_check_isinstance(o, self._cls)) for o in items]
+        return [self._serializer.dump(_check_is_instance(o, self._cls)) for o in items]
 
     def _from_dict(self, data: Mapping):
         return self._serializer.load(data)
