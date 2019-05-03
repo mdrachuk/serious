@@ -32,7 +32,7 @@ class SerializerOption:
             collection,
             primitive,
             dc,
-            datettime_timestamp,
+            datetime_timestamp,
             uuid,
             enum,
         ]
@@ -87,7 +87,7 @@ dc = SerializerOption(
     fits=lambda attr: is_dataclass(attr.type),
     factory=_dataclass_sr_factory
 )
-datettime_timestamp = SerializerOption(
+datetime_timestamp = SerializerOption(
     fits=lambda attr: issubclass(attr.type, datetime),
     factory=lambda attr, sr: DirectFieldSerializer(
         attr,
