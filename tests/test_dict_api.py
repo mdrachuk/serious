@@ -43,22 +43,9 @@ class TestDefaults:
         with pytest.raises(TypeError):
             DictSchema(dict, [], Loading(), Dumping())
 
-    def test_dump(self):
-        user = User(id=UserId(0), username='admin', password='admin', age=None)
-        d = self.schema.dump(user)
-        assert d == {'id': {'value': 0}, 'username': 'admin', 'password': 'admin', 'age': None}
-
     def test_load(self):
         user = self.schema.load({'id': {'value': 0}, 'username': 'admin', 'password': 'admin', 'age': None})
         assert user == User(id=UserId(0), username='admin', password='admin', age=None)
-
-    def test_dump_many(self):
-        user1 = User(id=UserId(0), username='admin', password='admin', age=None)
-        user2 = User(id=UserId(1), username='root', password='root123', age=23)
-        expected = [{'id': {'value': 0}, 'username': 'admin', 'password': 'admin', 'age': None},
-                    {'id': {'value': 1}, 'username': 'root', 'password': 'root123', 'age': 23}]
-        actual = self.schema.dump_many([user1, user2])
-        assert actual == expected
 
     def test_load_many(self):
         expected = [User(id=UserId(0), username='admin', password='admin', age=None),
@@ -68,20 +55,33 @@ class TestDefaults:
         actual = self.schema.load_many(data)
         assert actual == expected
 
+    def test_dump(self):
+        user = User(id=UserId(0), username='admin', password='admin', age=None)
+        d = self.schema.dump(user)
+        assert d == {'id': {'value': 0}, 'username': 'admin', 'password': 'admin', 'age': None}
+
+    def test_dump_many(self):
+        user1 = User(id=UserId(0), username='admin', password='admin', age=None)
+        user2 = User(id=UserId(1), username='root', password='root123', age=23)
+        expected = [{'id': {'value': 0}, 'username': 'admin', 'password': 'admin', 'age': None},
+                    {'id': {'value': 1}, 'username': 'root', 'password': 'root123', 'age': 23}]
+        actual = self.schema.dump_many([user1, user2])
+        assert actual == expected
+
 
 class TestSerializer:
     serializers = SerializerOption.defaults()
     serializers.insert(0, SerializerOption(lambda attr: attr.type is UserId, factory=UserIdSerializer))
     schema = DictSchema(User, serializers, Loading(), Dumping())
 
-    def test_dump(self):
-        actual = self.schema.dump(User(id=UserId(0), username='admin', password='admin', age=None))
-        expected = {'id': 0, 'username': 'admin', 'password': 'admin', 'age': None}
-        assert actual == expected
-
     def test_load(self):
         actual = self.schema.load({'id': 0, 'username': 'admin', 'password': 'admin', 'age': None})
         expected = User(id=UserId(0), username='admin', password='admin', age=None)
+        assert actual == expected
+
+    def test_dump(self):
+        actual = self.schema.dump(User(id=UserId(0), username='admin', password='admin', age=None))
+        expected = {'id': 0, 'username': 'admin', 'password': 'admin', 'age': None}
         assert actual == expected
 
 

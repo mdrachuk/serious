@@ -43,22 +43,9 @@ class TestDefaults:
         with pytest.raises(TypeError):
             JsonSchema(dict, [], Loading(), Dumping())
 
-    def test_dump(self):
-        user = User(id=UserId(0), username='admin', password='admin', age=None)
-        d = self.schema.dump(user)
-        assert d == '{"id": {"value": 0}, "username": "admin", "password": "admin", "age": null}'
-
     def test_load(self):
         user = self.schema.load('{"id": {"value": 0}, "username": "admin", "password": "admin", "age": null}')
         assert user == User(id=UserId(0), username='admin', password='admin', age=None)
-
-    def test_dump_many(self):
-        user1 = User(id=UserId(0), username='admin', password='admin', age=None)
-        user2 = User(id=UserId(1), username='root', password='root123', age=23)
-        expected = '[{"id": {"value": 0}, "username": "admin", "password": "admin", "age": null}, ' \
-                   '{"id": {"value": 1}, "username": "root", "password": "root123", "age": 23}]'
-        actual = self.schema.dump_many([user1, user2])
-        assert actual == expected
 
     def test_load_many(self):
         expected = [User(id=UserId(0), username='admin', password='admin', age=None),
@@ -66,6 +53,19 @@ class TestDefaults:
         data = '[{"id": {"value": 0}, "username": "admin", "password": "admin", "age": null},' \
                '{"id": {"value": 1}, "username": "root", "password": "root123", "age": 23}]'
         actual = self.schema.load_many(data)
+        assert actual == expected
+
+    def test_dump(self):
+        user = User(id=UserId(0), username='admin', password='admin', age=None)
+        d = self.schema.dump(user)
+        assert d == '{"id": {"value": 0}, "username": "admin", "password": "admin", "age": null}'
+
+    def test_dump_many(self):
+        user1 = User(id=UserId(0), username='admin', password='admin', age=None)
+        user2 = User(id=UserId(1), username='root', password='root123', age=23)
+        expected = '[{"id": {"value": 0}, "username": "admin", "password": "admin", "age": null}, ' \
+                   '{"id": {"value": 1}, "username": "root", "password": "root123", "age": 23}]'
+        actual = self.schema.dump_many([user1, user2])
         assert actual == expected
 
 
@@ -90,13 +90,13 @@ class TestTypes:
     dc_uuid_json = f'{{"id": "{uuid_s}"}}'
     uuid_schema = json_schema(DataClassWithUuid)
 
-    def test_uuid_encode(self):
-        actual = self.uuid_schema.dump(DataClassWithUuid(UUID(self.uuid_s)))
-        assert actual == self.dc_uuid_json
-
     def test_uuid_decode(self):
         actual = self.uuid_schema.load(self.dc_uuid_json)
         assert actual == DataClassWithUuid(UUID(self.uuid_s))
+
+    def test_uuid_encode(self):
+        actual = self.uuid_schema.dump(DataClassWithUuid(UUID(self.uuid_s)))
+        assert actual == self.dc_uuid_json
 
 
 class TestAllowMissing:
