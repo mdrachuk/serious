@@ -84,8 +84,8 @@ class SeriousSerializer(Generic[T]):
         return serializer
 
     def _untracked_field_serializer(self, attr: Attr) -> FieldSerializer:
-        options = (option.factory(attr, self) for option in self._serializers if option.fits(attr))
-        serializer = next(options, None)
+        options = (option.factory(attr, self) for option in self._serializers if option.fits(attr))  # type: ignore
+        serializer: Optional[FieldSerializer] = next(options, None)
         if serializer is None:
             raise TypeError(f'{attr.type} is unsupported')
         return serializer

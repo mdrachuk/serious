@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import dataclass, replace, is_dataclass
 from datetime import datetime, timezone
 from enum import Enum
@@ -19,7 +21,7 @@ local_tz = datetime.now(timezone.utc).astimezone().tzinfo
 @dataclass(frozen=True)
 class SerializerOption:
     fits: Callable[[Attr], bool]
-    factory: Callable[[Attr, 'SeriousSerializer'], FieldSerializer]
+    factory: Callable[[Attr, SeriousSerializer], FieldSerializer]
 
     @staticmethod
     def defaults():
