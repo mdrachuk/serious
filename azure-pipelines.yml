@@ -3,8 +3,9 @@
 # Add steps that analyze code, save the dist with the build record, publish to a PyPI-compatible index, and more:
 # https://docs.microsoft.com/azure/devops/pipelines/languages/python
 
-trigger:
+pr:
   - master
+  - dev
 
 pool:
   vmImage: 'Ubuntu-16.04'
@@ -32,9 +33,3 @@ steps:
   - script: |
       mypy serious
     displayName: 'Check typings with mypy'
-
-  - script: |
-      pip install setuptools wheel
-      python setup.py sdist bdist_wheel
-      twine upload dist/* -u serious -p $(PYPI_PASSWORD)
-    displayName: 'Publish to PyPI'
