@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import fields, Field, MISSING
-from typing import Mapping, Type, Any, Dict, Iterator, Generic, TypeVar, List, Optional
+from typing import Mapping, Type, Any, Dict, Iterator, Generic, TypeVar, Optional, Iterable
 
 from serious.attr import Attr
 from serious.context import SerializationContext
@@ -14,14 +14,16 @@ T = TypeVar('T')
 
 
 class SeriousSerializer(Generic[T]):
-    def __init__(self,
-                 cls: Type[T],
-                 allow_missing: bool,
-                 allow_unexpected: bool,
-                 serializers: List[SerializerOption] = None,
-                 _registry: Dict[Type[DataClass], SeriousSerializer] = None):
+    def __init__(
+            self,
+            cls: Type[T],
+            serializers: Iterable[SerializerOption],
+            allow_missing: bool,
+            allow_unexpected: bool,
+            _registry: Dict[Type[DataClass], SeriousSerializer] = None
+    ):
         self._cls = cls
-        self._serializers = tuple(serializers or SerializerOption.defaults())
+        self._serializers = tuple(serializers)
         self._allow_missing = allow_missing
         self._allow_unexpected = allow_unexpected
         self._serializer_registry = {cls: self} if _registry is None else _registry
@@ -30,7 +32,7 @@ class SeriousSerializer(Generic[T]):
     def child_serializer(self, cls: Type[DataClass]) -> SeriousSerializer:
         if cls in self._serializer_registry:
             return self._serializer_registry[cls]
-        new_serializer = SeriousSerializer(cls, self._allow_missing, self._allow_unexpected)
+        new_serializer = SeriousSerializer(cls, self._serializers, self._allow_missing, self._allow_unexpected)
         self._serializer_registry[cls] = new_serializer
         return new_serializer
 
@@ -85,7 +87,7 @@ class SeriousSerializer(Generic[T]):
         options = (option.factory(attr, self) for option in self._serializers if option.fits(attr))
         serializer = next(options, None)
         if serializer is None:
-            raise Exception(f'{attr.type} is unsupported')
+            raise TypeError(f'{attr.type} is unsupported')
         return serializer
 
 
