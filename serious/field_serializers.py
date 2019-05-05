@@ -33,11 +33,11 @@ class FieldSerializer(abc.ABC):
 
     @abc.abstractmethod
     def dump(self, value: Any, ctx: SerializationContext) -> Primitive:
-        pass
+        raise NotImplementedError
 
     @abc.abstractmethod
     def load(self, value: Primitive, ctx: SerializationContext) -> Any:
-        pass
+        raise NotImplementedError
 
 
 def with_stack(f: Callable, entry: Optional[str] = None, entry_factory: Optional[Callable] = None) -> Callable:
@@ -49,6 +49,17 @@ def with_stack(f: Callable, entry: Optional[str] = None, entry_factory: Optional
             return f(*args)
 
     return _wrap
+
+
+class NoopSerializer(FieldSerializer):
+    def __init__(self, attr: Attr, ):
+        super().__init__(attr)
+
+    def load(self, value: Primitive, ctx: SerializationContext) -> Any:
+        return value
+
+    def dump(self, value: Any, ctx: SerializationContext) -> Primitive:
+        return value
 
 
 class DirectFieldSerializer(FieldSerializer):
@@ -113,10 +124,8 @@ class DataclassFieldSerializer(FieldSerializer):
 class DictFieldSerializer(FieldSerializer):
     def __init__(self, attr: Attr, key: FieldSerializer, value: FieldSerializer):
         super().__init__(attr)
-        self._dump_key = key.dump
-        self._load_key = key.load
-        self._dump_value = value.dump
-        self._load_value = value.load
+        self._key_sr = key
+        self._val_sr = value
 
     def with_stack(self):
         serializer = super().with_stack()
@@ -142,16 +151,16 @@ class DictFieldSerializer(FieldSerializer):
         return {self.dump_key(key, ctx): self.dump_value(key, value, ctx) for key, value in d.items()}
 
     def load_value(self, key: str, value: Primitive, ctx: SerializationContext) -> Any:
-        return self._load_value(value, ctx)
+        return self._val_sr.load(value, ctx)
 
     def dump_value(self, key: str, value: Any, ctx: SerializationContext) -> Primitive:
-        return self._dump_value(value, ctx)
+        return self._val_sr.dump(value, ctx)
 
     def load_key(self, key: str, ctx: SerializationContext) -> Any:
-        return self._load_key(key, ctx)
+        return self._key_sr.load(key, ctx)
 
     def dump_key(self, key: Any, ctx: SerializationContext) -> str:
-        return str(self._dump_key(key, ctx))
+        return str(self._key_sr.dump(key, ctx))
 
 
 class OptionalFieldSerializer(FieldSerializer):

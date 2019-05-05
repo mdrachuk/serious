@@ -5,13 +5,13 @@ from dataclasses import replace, is_dataclass
 from datetime import datetime, timezone
 from decimal import Decimal
 from enum import Enum
-from typing import _GenericAlias, List  # type: ignore # _GenericAlias exists!
+from typing import _GenericAlias, List, Any, TypeVar  # type: ignore # _GenericAlias exists!
 from uuid import UUID
 
 from serious.attr import Attr
 from serious.field_serializers import (FieldSerializer, DirectFieldSerializer, OptionalFieldSerializer,
                                        DictFieldSerializer, CollectionFieldSerializer, DataclassFieldSerializer,
-                                       MetadataFieldSerializer)
+                                       MetadataFieldSerializer, NoopSerializer)
 from serious.utils import _is_optional, _is_mapping, _is_collection
 
 if False:  # To reference in typings
@@ -36,6 +36,7 @@ class SerializerOption(ABC):
             OptionalSrOption(),
             MappingSrOption(),
             CollectionSrOption(),
+            AnySrOption(),
             PrimitiveSrOption(),
             DataclassSrOption(),
             DateTimeTimestampSrOption(),
@@ -79,6 +80,14 @@ class CollectionSrOption(SerializerOption):
     def factory(self, attr: Attr, sr: SeriousSerializer) -> FieldSerializer:
         item_sr = generic_item_serializer(attr, sr, type_index=0)
         return CollectionFieldSerializer(attr, each=item_sr)
+
+
+class AnySrOption(SerializerOption):
+    def fits(self, attr: Attr) -> bool:
+        return attr.type is Any
+
+    def factory(self, attr: Attr, sr: SeriousSerializer) -> FieldSerializer:
+        return NoopSerializer(attr)
 
 
 class PrimitiveSrOption(SerializerOption):
@@ -143,6 +152,9 @@ class EnumSrOption(SerializerOption):
 
 
 def generic_item_serializer(attr, sr, *, type_index):
-    item_descriptor = replace(attr, type=attr.type.__args__[type_index])
+    new_type = attr.type.__args__[type_index]
+    if isinstance(new_type, TypeVar):
+        new_type = Any
+    item_descriptor = replace(attr, type=new_type)
     item_sr = sr.field_serializer(item_descriptor, tracked=False)
     return item_sr
