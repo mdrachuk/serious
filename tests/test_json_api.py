@@ -4,11 +4,13 @@ from uuid import UUID
 
 import pytest
 
+from serious.attr import Attr
 from serious.context import SerializationContext
 from serious.errors import LoadError
 from serious.field_serializers import FieldSerializer
 from serious.json import json_schema
 from serious.json.api import JsonSchema, Loading, Dumping
+from serious.serialization import SeriousSerializer
 from serious.serializer_options import SerializerOption
 from serious.utils import Primitive
 from tests.entities import (DataClassWithDataClass, DataClassWithOptional,
@@ -69,9 +71,18 @@ class TestDefaults:
         assert actual == expected
 
 
+class UserIdSrOption(SerializerOption):
+
+    def fits(self, attr: Attr) -> bool:
+        return attr.type is UserId
+
+    def factory(self, attr: Attr, sr: SeriousSerializer) -> FieldSerializer:
+        return UserIdSerializer(attr)
+
+
 class TestSerializer:
     serializers = SerializerOption.defaults()
-    serializers.insert(0, SerializerOption(lambda attr: attr.type is UserId, factory=UserIdSerializer))
+    serializers.insert(0, UserIdSrOption())
     schema = JsonSchema(User, serializers, Loading(), Dumping())
 
     def test_dump(self):

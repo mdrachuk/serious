@@ -4,11 +4,13 @@ from uuid import UUID
 
 import pytest
 
+from serious.attr import Attr
 from serious.context import SerializationContext
 from serious.dict import dict_schema, Dumping, Loading
 from serious.dict.api import DictSchema
 from serious.errors import LoadError
 from serious.field_serializers import FieldSerializer
+from serious.serialization import SeriousSerializer
 from serious.serializer_options import SerializerOption
 from serious.utils import Primitive
 from tests.entities import (DataClassWithDataClass, DataClassWithOptional,
@@ -34,6 +36,15 @@ class UserIdSerializer(FieldSerializer):
 
     def load(self, value: Primitive, ctx: SerializationContext) -> Any:
         return UserId(value)
+
+
+class UserIdSrOption(SerializerOption):
+
+    def fits(self, attr: Attr) -> bool:
+        return attr.type is UserId
+
+    def factory(self, attr: Attr, sr: SeriousSerializer) -> FieldSerializer:
+        return UserIdSerializer(attr)
 
 
 class TestDefaults:
@@ -71,7 +82,7 @@ class TestDefaults:
 
 class TestSerializer:
     serializers = SerializerOption.defaults()
-    serializers.insert(0, SerializerOption(lambda attr: attr.type is UserId, factory=UserIdSerializer))
+    serializers.insert(0, UserIdSrOption())
     schema = DictSchema(User, serializers, Loading(), Dumping())
 
     def test_load(self):
