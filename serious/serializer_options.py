@@ -128,10 +128,10 @@ class DecimalSrOption(SerializerOption):
 
     def factory(self, attr: Attr, sr: SeriousSerializer) -> FieldSerializer:
         return DirectFieldSerializer(  # type: ignore # Decimal constructor in load
-        attr,
-        load=Decimal,
-        dump=lambda o: str(o)
-    )
+            attr,
+            load=Decimal,
+            dump=lambda o: str(o)
+        )
 
 
 class EnumSrOption(SerializerOption):
