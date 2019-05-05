@@ -3,6 +3,7 @@ from __future__ import annotations
 from abc import abstractmethod, ABC
 from dataclasses import replace, is_dataclass
 from datetime import datetime, timezone
+from decimal import Decimal
 from enum import Enum
 from typing import _GenericAlias, List  # type: ignore # _GenericAlias exists!
 from uuid import UUID
@@ -39,6 +40,7 @@ class SerializerOption(ABC):
             DataclassSrOption(),
             DateTimeTimestampSrOption(),
             UuidSrOption(),
+            DecimalSrOption(),
             EnumSrOption(),
         ]
 
@@ -118,6 +120,18 @@ class UuidSrOption(SerializerOption):
             load=UUID,
             dump=lambda o: str(o)
         )
+
+
+class DecimalSrOption(SerializerOption):
+    def fits(self, attr: Attr) -> bool:
+        return issubclass(attr.type, Decimal)
+
+    def factory(self, attr: Attr, sr: SeriousSerializer) -> FieldSerializer:
+        return DirectFieldSerializer(  # type: ignore # Decimal constructor in load
+        attr,
+        load=Decimal,
+        dump=lambda o: str(o)
+    )
 
 
 class EnumSrOption(SerializerOption):
