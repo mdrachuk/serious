@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace, is_dataclass
 from datetime import datetime, timezone
+from decimal import Decimal
 from enum import Enum
 from typing import Callable, _GenericAlias  # type: ignore # _GenericAlias exists!
 from uuid import UUID
@@ -34,6 +35,7 @@ class SerializerOption:
             dc,
             datetime_timestamp,
             uuid,
+            decimal,
             enum,
         ]
 
@@ -100,6 +102,14 @@ uuid = SerializerOption(
     factory=lambda attr, sr: DirectFieldSerializer(  # type: ignore # UUID constructor in load
         attr,
         load=UUID,
+        dump=lambda o: str(o)
+    )
+)
+decimal = SerializerOption(
+    fits=lambda attr: issubclass(attr.type, Decimal),
+    factory=lambda attr, sr: DirectFieldSerializer(  # type: ignore # Decimal constructor in load
+        attr,
+        load=Decimal,
         dump=lambda o: str(o)
     )
 )
