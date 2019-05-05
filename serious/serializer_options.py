@@ -58,7 +58,7 @@ class OptionalSrOption(SerializerOption):
         return isinstance(attr.type, _GenericAlias) and _is_optional(attr.type)
 
     def factory(self, attr: Attr, sr: SeriousSerializer) -> FieldSerializer:
-        present_sr = sr.field_serializer(replace(attr, type=attr.type.__args__[0]), tracked=False)
+        present_sr = generic_item_serializer(attr, sr, type_index=0)
         return OptionalFieldSerializer(attr, present_sr)
 
 
@@ -67,8 +67,8 @@ class MappingSrOption(SerializerOption):
         return isinstance(attr.type, _GenericAlias) and _is_mapping(attr.type)
 
     def factory(self, attr: Attr, sr: SeriousSerializer) -> FieldSerializer:
-        key_sr = sr.field_serializer(replace(attr, type=attr.type.__args__[0]), tracked=False)
-        val_sr = sr.field_serializer(replace(attr, type=attr.type.__args__[1]), tracked=False)
+        key_sr = generic_item_serializer(attr, sr, type_index=0)
+        val_sr = generic_item_serializer(attr, sr, type_index=1)
         return DictFieldSerializer(attr, key=key_sr, value=val_sr)
 
 
@@ -77,7 +77,7 @@ class CollectionSrOption(SerializerOption):
         return isinstance(attr.type, _GenericAlias) and _is_collection(attr.type)
 
     def factory(self, attr: Attr, sr: SeriousSerializer) -> FieldSerializer:
-        item_sr = sr.field_serializer(replace(attr, type=attr.type.__args__[0]), tracked=False)
+        item_sr = generic_item_serializer(attr, sr, type_index=0)
         return CollectionFieldSerializer(attr, each=item_sr)
 
 
@@ -140,3 +140,9 @@ class EnumSrOption(SerializerOption):
 
     def factory(self, attr: Attr, sr: SeriousSerializer) -> FieldSerializer:
         return DirectFieldSerializer(attr, load=attr.type, dump=lambda o: o.value)
+
+
+def generic_item_serializer(attr, sr, *, type_index):
+    item_descriptor = replace(attr, type=attr.type.__args__[type_index])
+    item_sr = sr.field_serializer(item_descriptor, tracked=False)
+    return item_sr
