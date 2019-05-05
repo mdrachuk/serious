@@ -34,3 +34,8 @@ steps:
   - script: |
       mypy serious
     displayName: 'Check typings with mypy'
+
+
+  - script: |
+      python check_version.py
+    displayName: 'Check version changed'
