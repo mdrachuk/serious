@@ -1,9 +1,8 @@
 # serious
 [![Build Status](https://dev.azure.com/misha-drachuk/serious/_apis/build/status/serious-release?branchName=master)](https://dev.azure.com/misha-drachuk/serious/_build/latest?definitionId=1&branchName=master)
 
-This library provides a simple API for encoding and decoding [dataclasses](https://docs.python.org/3/library/dataclasses.html) to and from JSON.
+This library is for JSON encoding/decoding and validation of [dataclasses](https://docs.python.org/3/library/dataclasses.html) without magic.
 
-It's recursive (see caveats below), so you can easily work with nested dataclasses.
 In addition to the supported types in the 
 [py to JSON table](https://docs.python.org/3/library/json.html#py-to-json-table), this library supports the following:
 - any arbitrary [Collection](https://docs.python.org/3/library/collections.abc.html#collections.abc.Collection) type is supported.
@@ -20,8 +19,9 @@ Thus, if you encode a datetime-naive object, you will decode into a
 datetime-aware object. This is important, because encoding and decoding won't 
 strictly be inverses. See this section if you want to override this default
 behavior (for example, if you want to use ISO).
-- [UUID](https://docs.python.org/3/library/uuid.html#uuid.UUID) objects. They 
-are encoded as `str` (JSON string).
+- [Decimal](https://docs.python.org/3/library/decimal.html) objects as strings.
+- [UUID](https://docs.python.org/3/library/uuid.html#uuid.UUID) objects as strings.
+- [Enums](https://docs.python.org/3/library/enum.html) objects by values.
 
 
 **Compatible with Python 3.7.**
