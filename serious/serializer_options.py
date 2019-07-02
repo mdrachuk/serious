@@ -6,10 +6,10 @@ from dataclasses import replace
 from datetime import datetime, timezone
 from decimal import Decimal
 from enum import Enum
-from typing import List, Any, TypeVar  # type: ignore # _GenericAlias exists!
+from typing import List, Any  # type: ignore # _GenericAlias exists!
 from uuid import UUID
 
-from serious.descriptors import FieldDescriptor, DataclassDescriptor
+from serious.descriptors import FieldDescriptor
 from serious.field_serializers import (FieldSerializer, DirectFieldSerializer, OptionalFieldSerializer,
                                        DictFieldSerializer, CollectionFieldSerializer, DataclassFieldSerializer,
                                        MetadataFieldSerializer, NoopSerializer)
@@ -101,7 +101,7 @@ class PrimitiveSrOption(FieldSrOption):
 
 class DataclassSrOption(FieldSrOption):
     def fits(self, field: FieldDescriptor) -> bool:
-        return isinstance(field.type, DataclassDescriptor)
+        return field.type.is_dataclass
 
     def create(self, field: FieldDescriptor, sr: DataclassSerializer) -> FieldSerializer:
         dataclass_sr = sr.child_serializer(field)

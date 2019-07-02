@@ -4,9 +4,9 @@ import json
 from dataclasses import dataclass
 from typing import Optional, TypeVar, Type, Generic, List, MutableMapping, Collection, Iterable, Any, Dict
 
-from serious.descriptors import DataclassDescriptor
+from serious.descriptors import describe
 from serious.json.preconditions import _check_that_loading_an_object, _check_that_loading_a_list
-from serious.preconditions import _check_is_instance
+from serious.preconditions import _check_is_instance, _check_is_dataclass
 from serious.serializer import DataclassSerializer
 from serious.serializer_options import FieldSrOption
 
@@ -37,35 +37,41 @@ class JsonSerializer(Generic[T]):
                  allow_missing: bool = _Loading.allow_missing,
                  allow_unexpected: bool = _Loading.allow_unexpected,
                  indent: Optional[int] = _Dumping.indent):
-        self._descriptor = DataclassDescriptor.of(cls)
+        self.descriptor = self._describe(cls)
         self.config = _Config(
             loading=_Loading(allow_missing=allow_missing, allow_unexpected=allow_unexpected),
             dumping=_Dumping(indent=indent)
         )
         field_serializers = field_serializers if field_serializers is not None else FieldSrOption.defaults()
         self._serializer = DataclassSerializer(
-            self._descriptor,
+            self.descriptor,
             field_serializers,
             self.config.loading.allow_missing,
             self.config.loading.allow_unexpected
         )
 
     @property
-    def _cls(self):
-        return self._descriptor.cls
+    def cls(self):
+        return self.descriptor.cls
+
+    @staticmethod
+    def _describe(cls):
+        descriptor = describe(cls)
+        _check_is_dataclass(descriptor.cls, 'Serious can only operate on dataclasses.')
+        return descriptor
 
     def load(self, json_: str) -> T:
         data: MutableMapping = self._load_from_str(json_)
-        _check_that_loading_an_object(data, self._cls)
+        _check_that_loading_an_object(data, self.cls)
         return self._from_dict(data)
 
     def load_many(self, json_: str) -> List[T]:
         data: Collection = self._load_from_str(json_)
-        _check_that_loading_a_list(data, self._cls)
+        _check_that_loading_a_list(data, self.cls)
         return [self._from_dict(each) for each in data]
 
     def dump(self, o: T) -> str:
-        _check_is_instance(o, self._cls)
+        _check_is_instance(o, self.cls)
         return self._dump_to_str(self._serializer.dump(o))
 
     def dump_many(self, items: Collection[T]) -> str:
@@ -73,7 +79,7 @@ class JsonSerializer(Generic[T]):
         return self._dump_to_str(dict_items)
 
     def _dump(self, o) -> Dict[str, Any]:
-        return self._serializer.dump(_check_is_instance(o, self._cls))
+        return self._serializer.dump(_check_is_instance(o, self.cls))
 
     def _from_dict(self, data: MutableMapping) -> T:
         return self._serializer.load(data)

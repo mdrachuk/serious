@@ -3,7 +3,6 @@ from dataclasses import dataclass, fields, is_dataclass, replace
 from typing import Type, Any, TypeVar, Generic, get_type_hints, Dict, Mapping, Union
 
 from serious._collections import FrozenDict, frozendict
-from serious.preconditions import _check_is_dataclass
 
 T = TypeVar('T')
 
@@ -16,6 +15,7 @@ class TypeDescriptor(Generic[T]):
     _cls: Type[T]
     generic_params: FrozenGenericParams
     is_optional: bool
+    is_dataclass: bool
 
     @property
     def cls(self):  # Python fails when providing cls as a keyword parameter to dataclasses
@@ -24,59 +24,44 @@ class TypeDescriptor(Generic[T]):
     def non_optional(self):
         return replace(self, is_optional=False)
 
-
-@dataclass(frozen=True)
-class DataclassDescriptor(TypeDescriptor[T]):
-    """A descriptor of a dataclass."""
-
-    @classmethod
-    def of(cls, type_: Type[T]) -> 'DataclassDescriptor[T]':
-        """A factory creating dataclass descriptors."""
-        type_, params, is_optional = unwrap_generic(type_, {})
-        _check_is_dataclass(type_, 'Serious can only operate on dataclasses.')
-        return cls(type_, frozendict(params), is_optional)
-
     @property
     def fields(self) -> Mapping[str, 'FieldDescriptor']:
         types = get_type_hints(self.cls)  # type: Dict[str, Type]
         descriptors = {name: self.describe(type_) for name, type_ in types.items()}
         return {f.name: FieldDescriptor(f.name, descriptors[f.name], f.metadata) for f in fields(self.cls)}
 
-    def describe(self, type_: Type) -> TypeDescriptor:
+    def describe(self, type_: Type) -> 'TypeDescriptor':
         return describe(type_, self.generic_params)
 
 
-def describe(type_: Type, generic_params: GenericParams) -> TypeDescriptor:
-    as_param = generic_params.get(type_, None)
-    if as_param is not None:
-        cls, params, is_optional = as_param.cls, as_param.generic_params, as_param.is_optional
-    else:
-        cls, params, is_optional = unwrap_generic(type_, generic_params)
-    if is_dataclass(cls):
-        params = frozendict({**generic_params, **params})
-        return DataclassDescriptor(cls, params, is_optional)
-    return TypeDescriptor(cls, frozendict(params), is_optional)
+def describe(type_: Type, generic_params: GenericParams = None) -> TypeDescriptor:
+    generic_params = generic_params if generic_params is not None else {}
+    param = generic_params.get(type_, None)
+    if param is not None:
+        return param
+    return unwrap_generic(type_, generic_params)
 
 
 Unwrapped = namedtuple('Unwrapped', ['type', 'params', 'is_optional'])
 
 
-def unwrap_generic(cls: Type, generic_params: GenericParams) -> Unwrapped:
+def unwrap_generic(cls: Type, generic_params: GenericParams) -> TypeDescriptor:
     params: GenericParams = {}
     is_optional = _is_optional(cls)
     if is_optional:
         cls = cls.__args__[0]
     if hasattr(cls, '__orig_bases__') and is_dataclass(cls):
-        params = dict(ChainMap(*(unwrap_generic(base, generic_params)[1] for base in cls.__orig_bases__)))
-        return Unwrapped(cls, params, is_optional)
+        params = dict(ChainMap(*(unwrap_generic(base, generic_params).generic_params for base in cls.__orig_bases__)))
+        return TypeDescriptor(cls, frozendict(params), is_optional, is_dataclass=True)
     if hasattr(cls, '__origin__'):
-        if is_dataclass(cls.__origin__):
+        origin_is_dc = is_dataclass(cls.__origin__)
+        if origin_is_dc:
             params = _collect_type_vars(cls, generic_params)
         else:
             describe_ = lambda arg: describe(Any if type(arg) is TypeVar else arg, generic_params)
             params = dict(enumerate(map(describe_, cls.__args__)))
-        return Unwrapped(cls.__origin__, params, is_optional)
-    return Unwrapped(cls, params, is_optional)
+        return TypeDescriptor(cls.__origin__, frozendict(params), is_optional, origin_is_dc)
+    return TypeDescriptor(cls, frozendict(params), is_optional, is_dataclass(cls))
 
 
 def _collect_type_vars(alias: Any, generic_params: GenericParams) -> GenericParams:

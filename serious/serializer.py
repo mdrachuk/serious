@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 from dataclasses import fields, MISSING, Field
-from typing import Mapping, Type, Any, Dict, Iterator, Generic, TypeVar, Optional, Iterable, cast
+from typing import Mapping, Type, Any, Dict, Iterator, Generic, TypeVar, Optional, Iterable
 
 from serious.context import SerializationContext
-from serious.descriptors import DataclassDescriptor, FieldDescriptor
+from serious.descriptors import FieldDescriptor, TypeDescriptor
 from serious.errors import LoadError, DumpError, UnexpectedItem, MissingField
 from serious.field_serializers import FieldSerializer
 from serious.preconditions import _check_present, _check_is_instance
@@ -17,11 +17,11 @@ T = TypeVar('T')
 class DataclassSerializer(Generic[T]):
     def __init__(
             self,
-            descriptor: DataclassDescriptor[T],
+            descriptor: TypeDescriptor[T],
             serializers: Iterable[FieldSrOption],
             allow_missing: bool,
             allow_unexpected: bool,
-            _registry: Dict[DataclassDescriptor, DataclassSerializer] = None
+            _registry: Dict[TypeDescriptor, DataclassSerializer] = None
     ):
         self._descriptor = descriptor
         self._serializers = tuple(serializers)
@@ -35,7 +35,7 @@ class DataclassSerializer(Generic[T]):
         return self._descriptor.cls
 
     def child_serializer(self, field: FieldDescriptor) -> DataclassSerializer:
-        descriptor = cast(DataclassDescriptor, field.type)
+        descriptor = field.type
         if descriptor in self._serializer_registry:
             return self._serializer_registry[descriptor]
         new_serializer = DataclassSerializer(
@@ -86,7 +86,7 @@ class DataclassSerializer(Generic[T]):
                 raise DumpError(o, ctx.stack) from e
             raise
 
-    def _build_field_serializers(self, cls: DataclassDescriptor) -> Dict[str, FieldSerializer]:
+    def _build_field_serializers(self, cls: TypeDescriptor) -> Dict[str, FieldSerializer]:
         return {key: self.field_serializer(field) for key, field in cls.fields.items()}
 
     def field_serializer(self, field: FieldDescriptor, tracked: bool = True) -> FieldSerializer:

@@ -3,8 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TypeVar, Type, Generic, List, Collection, Dict, Iterable, Any, Mapping
 
-from serious.descriptors import DataclassDescriptor
-from serious.preconditions import _check_is_instance
+from serious.descriptors import describe, TypeDescriptor
+from serious.preconditions import _check_is_instance, _check_is_dataclass
 from serious.serializer import DataclassSerializer
 from serious.serializer_options import FieldSrOption
 
@@ -34,22 +34,28 @@ class DictSerializer(Generic[T]):
                  field_serializers: Iterable[FieldSrOption] = None,
                  allow_missing: bool = _Loading.allow_missing,
                  allow_unexpected: bool = _Loading.allow_unexpected):
-        self._descriptor = DataclassDescriptor.of(cls)
+        self.descriptor = self._describe(cls)
         self.config = _Config(
             loading=_Loading(allow_missing=allow_missing, allow_unexpected=allow_unexpected),
             dumping=_Dumping()
         )
         field_serializers = field_serializers if field_serializers is not None else FieldSrOption.defaults()
         self._serializer = DataclassSerializer(
-            self._descriptor,
+            self.descriptor,
             field_serializers,
             self.config.loading.allow_missing,
             self.config.loading.allow_unexpected
         )
 
+    @staticmethod
+    def _describe(cls: Type[T]) -> TypeDescriptor[T]:
+        descriptor = describe(cls)
+        _check_is_dataclass(descriptor.cls, 'Serious can only operate on dataclasses.')
+        return descriptor
+
     @property
-    def _cls(self):
-        return self._descriptor.cls
+    def cls(self):
+        return self.descriptor.cls
 
     def load(self, data: Dict[str, Any]) -> T:
         return self._from_dict(data)
@@ -58,14 +64,14 @@ class DictSerializer(Generic[T]):
         return [self._from_dict(each) for each in items]
 
     def dump(self, o: T) -> Dict[str, Any]:
-        _check_is_instance(o, self._cls)
+        _check_is_instance(o, self.cls)
         return self._serializer.dump(o)
 
     def dump_many(self, items: Collection[T]) -> List[Dict[str, Any]]:
         return [self._dump(o) for o in items]
 
     def _dump(self, o) -> Dict[str, Any]:
-        return self._serializer.dump(_check_is_instance(o, self._cls))
+        return self._serializer.dump(_check_is_instance(o, self.cls))
 
     def _from_dict(self, data: Mapping):
         return self._serializer.load(data)
