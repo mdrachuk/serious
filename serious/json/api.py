@@ -4,7 +4,7 @@ import json
 from dataclasses import dataclass
 from typing import Optional, TypeVar, Type, Generic, List, MutableMapping, Collection, Iterable, Any, Dict
 
-from serious.descriptors import describe
+from serious.descriptors import describe, TypeDescriptor
 from serious.json.preconditions import _check_that_loading_an_object, _check_that_loading_a_list
 from serious.preconditions import _check_is_instance, _check_is_dataclass
 from serious.serializer import DataclassSerializer
@@ -55,7 +55,7 @@ class JsonSerializer(Generic[T]):
         return self.descriptor.cls
 
     @staticmethod
-    def _describe(cls):
+    def _describe(cls: Type[T]) -> TypeDescriptor[T]:
         descriptor = describe(cls)
         _check_is_dataclass(descriptor.cls, 'Serious can only operate on dataclasses.')
         return descriptor

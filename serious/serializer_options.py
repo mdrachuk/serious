@@ -153,7 +153,7 @@ class EnumSrOption(FieldSrOption):
 
 
 def generic_item_serializer(field: FieldDescriptor, sr: DataclassSerializer, *, type_index):
-    new_type = field.type.generic_params[type_index]
+    new_type = field.type.parameters[type_index]
     item_descriptor = replace(field, type=new_type)
     item_sr = sr.field_serializer(item_descriptor, tracked=False)
     return item_sr
