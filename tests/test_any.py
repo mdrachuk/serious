@@ -3,7 +3,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Any, Dict, List
 
-from serious.dict import dict_schema
+from serious.dict import DictSerializer
 
 
 @dataclass(frozen=True)
@@ -14,31 +14,32 @@ class User:
     meta: Dict[str, List]
 
 
-schema = dict_schema(User)
-now = datetime.now()
-height = Decimal('1.76')
-
-keith = User('Keith', height, now, {})
-keith_dict = dict(name='Keith', height=height, registered=now, meta={})
-
-meta = {'app1': [{'age': 13}], 'contact': [keith]}
-albert_meta = User('Albert', Decimal('2'), now, meta)
-albert_dict = dict(name='Albert', height=Decimal('2'), registered=now, meta=meta)
-
-
 class TestAny:
+
+    def setup_class(self):
+        self.schema = DictSerializer(User)
+        now = datetime.now()
+        height = Decimal('1.76')
+
+        self.keith = User('Keith', height, now, {})
+        self.keith_dict = dict(name='Keith', height=height, registered=now, meta={})
+
+        self.meta = {'app1': [{'age': 13}], 'contact': [self.keith]}
+        self.albert_meta = User('Albert', Decimal('2'), now, self.meta)
+        self.albert_dict = dict(name='Albert', height=Decimal('2'), registered=now, meta=self.meta)
+
     def test_load(self):
-        actual = schema.load(keith_dict)
-        assert actual == keith
+        actual = self.schema.load(self.keith_dict)
+        assert actual == self.keith
 
     def test_dump(self):
-        actual = schema.dump(keith)
-        assert actual == keith_dict
+        actual = self.schema.dump(self.keith)
+        assert actual == self.keith_dict
 
     def test_nested_implicit_any_load(self):
-        actual = schema.load(albert_dict)
-        assert actual.meta == meta
+        actual = self.schema.load(self.albert_dict)
+        assert actual.meta == self.meta
 
     def test_nested_implicit_any_dump(self):
-        actual = schema.dump(albert_meta)
-        assert actual['meta'] == meta
+        actual = self.schema.dump(self.albert_meta)
+        assert actual['meta'] == self.meta

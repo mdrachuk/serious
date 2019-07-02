@@ -4,17 +4,16 @@ from uuid import UUID
 
 import pytest
 
-from serious.attr import Attr
 from serious.context import SerializationContext
-from serious.dict import dict_schema, Dumping, Loading
-from serious.dict.api import DictSchema
+from serious.descriptors import FieldDescriptor
+from serious.dict.api import DictSerializer
 from serious.errors import LoadError
 from serious.field_serializers import FieldSerializer
-from serious.serialization import SeriousSerializer
-from serious.serializer_options import SerializerOption
+from serious.serializer import DataclassSerializer
+from serious.serializer_options import FieldSrOption
 from serious.utils import Primitive
-from tests.entities import (DataClassWithDataClass, DataClassWithOptional,
-                            DataClassWithOptionalNested, DataClassWithUuid)
+from tests.entities import (DataclassWithDataclass, DataclassWithOptional,
+                            DataclassWithOptionalNested, DataclassWithUuid)
 
 
 @dataclass
@@ -31,6 +30,7 @@ class User:
 
 
 class UserIdSerializer(FieldSerializer):
+
     def dump(self, value: Any, ctx: SerializationContext) -> Primitive:
         return value.value
 
@@ -38,21 +38,23 @@ class UserIdSerializer(FieldSerializer):
         return UserId(value)
 
 
-class UserIdSrOption(SerializerOption):
+class UserIdSrOption(FieldSrOption):
 
-    def fits(self, attr: Attr) -> bool:
-        return attr.type is UserId
+    def fits(self, field: FieldDescriptor) -> bool:
+        return field.type.cls is UserId
 
-    def factory(self, attr: Attr, sr: SeriousSerializer) -> FieldSerializer:
-        return UserIdSerializer(attr)
+    def create(self, field: FieldDescriptor, sr: DataclassSerializer) -> FieldSerializer:
+        return UserIdSerializer(field)
 
 
 class TestDefaults:
-    schema = dict_schema(User)
+
+    def setup_class(self):
+        self.schema = DictSerializer(User)
 
     def test_invalid_class(self):
         with pytest.raises(TypeError):
-            DictSchema(dict, [], Loading(), Dumping())
+            DictSerializer(dict, field_serializers=[])
 
     def test_load(self):
         user = self.schema.load({'id': {'value': 0}, 'username': 'admin', 'password': 'admin', 'age': None})
@@ -81,9 +83,11 @@ class TestDefaults:
 
 
 class TestSerializer:
-    serializers = SerializerOption.defaults()
-    serializers.insert(0, UserIdSrOption())
-    schema = DictSchema(User, serializers, Loading(), Dumping())
+
+    def setup_class(self):
+        serializers = FieldSrOption.defaults()
+        serializers.insert(0, UserIdSrOption())
+        self.schema = DictSerializer(User, field_serializers=serializers)
 
     def test_load(self):
         actual = self.schema.load({'id': 0, 'username': 'admin', 'password': 'admin', 'age': None})
@@ -97,57 +101,62 @@ class TestSerializer:
 
 
 class TestTypes:
-    uuid_s = 'd1d61dd7-c036-47d3-a6ed-91cc2e885fc8'
-    uuid = UUID(uuid_s)
-    dc_uuid_json = {"id": uuid_s}
-    schema = dict_schema(DataClassWithUuid)
+
+    def setup_class(self):
+        uuid_s = 'd1d61dd7-c036-47d3-a6ed-91cc2e885fc8'
+        self.uuid = UUID(uuid_s)
+        self.dc_uuid_json = {"id": uuid_s}
+        self.schema = DictSerializer(DataclassWithUuid)
 
     def test_uuid_encode(self):
-        actual = self.schema.dump(DataClassWithUuid(self.uuid))
+        actual = self.schema.dump(DataclassWithUuid(self.uuid))
         assert actual == self.dc_uuid_json
 
     def test_uuid_decode(self):
         actual = self.schema.load(self.dc_uuid_json)
-        assert actual == DataClassWithUuid(self.uuid)
+        assert actual == DataclassWithUuid(self.uuid)
 
 
 class TestAllowMissing:
+
     def test_allow_missing(self):
-        actual = dict_schema(DataClassWithOptional, allow_missing=True).load({})
-        assert actual == DataClassWithOptional(None)
+        actual = DictSerializer(DataclassWithOptional, allow_missing=True).load({})
+        assert actual == DataclassWithOptional(None)
 
     def test_allow_missing_is_recursive(self):
-        actual = dict_schema(DataClassWithOptionalNested, allow_missing=True).load({"x": {}})
-        expected = DataClassWithOptionalNested(DataClassWithOptional(None))
+        actual = DictSerializer(DataclassWithOptionalNested, allow_missing=True).load({"x": {}})
+        expected = DataclassWithOptionalNested(DataclassWithOptional(None))
         assert actual == expected
 
     def test_allow_missing_terminates_at_first_missing(self):
-        actual = dict_schema(DataClassWithOptionalNested, allow_missing=True).load({"x": None})
-        assert actual == DataClassWithOptionalNested(None)
+        actual = DictSerializer(DataclassWithOptionalNested, allow_missing=True).load({"x": None})
+        assert actual == DataclassWithOptionalNested(None)
 
     def test_error_when_missing_required(self):
         with pytest.raises(LoadError) as exc_info:
-            dict_schema(DataClassWithDataClass).load({"dc_with_list": {}})
+            DictSerializer(DataclassWithDataclass).load({"dc_with_list": {}})
         assert 'dc_with_list' in exc_info.value.message
         assert 'xs' in exc_info.value.message
 
 
 class TestAllowUnexpected:
+
     def test_allow_unexpected(self):
-        actual = dict_schema(DataClassWithOptional, allow_unexpected=True).load({"x": None, "y": True})
-        assert actual == DataClassWithOptional(None)
+        actual = DictSerializer(DataclassWithOptional, allow_unexpected=True).load({"x": None, "y": True})
+        assert actual == DataclassWithOptional(None)
 
     def test_allow_unexpected_is_recursive(self):
-        actual = dict_schema(DataClassWithOptionalNested, allow_unexpected=True).load({"x": {"x": None, "y": "test"}})
-        expected = DataClassWithOptionalNested(DataClassWithOptional(None))
+        actual = DictSerializer(DataclassWithOptionalNested, allow_unexpected=True).load(
+            {"x": {"x": None, "y": "test"}})
+        expected = DataclassWithOptionalNested(DataclassWithOptional(None))
         assert actual == expected
 
     def test_error_when_unexpected(self):
         with pytest.raises(LoadError) as exc_info:
-            dict_schema(DataClassWithOptional, allow_unexpected=False).load({"x": 1, "y": 1})
+            DictSerializer(DataclassWithOptional, allow_unexpected=False).load({"x": 1, "y": 1})
         assert '"y"' in exc_info.value.message
 
     def test_error_when_unexpected_by_default(self):
         with pytest.raises(LoadError) as exc_info:
-            dict_schema(DataClassWithOptional).load({"x": 1, "y": 1})
+            DictSerializer(DataclassWithOptional).load({"x": 1, "y": 1})
         assert '"y"' in exc_info.value.message

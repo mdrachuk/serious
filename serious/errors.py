@@ -1,10 +1,10 @@
 from typing import Type, Mapping, Collection
 
-from serious.utils import DataClass, _class_path
+from serious.utils import DataclassType, _class_path
 
 
 class SerializationError(Exception):
-    def __init__(self, cls: Type[DataClass], serializer_stack: Collection[str]):
+    def __init__(self, cls: Type[DataclassType], serializer_stack: Collection[str]):
         super().__init__()
         self._cls = cls
         self._path = self.__parse_stack(serializer_stack)
@@ -25,7 +25,7 @@ class SerializationError(Exception):
 
 
 class LoadError(SerializationError):
-    def __init__(self, cls: DataClass, serializer_stack: Collection[str], data: Mapping):
+    def __init__(self, cls: DataclassType, serializer_stack: Collection[str], data: Mapping):
         super().__init__(cls, serializer_stack)
         self._data = data
 
@@ -35,7 +35,7 @@ class LoadError(SerializationError):
 
 
 class DumpError(SerializationError):
-    def __init__(self, obj: DataClass, serializer_stack: Collection[str]):
+    def __init__(self, obj: DataclassType, serializer_stack: Collection[str]):
         super().__init__(type(obj), serializer_stack)
         self._object = obj
 
@@ -45,7 +45,7 @@ class DumpError(SerializationError):
 
 
 class UnexpectedItem(LoadError):
-    def __init__(self, cls: Type[DataClass], data, fields: Collection[str]):
+    def __init__(self, cls: Type[DataclassType], data, fields: Collection[str]):
         super().__init__(cls, [], data)
         self._fields = fields
 
@@ -59,7 +59,7 @@ class UnexpectedItem(LoadError):
 
 
 class MissingField(LoadError):
-    def __init__(self, cls: Type[DataClass], data, fields: Collection[str]):
+    def __init__(self, cls: Type[DataclassType], data, fields: Collection[str]):
         super().__init__(cls, [], data)
         self._fields = fields
 

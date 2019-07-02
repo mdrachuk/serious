@@ -33,7 +33,7 @@ behavior (for example, if you want to use ISO).
 
 ```python
 from dataclasses import dataclass
-from serious.json import json_schema
+from serious.json import JsonSerializer
 
 @dataclass
 class Person:
@@ -42,7 +42,7 @@ class Person:
 lidatong = Person('lidatong')
 mdrachuk = Person('mdrachuk')
 
-schema = json_schema(Person)
+schema = JsonSerializer(Person)
 
 # Encoding to JSON
 schema.dump(lidatong)  # '{"name": "lidatong"}'
@@ -66,14 +66,14 @@ corresponding field is missing from the JSON you're decoding.
 
 ```python
 from dataclasses import dataclass
-from serious.json import json_schema
+from serious.json import JsonSerializer
  
 @dataclass
 class Student:
     id: int
     name: str = 'student'
 
-json_schema(Student, allow_missing=True).load('{"id": 1}')  # Student(id=1, name='student')
+JsonSerializer(Student, allow_missing=True).load('{"id": 1}')  # Student(id=1, name='student')
 ```
 
 Notice that `name` got default value `student` when it was missing from the JSON.
@@ -88,7 +88,7 @@ class Tutor:
     id: int
     student: Optional[Student]
 
-serious.json.json_schema(Tutor).load('{"id": 1}')  # Tutor(id=1, student=None)
+serious.json.JsonSerializer(Tutor).load('{"id": 1}')  # Tutor(id=1, student=None)
 ```
 
 Personally I recommend you leverage dataclass defaults rather than using 
@@ -106,7 +106,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 
 @dataclass
-class DataClassWithIsoDatetime:
+class DataclassWithIsoDatetime:
     created_at: datetime = field(
         metadata={'serious': {
             'dump': datetime.isoformat,
@@ -118,7 +118,7 @@ class DataClassWithIsoDatetime:
 
 ```python
 from dataclasses import dataclass
-from serious.json import json_schema, Dumping
+from serious.json import JsonSerializer, Dumping
 from typing import List
 
 @dataclass(frozen=True)
@@ -144,7 +144,7 @@ boss_json = """
 }
 """.strip()
 
-schema = json_schema(Boss, indent=4)
+schema = JsonSerializer(Boss, indent=4)
 
 assert schema.dump(boss) == boss_json
 assert schema.load(boss_json) == boss
