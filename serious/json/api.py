@@ -8,7 +8,7 @@ from serious.descriptors import describe, TypeDescriptor
 from serious.json.preconditions import _check_that_loading_an_object, _check_that_loading_a_list
 from serious.preconditions import _check_is_instance, _check_is_dataclass
 from serious.serializer import DataclassSerializer
-from serious.serializer_options import FieldSrOption
+from serious.serializer_options import FieldSerializerOption
 
 T = TypeVar('T')
 
@@ -33,7 +33,7 @@ class _Config:
 class JsonSerializer(Generic[T]):
 
     def __init__(self, cls: Type[T], *,
-                 field_serializers: Iterable[FieldSrOption] = None,
+                 field_serializers: Iterable[FieldSerializerOption] = None,
                  allow_missing: bool = _Loading.allow_missing,
                  allow_unexpected: bool = _Loading.allow_unexpected,
                  indent: Optional[int] = _Dumping.indent):
@@ -42,7 +42,7 @@ class JsonSerializer(Generic[T]):
             loading=_Loading(allow_missing=allow_missing, allow_unexpected=allow_unexpected),
             dumping=_Dumping(indent=indent)
         )
-        field_serializers = field_serializers if field_serializers is not None else FieldSrOption.defaults()
+        field_serializers = field_serializers if field_serializers is not None else FieldSerializerOption.defaults()
         self._serializer = DataclassSerializer(
             self.descriptor,
             field_serializers,

@@ -8,7 +8,7 @@ from serious.descriptors import FieldDescriptor, TypeDescriptor
 from serious.errors import LoadError, DumpError, UnexpectedItem, MissingField
 from serious.field_serializers import FieldSerializer
 from serious.preconditions import _check_present, _check_is_instance
-from serious.serializer_options import FieldSrOption
+from serious.serializer_options import FieldSerializerOption
 from serious.utils import DataclassType
 
 T = TypeVar('T')
@@ -18,7 +18,7 @@ class DataclassSerializer(Generic[T]):
     def __init__(
             self,
             descriptor: TypeDescriptor[T],
-            serializers: Iterable[FieldSrOption],
+            serializers: Iterable[FieldSerializerOption],
             allow_missing: bool,
             allow_unexpected: bool,
             _registry: Dict[TypeDescriptor, DataclassSerializer] = None

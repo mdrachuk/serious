@@ -16,6 +16,9 @@ DumpF = Callable[[Any], Primitive]
 LoadF = Callable[[Primitive], Any]
 
 
+# TODO:mdrachuk:2019-07-05: document every single serializer
+
+
 class FieldSerializer(abc.ABC):
     def __init__(self, attr: FieldDescriptor):
         self._attr = attr

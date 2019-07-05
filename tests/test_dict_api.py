@@ -10,7 +10,7 @@ from serious.dict.api import DictSerializer
 from serious.errors import LoadError
 from serious.field_serializers import FieldSerializer
 from serious.serializer import DataclassSerializer
-from serious.serializer_options import FieldSrOption
+from serious.serializer_options import FieldSerializerOption
 from serious.utils import Primitive
 from tests.entities import (DataclassWithDataclass, DataclassWithOptional,
                             DataclassWithOptionalNested, DataclassWithUuid)
@@ -38,7 +38,7 @@ class UserIdSerializer(FieldSerializer):
         return UserId(value)
 
 
-class UserIdSrOption(FieldSrOption):
+class UserIdSerializerOption(FieldSerializerOption):
 
     def fits(self, field: FieldDescriptor) -> bool:
         return field.type.cls is UserId
@@ -85,8 +85,8 @@ class TestDefaults:
 class TestSerializer:
 
     def setup_class(self):
-        serializers = FieldSrOption.defaults()
-        serializers.insert(0, UserIdSrOption())
+        serializers = FieldSerializerOption.defaults()
+        serializers.insert(0, UserIdSerializerOption())
         self.schema = DictSerializer(User, field_serializers=serializers)
 
     def test_load(self):

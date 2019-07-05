@@ -10,7 +10,7 @@ from serious.errors import LoadError
 from serious.field_serializers import FieldSerializer
 from serious.json.api import JsonSerializer
 from serious.serializer import DataclassSerializer
-from serious.serializer_options import FieldSrOption
+from serious.serializer_options import FieldSerializerOption
 from serious.utils import Primitive
 from tests.entities import (DataclassWithDataclass, DataclassWithOptional,
                             DataclassWithOptionalNested, DataclassWithUuid)
@@ -73,7 +73,7 @@ class TestDefaults:
         assert actual == expected
 
 
-class UserIdSrOption(FieldSrOption):
+class UserIdSerializerOption(FieldSerializerOption):
 
     def fits(self, field: FieldDescriptor) -> bool:
         return field.type is UserId
@@ -85,8 +85,8 @@ class UserIdSrOption(FieldSrOption):
 class TestSerializer:
 
     def setup_class(self):
-        serializers = FieldSrOption.defaults()
-        serializers.insert(0, UserIdSrOption())
+        serializers = FieldSerializerOption.defaults()
+        serializers.insert(0, UserIdSerializerOption())
         self.schema = JsonSerializer(User, field_serializers=serializers)
 
     def test_dump(self):
