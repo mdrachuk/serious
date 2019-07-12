@@ -1,19 +1,20 @@
 from typing import Type, Mapping, Collection
 
+from serious.context import SerializationStep
 from serious.utils import DataclassType, _class_path
 
 
 class SerializationError(Exception):
-    def __init__(self, cls: Type[DataclassType], serializer_stack: Collection[str]):
+    def __init__(self, cls: Type[DataclassType], serializer_stack: Collection[SerializationStep]):
         super().__init__()
         self._cls = cls
         self._path = self.__parse_stack(serializer_stack)
 
     @staticmethod
-    def __parse_stack(serializer_stack: Collection[str]) -> str:
+    def __parse_stack(serializer_stack: Collection[SerializationStep]) -> str:
         if len(serializer_stack) == 0:
             return ''
-        return ''.join(serializer_stack)[1:]
+        return ''.join(step.step_name() for step in serializer_stack)[1:]
 
     @property
     def message(self):
@@ -25,7 +26,7 @@ class SerializationError(Exception):
 
 
 class LoadError(SerializationError):
-    def __init__(self, cls: DataclassType, serializer_stack: Collection[str], data: Mapping):
+    def __init__(self, cls: DataclassType, serializer_stack: Collection[SerializationStep], data: Mapping):
         super().__init__(cls, serializer_stack)
         self._data = data
 
@@ -35,7 +36,7 @@ class LoadError(SerializationError):
 
 
 class DumpError(SerializationError):
-    def __init__(self, obj: DataclassType, serializer_stack: Collection[str]):
+    def __init__(self, obj: DataclassType, serializer_stack: Collection[SerializationStep]):
         super().__init__(type(obj), serializer_stack)
         self._object = obj
 

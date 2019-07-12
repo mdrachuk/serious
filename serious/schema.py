@@ -36,7 +36,7 @@ class SeriousSchema(Generic[T]):
         self._allow_missing = allow_missing
         self._allow_unexpected = allow_unexpected
         self._serializer_registry = {descriptor: self} if _registry is None else _registry
-        self._field_serializers = self._build_field_serializers(descriptor)
+        self._field_serializers = [self.field_serializer(field) for field in descriptor.fields]
 
     @property
     def _cls(self) -> Type[T]:
@@ -77,15 +77,21 @@ class SeriousSchema(Generic[T]):
             _check_for_unexpected(self._cls, mut_data)
         try:
             init_kwargs = {
-                key: serializer.load(mut_data[key], ctx)
-                for key, serializer in self._field_serializers.items()
-                if key in mut_data
+                serializer.field.name: self._load_field(mut_data, serializer, ctx)
+                for serializer in self._field_serializers
+                if serializer.field.name in mut_data
             }
             return self._cls(**init_kwargs)  # type: ignore # not an object
         except Exception as e:
             if root:
                 raise LoadError(self._cls, ctx.stack, data) from e
             raise
+
+    @staticmethod
+    def _load_field(data: Mapping[str, Any], serializer: FieldSerializer, ctx: SerializationContext) -> Any:
+        field = serializer.field
+        with ctx.enter(serializer):
+            return serializer.load(data[field.name], ctx)
 
     def dump(self, o: T, _ctx: Optional[SerializationContext] = None) -> Dict[str, Any]:
         """Dumps a dataclass object to a dictionary."""
@@ -95,30 +101,29 @@ class SeriousSchema(Generic[T]):
         ctx: SerializationContext = SerializationContext() if root else _ctx  # type: ignore # checked above
         try:
             return {
-                key: serializer.dump(getattr(o, key), ctx)
-                for key, serializer in self._field_serializers.items()
+                serializer.field.name: self._dump_field(o, serializer, ctx)
+                for serializer in self._field_serializers
             }
         except Exception as e:
             if root:
                 raise DumpError(o, ctx.stack) from e
             raise
 
-    def _build_field_serializers(self, cls: TypeDescriptor) -> Dict[str, FieldSerializer]:
-        return {key: self.field_serializer(field) for key, field in cls.fields.items()}
+    @staticmethod
+    def _dump_field(o: Any, serializer: FieldSerializer, ctx: SerializationContext) -> Any:
+        field = serializer.field
+        with ctx.enter(serializer):
+            return serializer.dump(getattr(o, field.name), ctx)
 
-    def field_serializer(self, field: FieldDescriptor, _tracked: bool = True) -> FieldSerializer:
+    def field_serializer(self, field: FieldDescriptor) -> FieldSerializer:
         """
         Creates a serializer fitting the provided field descriptor.
 
         @param field descriptor of a field to serialize.
-        @param _tracked should serializers usage be registered by [SerializationContext]?
-        Serialization context tracks the loading errors to pinpoint the place where loading or dumping error occurs.
-        Tracking is disabled for some nested serializers of a single field, e.g. optional serializer contains a
-        serializer for type itself.
         """
         optional = self._get_serializer(field)
         serializer = _check_present(optional, f'Type "{field.type.cls}" is not supported')
-        return serializer.with_stack() if _tracked else serializer
+        return serializer
 
     def _get_serializer(self, field: FieldDescriptor) -> Optional[FieldSerializer]:
         sr_generator = (option(field, self) for option in self._serializers if option.fits(field))  # type: ignore

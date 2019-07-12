@@ -1,6 +1,6 @@
 from collections import ChainMap
 from dataclasses import dataclass, fields, is_dataclass, replace
-from typing import Type, Any, TypeVar, Generic, get_type_hints, Dict, Mapping
+from typing import Type, Any, TypeVar, Generic, get_type_hints, Dict, Mapping, Collection
 
 from serious._collections import FrozenDict, frozendict
 from serious.utils import _is_optional
@@ -26,10 +26,10 @@ class TypeDescriptor(Generic[T]):
         return replace(self, is_optional=False)
 
     @property
-    def fields(self) -> Mapping[str, 'FieldDescriptor']:
+    def fields(self) -> Collection['FieldDescriptor']:
         types = get_type_hints(self.cls)  # type: Dict[str, Type]
         descriptors = {name: self.describe(type_) for name, type_ in types.items()}
-        return {f.name: FieldDescriptor(f.name, descriptors[f.name], f.metadata) for f in fields(self.cls)}
+        return [FieldDescriptor(f.name, descriptors[f.name], f.metadata) for f in fields(self.cls)]
 
     def describe(self, type_: Type) -> 'TypeDescriptor':
         return describe(type_, self.parameters)

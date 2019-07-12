@@ -1,43 +1,23 @@
 from __future__ import annotations
 
-import copy
 from abc import abstractmethod, ABC
 from dataclasses import replace
 from datetime import datetime, timezone
 from decimal import Decimal
 from enum import Enum
-from typing import Any, Type, Callable, Optional, Iterable
+from typing import Any, Type, Iterable
 from uuid import UUID
 
 from serious._collections import frozenlist, FrozenList
-from serious.context import SerializationContext as Context
+from serious.context import SerializationContext as Context, SerializationStep
 from serious.descriptors import FieldDescriptor
-from serious.preconditions import _check_exactly_one_present
 from serious.utils import Primitive
 
 if False:  # To reference in typings
     from serious.schema import SeriousSchema
 
 
-def with_stack(f: Callable, entry: Optional[str] = None, entry_factory: Optional[Callable] = None) -> Callable:
-    """
-    A decorator for serialization methods to log the serialization path.
-
-    E.g. in a structure of `{"nodes": [{"nodes": [{"nodes": []}, None]}]}` if `None` is not allowed as a node
-    the error would say "nodes.nodes.[1] serialization error". This allows to track the exact point where
-    the data does not match the schema.
-    """
-    _check_exactly_one_present(entry, entry_factory, message='Exactly one of "entry" and "entry_factory" is expected')
-
-    def _wrap(*args):
-        ctx: Context = args[-1]
-        with ctx.enter(entry or entry_factory()):
-            return f(*args)
-
-    return _wrap
-
-
-class FieldSerializer(ABC):
+class FieldSerializer(SerializationStep, ABC):
     """
     A abstract field serializer defining a constructor invoked by serious, [dump](#dump)/[load](#load)
     and class [fits](#fits) methods.
@@ -56,14 +36,6 @@ class FieldSerializer(ABC):
         self._field = field
         self._sr = sr
 
-    def with_stack(self) -> FieldSerializer:
-        """Creates a copy of this serializer decorating load and dump to log invocations."""
-        entry = f'.{self.field.name}'
-        serializer = copy.copy(self)
-        setattr(serializer, 'load', with_stack(self.load, entry))
-        setattr(serializer, 'dump', with_stack(self.dump, entry))
-        return serializer
-
     @classmethod
     @abstractmethod
     def fits(cls, field: FieldDescriptor) -> bool:
@@ -74,6 +46,9 @@ class FieldSerializer(ABC):
         if using `issubclass` which expects a `type`.
         """
         raise NotImplementedError(f"Serializer {cls} must implement the `#fits(FieldDescriptor)` method.")
+
+    def step_name(self):
+        return f'.{self.field.name}'
 
     @property
     def field(self) -> FieldDescriptor:
@@ -160,7 +135,7 @@ class OptionalSerializer(FieldSerializer):
     def __init__(self, field: FieldDescriptor, sr: SeriousSchema):
         super().__init__(field, sr)
         item_descriptor = replace(field, type=field.type.non_optional())
-        self._serializer = sr.field_serializer(item_descriptor, _tracked=False)
+        self._serializer = sr.field_serializer(item_descriptor)
 
     def dump(self, value: Any, ctx: Context) -> Primitive:
         return None if value is None else self._serializer.dump(value, ctx)
@@ -200,32 +175,23 @@ class DictSerializer(FieldSerializer):
     def fits(cls, field: FieldDescriptor) -> bool:
         return issubclass(field.type.cls, dict)
 
-    def with_stack(self):
-        # Custom implementation logging keys of loaded/dumped elements.
-        serializer = super().with_stack()
-        setattr(serializer, 'dump_value', with_stack(self.dump_value, entry_factory=self._value_entry))
-        setattr(serializer, 'load_value', with_stack(self.load_value, entry_factory=self._value_entry))
-        return serializer
-
     def load(self, data: Primitive, ctx: Context) -> Any:
         items = {
-            key: self.load_value(value, ctx)
+            key: self.load_value(key, value, ctx)
             for key, value in data.items()  # type: ignore # data is always a dict
         }
         return self.field.type.cls(items)
 
     def dump(self, d: Any, ctx: Context) -> Primitive:
-        return {key: self.dump_value(value, ctx) for key, value in d.items()}
+        return {key: self.dump_value(key, value, ctx) for key, value in d.items()}
 
-    def load_value(self, value: Primitive, ctx: Context) -> Any:
-        return self._val_sr.load(value, ctx)
+    def load_value(self, key, value: Primitive, ctx: Context) -> Any:
+        with ctx.enter(CollectionStep(key)):
+            return self._val_sr.load(value, ctx)
 
-    def dump_value(self, value: Any, ctx: Context) -> Primitive:
-        return self._val_sr.dump(value, ctx)
-
-    @staticmethod
-    def _value_entry(key, *_):
-        return f'[{key}]'
+    def dump_value(self, key, value: Any, ctx: Context) -> Primitive:
+        with ctx.enter(CollectionStep(key)):
+            return self._val_sr.dump(value, ctx)
 
 
 class CollectionSerializer(FieldSerializer):
@@ -241,16 +207,6 @@ class CollectionSerializer(FieldSerializer):
     def fits(cls, field: FieldDescriptor) -> bool:
         return issubclass(field.type.cls, (list, set, frozenset, tuple))
 
-    def with_stack(self):
-        # Custom implementation logging indices of loaded/dumped elements.
-        serializer = super().with_stack()
-
-        item_entry = lambda i, *_: f'[{i}]'
-        setattr(serializer, 'load_item', with_stack(self.load_item, entry_factory=item_entry))
-        setattr(serializer, 'dump_item', with_stack(self.dump_item, entry_factory=item_entry))
-
-        return serializer
-
     def load(self, value: Primitive, ctx: Context) -> Any:
         items = [self.load_item(i, item, ctx) for i, item in enumerate(value)]  # type: ignore # value is a collection
         return self._field.type.cls(items)
@@ -259,10 +215,20 @@ class CollectionSerializer(FieldSerializer):
         return [self.dump_item(i, item, ctx) for i, item in enumerate(value)]
 
     def load_item(self, i: int, value: Primitive, ctx: Context):
-        return self._load_item(value, ctx)
+        with ctx.enter(CollectionStep(i)):
+            return self._load_item(value, ctx)
 
     def dump_item(self, i: int, value: Any, ctx: Context):
-        return self._dump_item(value, ctx)
+        with ctx.enter(CollectionStep(i)):
+            return self._dump_item(value, ctx)
+
+
+class CollectionStep(SerializationStep):
+    def __init__(self, index):
+        self.index = index
+
+    def step_name(self) -> str:
+        return f'[{self.index}]'
 
 
 class PrimitiveSerializer(FieldSerializer):
@@ -396,5 +362,5 @@ class EnumSerializer(FieldSerializer):
 def generic_item_serializer(field: FieldDescriptor, sr: SeriousSchema, *, param_index: int) -> FieldSerializer:
     new_type = field.type.parameters[param_index]
     item_descriptor = replace(field, type=new_type)
-    item_serializer = sr.field_serializer(item_descriptor, _tracked=False)
+    item_serializer = sr.field_serializer(item_descriptor)
     return item_serializer
