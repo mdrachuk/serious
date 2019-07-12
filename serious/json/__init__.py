@@ -1,1 +1,1 @@
-from .api import json_schema, Dumping, Loading
+from .api import JsonSerializer

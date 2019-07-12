@@ -1,9 +1,8 @@
 # serious
 [![Build Status](https://dev.azure.com/misha-drachuk/serious/_apis/build/status/serious-release?branchName=master)](https://dev.azure.com/misha-drachuk/serious/_build/latest?definitionId=1&branchName=master)
 
-This library provides a simple API for encoding and decoding [dataclasses](https://docs.python.org/3/library/dataclasses.html) to and from JSON.
+This library is for JSON encoding/decoding and validation of [dataclasses](https://docs.python.org/3/library/dataclasses.html) without magic.
 
-It's recursive (see caveats below), so you can easily work with nested dataclasses.
 In addition to the supported types in the 
 [py to JSON table](https://docs.python.org/3/library/json.html#py-to-json-table), this library supports the following:
 - any arbitrary [Collection](https://docs.python.org/3/library/collections.abc.html#collections.abc.Collection) type is supported.
@@ -20,8 +19,9 @@ Thus, if you encode a datetime-naive object, you will decode into a
 datetime-aware object. This is important, because encoding and decoding won't 
 strictly be inverses. See this section if you want to override this default
 behavior (for example, if you want to use ISO).
-- [UUID](https://docs.python.org/3/library/uuid.html#uuid.UUID) objects. They 
-are encoded as `str` (JSON string).
+- [Decimal](https://docs.python.org/3/library/decimal.html) objects as strings.
+- [UUID](https://docs.python.org/3/library/uuid.html#uuid.UUID) objects as strings.
+- [Enums](https://docs.python.org/3/library/enum.html) objects by values.
 
 
 **Compatible with Python 3.7.**
@@ -33,7 +33,7 @@ are encoded as `str` (JSON string).
 
 ```python
 from dataclasses import dataclass
-from serious.json import json_schema
+from serious.json import JsonSerializer
 
 @dataclass
 class Person:
@@ -42,7 +42,7 @@ class Person:
 lidatong = Person('lidatong')
 mdrachuk = Person('mdrachuk')
 
-schema = json_schema(Person)
+schema = JsonSerializer(Person)
 
 # Encoding to JSON
 schema.dump(lidatong)  # '{"name": "lidatong"}'
@@ -66,14 +66,14 @@ corresponding field is missing from the JSON you're decoding.
 
 ```python
 from dataclasses import dataclass
-from serious.json import json_schema
+from serious.json import JsonSerializer
  
 @dataclass
 class Student:
     id: int
     name: str = 'student'
 
-json_schema(Student, allow_missing=True).load('{"id": 1}')  # Student(id=1, name='student')
+JsonSerializer(Student, allow_missing=True).load('{"id": 1}')  # Student(id=1, name='student')
 ```
 
 Notice that `name` got default value `student` when it was missing from the JSON.
@@ -88,7 +88,7 @@ class Tutor:
     id: int
     student: Optional[Student]
 
-serious.json.json_schema(Tutor).load('{"id": 1}')  # Tutor(id=1, student=None)
+serious.json.JsonSerializer(Tutor).load('{"id": 1}')  # Tutor(id=1, student=None)
 ```
 
 Personally I recommend you leverage dataclass defaults rather than using 
@@ -106,7 +106,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 
 @dataclass
-class DataClassWithIsoDatetime:
+class DataclassWithIsoDatetime:
     created_at: datetime = field(
         metadata={'serious': {
             'dump': datetime.isoformat,
@@ -118,7 +118,7 @@ class DataClassWithIsoDatetime:
 
 ```python
 from dataclasses import dataclass
-from serious.json import json_schema, Dumping
+from serious.json import JsonSerializer, Dumping
 from typing import List
 
 @dataclass(frozen=True)
@@ -144,7 +144,7 @@ boss_json = """
 }
 """.strip()
 
-schema = json_schema(Boss, indent=4)
+schema = JsonSerializer(Boss, indent=4)
 
 assert schema.dump(boss) == boss_json
 assert schema.load(boss_json) == boss

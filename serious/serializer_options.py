@@ -1,119 +1,159 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, replace, is_dataclass
+from abc import abstractmethod, ABC
+from collections import deque
+from dataclasses import replace
 from datetime import datetime, timezone
 from decimal import Decimal
 from enum import Enum
-from typing import Callable, _GenericAlias  # type: ignore # _GenericAlias exists!
+from typing import List, Any  # type: ignore # _GenericAlias exists!
 from uuid import UUID
 
-from serious.attr import Attr
+from serious.descriptors import FieldDescriptor
 from serious.field_serializers import (FieldSerializer, DirectFieldSerializer, OptionalFieldSerializer,
                                        DictFieldSerializer, CollectionFieldSerializer, DataclassFieldSerializer,
-                                       MetadataFieldSerializer)
-from serious.utils import _is_optional, _is_mapping, _is_collection
+                                       MetadataFieldSerializer, NoopSerializer)
 
 if False:  # To reference in typings
-    from serious.serialization import SeriousSerializer
+    from serious.serializer import DataclassSerializer
 
 local_tz = datetime.now(timezone.utc).astimezone().tzinfo
 
 
-@dataclass(frozen=True)
-class SerializerOption:
-    fits: Callable[[Attr], bool]
-    factory: Callable[[Attr, SeriousSerializer], FieldSerializer]
+class FieldSrOption(ABC):
+    @abstractmethod
+    def fits(self, field: FieldDescriptor) -> bool:
+        raise NotImplementedError
+
+    @abstractmethod
+    def create(self, field: FieldDescriptor, sr: DataclassSerializer) -> FieldSerializer:
+        raise NotImplementedError
 
     @staticmethod
-    def defaults():
+    def defaults() -> List[FieldSrOption]:
         return [
-            metadata,
-            optional,
-            mapping,
-            collection,
-            primitive,
-            dc,
-            datetime_timestamp,
-            uuid,
-            decimal,
-            enum,
+            MetadataSrOption(),
+            OptionalSrOption(),
+            AnySrOption(),
+            MappingSrOption(),
+            CollectionSrOption(),
+            PrimitiveSrOption(),
+            DataclassSrOption(),
+            DateTimeTimestampSrOption(),
+            UuidSrOption(),
+            DecimalSrOption(),
+            EnumSrOption(),
         ]
 
 
-def _optional_sr_factory(attr: Attr, sr: SeriousSerializer) -> FieldSerializer:
-    present_sr = sr.field_serializer(replace(attr, type=attr.type.__args__[0]), tracked=False)
-    return OptionalFieldSerializer(attr, present_sr)
+class MetadataSrOption(FieldSrOption):
+    def fits(self, field: FieldDescriptor) -> bool:
+        return field.metadata is not None and 'serious' in field.metadata
+
+    def create(self, field: FieldDescriptor, sr: DataclassSerializer) -> FieldSerializer:
+        return MetadataFieldSerializer(field)
 
 
-def _mapping_sr_factory(attr: Attr, sr: SeriousSerializer) -> FieldSerializer:
-    key_sr = sr.field_serializer(replace(attr, type=attr.type.__args__[0]), tracked=False)
-    val_sr = sr.field_serializer(replace(attr, type=attr.type.__args__[1]), tracked=False)
-    return DictFieldSerializer(attr, key=key_sr, value=val_sr)
+class OptionalSrOption(FieldSrOption):
+    def fits(self, field: FieldDescriptor) -> bool:
+        return field.type.is_optional
+
+    def create(self, field: FieldDescriptor, sr: DataclassSerializer) -> FieldSerializer:
+        item_descriptor = replace(field, type=field.type.non_optional())
+        present_sr = sr.field_serializer(item_descriptor, tracked=False)
+        return OptionalFieldSerializer(field, present_sr)
 
 
-def _collection_sr_factory(attr: Attr, sr: SeriousSerializer) -> FieldSerializer:
-    item_sr = sr.field_serializer(replace(attr, type=attr.type.__args__[0]), tracked=False)
-    return CollectionFieldSerializer(attr, each=item_sr)
+class AnySrOption(FieldSrOption):
+    def fits(self, field: FieldDescriptor) -> bool:
+        return field.type.cls is Any
+
+    def create(self, field: FieldDescriptor, sr: DataclassSerializer) -> FieldSerializer:
+        return NoopSerializer(field)
 
 
-def _dataclass_sr_factory(attr: Attr, sr: SeriousSerializer) -> FieldSerializer:
-    dataclass_sr = sr.child_serializer(attr.type)
-    return DataclassFieldSerializer(attr, dataclass_sr)
+class MappingSrOption(FieldSrOption):
+    def fits(self, field: FieldDescriptor) -> bool:
+        return issubclass(field.type.cls, dict)
+
+    def create(self, field: FieldDescriptor, sr: DataclassSerializer) -> FieldSerializer:
+        key_sr = generic_item_serializer(field, sr, type_index=0)
+        val_sr = generic_item_serializer(field, sr, type_index=1)
+        return DictFieldSerializer(field, key=key_sr, value=val_sr)
 
 
-metadata = SerializerOption(
-    fits=lambda attr: attr.contains_serious_metadata,
-    factory=lambda attr, sr: MetadataFieldSerializer(attr)
-)
+class CollectionSrOption(FieldSrOption):
+    def fits(self, field: FieldDescriptor) -> bool:
+        return issubclass(field.type.cls, (list, set, frozenset, tuple, deque))
 
-optional = SerializerOption(
-    fits=lambda attr: isinstance(attr.type, _GenericAlias) and _is_optional(attr.type),
-    factory=_optional_sr_factory
-)
+    def create(self, field: FieldDescriptor, sr: DataclassSerializer) -> FieldSerializer:
+        item_sr = generic_item_serializer(field, sr, type_index=0)
+        return CollectionFieldSerializer(field, each=item_sr)
 
-mapping = SerializerOption(
-    fits=lambda attr: isinstance(attr.type, _GenericAlias) and _is_mapping(attr.type),
-    factory=_mapping_sr_factory
-)
 
-collection = SerializerOption(
-    fits=lambda attr: isinstance(attr.type, _GenericAlias) and _is_collection(attr.type),
-    factory=_collection_sr_factory
-)
-primitive = SerializerOption(
-    fits=lambda attr: issubclass(attr.type, (str, int, float, bool)),
-    factory=lambda attr, sr: DirectFieldSerializer(attr, load=attr.type, dump=attr.type)
-)
+class PrimitiveSrOption(FieldSrOption):
+    def fits(self, field: FieldDescriptor) -> bool:
+        return issubclass(field.type.cls, (str, int, float, bool))
 
-dc = SerializerOption(
-    fits=lambda attr: is_dataclass(attr.type),
-    factory=_dataclass_sr_factory
-)
-datetime_timestamp = SerializerOption(
-    fits=lambda attr: issubclass(attr.type, datetime),
-    factory=lambda attr, sr: DirectFieldSerializer(
-        attr,
-        load=lambda o: datetime.fromtimestamp(o, local_tz),  # type: ignore # gonna be float
-        dump=lambda o: o.timestamp()
-    )
-)
-uuid = SerializerOption(
-    fits=lambda attr: issubclass(attr.type, UUID),
-    factory=lambda attr, sr: DirectFieldSerializer(  # type: ignore # UUID constructor in load
-        attr,
-        load=UUID,
-        dump=lambda o: str(o)
-    )
-)
-decimal = SerializerOption(
-    fits=lambda attr: issubclass(attr.type, Decimal),
-    factory=lambda attr, sr: DirectFieldSerializer(  # type: ignore # Decimal constructor in load
-        attr,
-        load=Decimal,
-        dump=lambda o: str(o)
-    )
-)
-enum = SerializerOption(
-    fits=lambda attr: issubclass(attr.type, Enum),
-    factory=lambda attr, sr: DirectFieldSerializer(attr, load=attr.type, dump=lambda o: o.value)
-)
+    def create(self, field: FieldDescriptor, sr: DataclassSerializer) -> FieldSerializer:
+        return DirectFieldSerializer(field, load=field.type.cls, dump=field.type.cls)
+
+
+class DataclassSrOption(FieldSrOption):
+    def fits(self, field: FieldDescriptor) -> bool:
+        return field.type.is_dataclass
+
+    def create(self, field: FieldDescriptor, sr: DataclassSerializer) -> FieldSerializer:
+        dataclass_sr = sr.child_serializer(field)
+        return DataclassFieldSerializer(field, dataclass_sr)
+
+
+class DateTimeTimestampSrOption(FieldSrOption):
+    def fits(self, field: FieldDescriptor) -> bool:
+        return issubclass(field.type.cls, datetime)
+
+    def create(self, field: FieldDescriptor, sr: DataclassSerializer) -> FieldSerializer:
+        return DirectFieldSerializer(
+            field,
+            load=lambda o: datetime.fromtimestamp(o, local_tz),  # type: ignore # gonna be float
+            dump=lambda o: o.timestamp()
+        )
+
+
+class UuidSrOption(FieldSrOption):
+    def fits(self, field: FieldDescriptor) -> bool:
+        return issubclass(field.type.cls, UUID)
+
+    def create(self, field: FieldDescriptor, sr: DataclassSerializer) -> FieldSerializer:
+        return DirectFieldSerializer(  # type: ignore # UUID constructor in load
+            field,
+            load=UUID,
+            dump=lambda o: str(o)
+        )
+
+
+class DecimalSrOption(FieldSrOption):
+    def fits(self, field: FieldDescriptor) -> bool:
+        return issubclass(field.type.cls, Decimal)
+
+    def create(self, field: FieldDescriptor, sr: DataclassSerializer) -> FieldSerializer:
+        return DirectFieldSerializer(  # type: ignore # Decimal constructor in load
+            field,
+            load=Decimal,
+            dump=lambda o: str(o)
+        )
+
+
+class EnumSrOption(FieldSrOption):
+    def fits(self, field: FieldDescriptor) -> bool:
+        return issubclass(field.type.cls, Enum)
+
+    def create(self, field: FieldDescriptor, sr: DataclassSerializer) -> FieldSerializer:
+        return DirectFieldSerializer(field, load=field.type.cls, dump=lambda o: o.value)
+
+
+def generic_item_serializer(field: FieldDescriptor, sr: DataclassSerializer, *, type_index):
+    new_type = field.type.parameters[type_index]
+    item_descriptor = replace(field, type=new_type)
+    item_sr = sr.field_serializer(item_descriptor, tracked=False)
+    return item_sr

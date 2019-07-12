@@ -1,6 +1,6 @@
 from typing import Collection, Mapping, Any, Union, List, Type
 
-DataClass = Any
+DataclassType = Any
 Primitive = Union[Mapping, List, str, int, float, bool, None]
 
 

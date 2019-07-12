@@ -1,31 +1,36 @@
 import json
 
-from serious.json import json_schema
-from tests.entities import DataClassWithDataClass, DataClassWithList, DataClassX, DataClassXs
-
-dcwdc = json_schema(DataClassWithDataClass)
-dcxs = json_schema(DataClassXs)
+from serious.json import JsonSerializer
+from tests.entities import DataclassWithDataclass, DataclassWithList, DataclassX, DataclassXs
 
 
 class TestDecoder:
+    def setup_class(self):
+        self.dcwdc = JsonSerializer(DataclassWithDataclass)
+        self.dcxs = JsonSerializer(DataclassXs)
+
     def test_nested_dataclass(self):
-        actual = dcwdc.load(json.dumps({"dc_with_list": {"xs": [1]}}))
-        expected = DataClassWithDataClass(DataClassWithList([1]))
+        actual = self.dcwdc.load(json.dumps({"dc_with_list": {"xs": [1]}}))
+        expected = DataclassWithDataclass(DataclassWithList([1]))
         assert actual == expected
 
     def test_nested_list_of_dataclasses(self):
-        actual = dcxs.load(json.dumps({"xs": [{"x": 0}, {"x": 1}]}))
-        expected = DataClassXs([DataClassX(0), DataClassX(1)])
+        actual = self.dcxs.load(json.dumps({"xs": [{"x": 0}, {"x": 1}]}))
+        expected = DataclassXs([DataclassX(0), DataclassX(1)])
         assert actual == expected
 
 
 class TestEncoder:
+    def setup_class(self):
+        self.dcwdc = JsonSerializer(DataclassWithDataclass)
+        self.dcxs = JsonSerializer(DataclassXs)
+
     def test_nested_dataclass(self):
-        actual = dcwdc.dump(DataClassWithDataClass(DataClassWithList([1])))
+        actual = self.dcwdc.dump(DataclassWithDataclass(DataclassWithList([1])))
         expected = json.dumps({"dc_with_list": {"xs": [1]}})
         assert actual == expected
 
     def test_nested_list_of_dataclasses(self):
-        actual = dcxs.dump(DataClassXs([DataClassX(0), DataClassX(1)]))
+        actual = self.dcxs.dump(DataclassXs([DataclassX(0), DataclassX(1)]))
         expected = json.dumps({"xs": [{"x": 0}, {"x": 1}]})
         assert actual == expected

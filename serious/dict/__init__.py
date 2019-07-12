@@ -1,1 +1,1 @@
-from .api import dict_schema, Dumping, Loading
+from .api import DictSerializer

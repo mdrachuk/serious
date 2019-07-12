@@ -6,127 +6,106 @@ A = TypeVar('A')
 
 
 @dataclass(frozen=True)
-class DataClassWithList:
+class DataclassWithList:
     xs: List[int]
 
 
 @dataclass(frozen=True)
-class DataClassWithListStr:
+class DataclassWithListStr:
     xs: List[str]
 
 
 @dataclass(frozen=True)
-class DataClassWithDict:
+class DataclassWithDict:
     kvs: Dict[str, str]
 
 
 @dataclass(frozen=True)
-class DataClassWithDictInt:
+class DataclassWithDictInt:
     kvs: Dict[int, str]
 
 
 @dataclass(frozen=True)
-class DataClassWithSet:
+class DataclassWithSet:
     xs: Set[int]
 
 
 @dataclass(frozen=True)
-class DataClassWithTuple:
+class DataclassWithTuple:
     xs: Tuple[int]
 
 
 @dataclass(frozen=True)
-class DataClassWithFrozenSet:
+class DataclassWithFrozenSet:
     xs: FrozenSet[int]
 
 
 @dataclass(frozen=True)
-class DataClassWithDeque:
+class DataclassWithDeque:
     xs: Deque[int]
 
 
 @dataclass(frozen=True)
-class DataClassWithOptional:
+class DataclassWithOptional:
     x: Optional[int]
 
 
 @dataclass
-class DataClassWithOptionalStr:
+class DataclassWithOptionalStr:
     x: Optional[str] = None
 
 
 @dataclass(frozen=True)
-class DataClassWithOptionalNested:
-    x: Optional[DataClassWithOptional]
+class DataclassWithOptionalNested:
+    x: Optional[DataclassWithOptional]
 
 
 @dataclass(frozen=True)
-class DataClassWithUnionIntNone:
+class DataclassWithUnionIntNone:
     x: Union[int, None]
 
 
 @dataclass(frozen=True)
-class DataClassWithDataClass:
-    dc_with_list: DataClassWithList
+class DataclassWithDataclass:
+    dc_with_list: DataclassWithList
 
 
 @dataclass(frozen=True)
-class DataClassX:
+class DataclassX:
     x: int
 
 
 @dataclass(frozen=True)
-class DataClassXs:
-    xs: List[DataClassX]
+class DataclassXs:
+    xs: List[DataclassX]
 
 
 @dataclass(frozen=True)
-class DataClassIntImmutableDefault:
+class DataclassIntImmutableDefault:
     x: int = 0
 
 
 @dataclass(frozen=True)
-class DataClassMutableDefaultList:
+class DataclassMutableDefaultList:
     xs: List[int] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
-class DataClassMutableDefaultDict:
+class DataclassMutableDefaultDict:
     xs: Dict[str, int] = field(default_factory=dict)
 
 
-class MyCollection(Collection[A]):
-    def __init__(self, xs: Collection[A]) -> None:
-        self.xs = xs
-
-    def __contains__(self, item) -> NoReturn:
-        return item in self.xs
-
-    def __iter__(self):
-        return iter(self.xs)
-
-    def __len__(self):
-        return len(self.xs)
-
-    def __eq__(self, other):
-        return type(self) == type(other) and self.xs == other.xs
-
-
-@dataclass(frozen=True)
-class DataClassWithMyCollection:
-    xs: MyCollection[int]
-
 
 @dataclass
-class DataClassJsonDecorator:
+class DataclassJsonDecorator:
     x: str
 
 
 @dataclass
-class DataClassWithUuid:
+class DataclassWithUuid:
     id: UUID
 
 
 @dataclass
-class DataClassChild:
+class DataclassChild:
     name: str

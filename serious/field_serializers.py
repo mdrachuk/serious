@@ -4,40 +4,40 @@ import abc
 import copy
 from typing import Callable, Any, Optional
 
-from serious.attr import Attr
 from serious.context import SerializationContext
+from serious.descriptors import FieldDescriptor
 from serious.preconditions import _check_exactly_one_present
 from serious.utils import Primitive
 
 if False:  # To reference in typings
-    from serious.serialization import SeriousSerializer
+    from serious.serializer import DataclassSerializer
 
 DumpF = Callable[[Any], Primitive]
 LoadF = Callable[[Primitive], Any]
 
 
 class FieldSerializer(abc.ABC):
-    def __init__(self, attr: Attr, *args):
+    def __init__(self, attr: FieldDescriptor):
         self._attr = attr
 
     def with_stack(self) -> FieldSerializer:
-        entry = f'.{self.attr.name}'
+        entry = f'.{self.field.name}'
         serializer = copy.copy(self)
         setattr(serializer, 'load', with_stack(self.load, entry))
         setattr(serializer, 'dump', with_stack(self.dump, entry))
         return serializer
 
     @property
-    def attr(self):
+    def field(self):
         return self._attr
 
     @abc.abstractmethod
     def dump(self, value: Any, ctx: SerializationContext) -> Primitive:
-        pass
+        raise NotImplementedError
 
     @abc.abstractmethod
     def load(self, value: Primitive, ctx: SerializationContext) -> Any:
-        pass
+        raise NotImplementedError
 
 
 def with_stack(f: Callable, entry: Optional[str] = None, entry_factory: Optional[Callable] = None) -> Callable:
@@ -51,8 +51,19 @@ def with_stack(f: Callable, entry: Optional[str] = None, entry_factory: Optional
     return _wrap
 
 
+class NoopSerializer(FieldSerializer):
+    def __init__(self, attr: FieldDescriptor, ):
+        super().__init__(attr)
+
+    def load(self, value: Primitive, ctx: SerializationContext) -> Any:
+        return value
+
+    def dump(self, value: Any, ctx: SerializationContext) -> Primitive:
+        return value
+
+
 class DirectFieldSerializer(FieldSerializer):
-    def __init__(self, attr: Attr, load: LoadF, dump: DumpF):
+    def __init__(self, attr: FieldDescriptor, load: LoadF, dump: DumpF):
         super().__init__(attr)
         self._load = load
         self._dump = dump
@@ -65,12 +76,13 @@ class DirectFieldSerializer(FieldSerializer):
 
 
 class MetadataFieldSerializer(DirectFieldSerializer):
-    def __init__(self, attr: Attr):
-        super().__init__(attr, load=attr.serious_metadata['load'], dump=attr.serious_metadata['dump'])
+    def __init__(self, attr: FieldDescriptor):
+        metadata = attr.metadata['serious']
+        super().__init__(attr, load=metadata['load'], dump=metadata['dump'])
 
 
 class CollectionFieldSerializer(FieldSerializer):
-    def __init__(self, attr: Attr, each: FieldSerializer):
+    def __init__(self, attr: FieldDescriptor, each: FieldSerializer):
         super().__init__(attr)
         self._load_item = each.load
         self._dump_item = each.dump
@@ -86,7 +98,7 @@ class CollectionFieldSerializer(FieldSerializer):
 
     def load(self, value: Primitive, ctx: SerializationContext) -> Any:
         items = [self.load_item(i, item, ctx) for i, item in enumerate(value)]  # type: ignore # value is a collection
-        return self._attr.type.__origin__(items)
+        return self._attr.type.cls(items)
 
     def dump(self, value: Any, ctx: SerializationContext) -> Primitive:
         return [self.dump_item(i, item, ctx) for i, item in enumerate(value)]
@@ -99,8 +111,8 @@ class CollectionFieldSerializer(FieldSerializer):
 
 
 class DataclassFieldSerializer(FieldSerializer):
-    def __init__(self, attr: Attr, serializer: 'SeriousSerializer'):
-        super().__init__(attr)
+    def __init__(self, field: FieldDescriptor, serializer: 'DataclassSerializer'):
+        super().__init__(field)
         self._serializer = serializer
 
     def load(self, value: Primitive, ctx: SerializationContext) -> Any:
@@ -111,12 +123,10 @@ class DataclassFieldSerializer(FieldSerializer):
 
 
 class DictFieldSerializer(FieldSerializer):
-    def __init__(self, attr: Attr, key: FieldSerializer, value: FieldSerializer):
-        super().__init__(attr)
-        self._dump_key = key.dump
-        self._load_key = key.load
-        self._dump_value = value.dump
-        self._load_value = value.load
+    def __init__(self, field: FieldDescriptor, key: FieldSerializer, value: FieldSerializer):
+        super().__init__(field)
+        self._key_sr = key
+        self._val_sr = value
 
     def with_stack(self):
         serializer = super().with_stack()
@@ -136,26 +146,26 @@ class DictFieldSerializer(FieldSerializer):
             self.load_key(key, ctx): self.load_value(key, value, ctx)
             for key, value in data.items()  # type: ignore # data is always a dict
         }
-        return self.attr.type.__origin__(items)
+        return self.field.type.cls(items)
 
     def dump(self, d: Any, ctx: SerializationContext) -> Primitive:
         return {self.dump_key(key, ctx): self.dump_value(key, value, ctx) for key, value in d.items()}
 
     def load_value(self, key: str, value: Primitive, ctx: SerializationContext) -> Any:
-        return self._load_value(value, ctx)
+        return self._val_sr.load(value, ctx)
 
     def dump_value(self, key: str, value: Any, ctx: SerializationContext) -> Primitive:
-        return self._dump_value(value, ctx)
+        return self._val_sr.dump(value, ctx)
 
     def load_key(self, key: str, ctx: SerializationContext) -> Any:
-        return self._load_key(key, ctx)
+        return self._key_sr.load(key, ctx)
 
     def dump_key(self, key: Any, ctx: SerializationContext) -> str:
-        return str(self._dump_key(key, ctx))
+        return str(self._key_sr.dump(key, ctx))
 
 
 class OptionalFieldSerializer(FieldSerializer):
-    def __init__(self, attr: Attr, serializer: FieldSerializer):
+    def __init__(self, attr: FieldDescriptor, serializer: FieldSerializer):
         super().__init__(attr)
         self._serializer = serializer
 
