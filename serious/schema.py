@@ -126,7 +126,7 @@ class SeriousSchema(Generic[T]):
         return serializer
 
     def _get_serializer(self, field: FieldDescriptor) -> Optional[FieldSerializer]:
-        sr_generator = (option(field, self) for option in self._serializers if option.fits(field))  # type: ignore
+        sr_generator = (serializer(field, self) for serializer in self._serializers if serializer.fits(field))
         optional_sr = next(sr_generator, None)
         return optional_sr
 
