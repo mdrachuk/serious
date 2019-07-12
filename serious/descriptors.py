@@ -1,8 +1,9 @@
 from collections import ChainMap
 from dataclasses import dataclass, fields, is_dataclass, replace
-from typing import Type, Any, TypeVar, Generic, get_type_hints, Dict, Mapping, Union
+from typing import Type, Any, TypeVar, Generic, get_type_hints, Dict, Mapping
 
 from serious._collections import FrozenDict, frozendict
+from serious.utils import _is_optional
 
 T = TypeVar('T')
 
@@ -64,13 +65,6 @@ def _unwrap_generic(cls: Type, generic_params: GenericParams) -> TypeDescriptor:
 def _collect_type_vars(alias: Any, generic_params: GenericParams) -> GenericParams:
     return dict(zip(alias.__origin__.__parameters__,
                     (describe(arg, generic_params) for arg in alias.__args__)))
-
-
-def _is_optional(cls: Type) -> bool:
-    return hasattr(cls, '__origin__') \
-           and cls.__origin__ == Union \
-           and len(cls.__args__) == 2 \
-           and cls.__args__[1] == type(None)
 
 
 @dataclass(frozen=True)

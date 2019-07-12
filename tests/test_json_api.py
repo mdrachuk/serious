@@ -33,7 +33,7 @@ class TestDefaults:
         self.schema = JsonSchema(User)
 
     def test_invalid_class(self):
-        with pytest.raises(TypeError):
+        with pytest.raises(AssertionError):
             JsonSchema(dict, serializers=[])
 
     def test_load(self):

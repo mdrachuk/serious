@@ -10,20 +10,17 @@ T = TypeVar('T')
 
 def _check_is_instance(value: T, type_: Type[T], message: str = None) -> T:
     message = message or f'Got "{value}" when expecting a "{type_}" instance.'
-    if not isinstance(value, type_):
-        raise TypeError(message)
+    assert isinstance(value, type_), message
     return value
 
 
 def _check_is_dataclass(type_: Type[T], message: str = 'Not a dataclass') -> Type[T]:
-    if not is_dataclass(type_):
-        raise TypeError(message)
+    assert is_dataclass(type_), message
     return type_
 
 
 def _check_present(optional: Optional[T], message: str = 'Value must be present') -> T:
-    if optional is None:
-        raise ValueError(message)
+    assert optional is not None, message
     value: T = optional
     return value
 
@@ -34,5 +31,4 @@ def _check_exactly_one_present(*args, message: str = 'Exactly one parameter is e
         if arg is not None:
             _check_present(message)
             flag = True
-    if flag is False:
-        raise ValueError(message)
+    assert flag, message

@@ -3,11 +3,9 @@ from collections import deque
 from serious.json import JsonSchema
 from tests.entities import (DataclassIntImmutableDefault,
                             DataclassMutableDefaultDict, DataclassMutableDefaultList,
-                            DataclassWithDict, DataclassWithDictInt,
-                            DataclassWithFrozenSet, DataclassWithList,
-                            DataclassWithListStr, DataclassWithOptional,
-                            DataclassWithOptionalStr, DataclassWithSet,
-                            DataclassWithTuple, DataclassWithUnionIntNone)
+                            DataclassWithDict, DataclassWithFrozenSet, DataclassWithList,
+                            DataclassWithListStr, DataclassWithOptional, DataclassWithOptionalStr,
+                            DataclassWithSet, DataclassWithTuple, DataclassWithUnionIntNone)
 
 
 class TestEncoder:
@@ -19,9 +17,6 @@ class TestEncoder:
 
     def test_dict(self):
         assert JsonSchema(DataclassWithDict).dump(DataclassWithDict({'1': 'a'})) == '{"kvs": {"1": "a"}}'
-
-    def test_dict_int(self):
-        assert JsonSchema(DataclassWithDictInt).dump(DataclassWithDictInt({1: 'a'})) == '{"kvs": {"1": "a"}}'
 
     def test_set(self):
         assert JsonSchema(DataclassWithSet).dump(DataclassWithSet({1})) == '{"xs": [1]}'
@@ -72,11 +67,6 @@ class TestDecoder:
     def test_dict(self):
         actual = JsonSchema(DataclassWithDict).load('{"kvs": {"1": "a"}}')
         expected = DataclassWithDict({'1': 'a'})
-        assert actual == expected
-
-    def test_dict_int(self):
-        actual = JsonSchema(DataclassWithDictInt).load('{"kvs": {"1": "a"}}')
-        expected = DataclassWithDictInt({1: 'a'})
         assert actual == expected
 
     def test_set(self):

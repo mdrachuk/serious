@@ -46,7 +46,7 @@ class TestDefaults:
         self.schema = DictSchema(User)
 
     def test_invalid_class(self):
-        with pytest.raises(TypeError):
+        with pytest.raises(AssertionError):
             DictSchema(dict, serializers=[])
 
     def test_load(self):

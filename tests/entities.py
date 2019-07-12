@@ -21,11 +21,6 @@ class DataclassWithDict:
 
 
 @dataclass(frozen=True)
-class DataclassWithDictInt:
-    kvs: Dict[int, str]
-
-
-@dataclass(frozen=True)
 class DataclassWithSet:
     xs: Set[int]
 

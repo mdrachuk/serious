@@ -191,7 +191,9 @@ class DictSerializer(FieldSerializer):
 
     def __init__(self, field: FieldDescriptor, sr: SeriousSchema):
         super().__init__(field, sr)
-        self._key_sr = generic_item_serializer(field, sr, type_index=0)
+        key_type = field.type.parameters[0]
+        assert key_type.cls is str and not key_type.is_optional, \
+            'Dict keys must have explicit str type (Dict[str, Any])'
         self._val_sr = generic_item_serializer(field, sr, type_index=1)
 
     @classmethod
@@ -201,26 +203,19 @@ class DictSerializer(FieldSerializer):
     def with_stack(self):
         # Custom implementation logging keys of loaded/dumped elements.
         serializer = super().with_stack()
-
-        value_entry = lambda key, *_: f'[{key}]'
-        setattr(serializer, 'dump_value', with_stack(self.dump_value, entry_factory=value_entry))
-        setattr(serializer, 'load_value', with_stack(self.load_value, entry_factory=value_entry))
-
-        key_entry = lambda key, *_: f'${key}'
-        setattr(serializer, 'dump_key', with_stack(self.dump_key, entry_factory=key_entry))
-        setattr(serializer, 'load_key', with_stack(self.load_key, entry_factory=key_entry))
-
+        setattr(serializer, 'dump_value', with_stack(self.dump_value, entry_factory=self._value_entry))
+        setattr(serializer, 'load_value', with_stack(self.load_value, entry_factory=self._value_entry))
         return serializer
 
     def load(self, data: Primitive, ctx: SerializationContext) -> Any:
         items = {
-            self.load_key(key, ctx): self.load_value(value, ctx)
+            key: self.load_value(value, ctx)
             for key, value in data.items()  # type: ignore # data is always a dict
         }
         return self.field.type.cls(items)
 
     def dump(self, d: Any, ctx: SerializationContext) -> Primitive:
-        return {self.dump_key(key, ctx): self.dump_value(value, ctx) for key, value in d.items()}
+        return {key: self.dump_value(value, ctx) for key, value in d.items()}
 
     def load_value(self, value: Primitive, ctx: SerializationContext) -> Any:
         return self._val_sr.load(value, ctx)
@@ -228,11 +223,9 @@ class DictSerializer(FieldSerializer):
     def dump_value(self, value: Any, ctx: SerializationContext) -> Primitive:
         return self._val_sr.dump(value, ctx)
 
-    def load_key(self, key: str, ctx: SerializationContext) -> Any:
-        return self._key_sr.load(key, ctx)
-
-    def dump_key(self, key: Any, ctx: SerializationContext) -> str:
-        return str(self._key_sr.dump(key, ctx))
+    @staticmethod
+    def _value_entry(key, *_):
+        return f'[{key}]'
 
 
 class CollectionSerializer(FieldSerializer):
