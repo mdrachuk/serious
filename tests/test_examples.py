@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Set
 
-from serious.json import JsonSerializer
+from serious.json import JsonSchema
 
 
 @dataclass(frozen=True)
@@ -32,15 +32,15 @@ class TestEncoder:
         self.c = Course(1, 'course', self.p, {self.s1})
 
     def test_student(self):
-        schema = JsonSerializer(Student)
+        schema = JsonSchema(Student)
         assert schema.dump(self.s1) == '{"id": 1, "name": "student"}'
 
     def test_professor(self):
-        schema = JsonSerializer(Professor)
+        schema = JsonSchema(Professor)
         assert schema.dump(self.p) == '{"id": 1, "name": "professor"}'
 
     def test_course(self):
-        schema = JsonSerializer(Course)
+        schema = JsonSchema(Course)
         assert schema.dump(self.c) == '{"id": 1, ' \
                                       '"name": "course", ' \
                                       '"professor": {"id": 1, "name": "professor"}, ' \
@@ -51,5 +51,5 @@ class TestEncoder:
         s2_anon = Student(2, 'student')
         one = [s1_anon, s2_anon]
         two = [s2_anon, s1_anon]
-        actual = JsonSerializer(Student, allow_missing=True).load_many('[{"id": 1}, {"id": 2}]')
+        actual = JsonSchema(Student, allow_missing=True).load_many('[{"id": 1}, {"id": 2}]')
         assert actual == one or actual == two

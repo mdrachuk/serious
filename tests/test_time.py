@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
-from serious.json import JsonSerializer
+from serious.json import JsonSchema
 
 
 @dataclass
@@ -21,15 +21,15 @@ class DataclassWithIsoDatetime:
 class TestTime:
 
     def setup_class(self):
-        self.timestamp_schema = JsonSerializer(DataclassWithDatetime)
-        self.iso_schema = JsonSerializer(DataclassWithIsoDatetime)
+        self.timestamp_schema = JsonSchema(DataclassWithDatetime)
+        self.iso_schema = JsonSchema(DataclassWithIsoDatetime)
 
-        dt = datetime(2018, 11, 17, 16, 55, 28, 456753, tzinfo=timezone.utc)
-        tz = timezone.utc
+        utc = timezone.utc
+        dt = datetime(2018, 11, 17, 16, 55, 28, 456753, tzinfo=utc)
 
         ts = dt.timestamp()
         self.dc_ts_json = f'{{"created_at": {ts}}}'
-        self.dc_ts = DataclassWithDatetime(datetime.fromtimestamp(ts, tz=tz))
+        self.dc_ts = DataclassWithDatetime(datetime.fromtimestamp(ts, tz=utc))
 
         iso = dt.isoformat()
         self.dc_iso_json = f'{{"created_at": "{iso}"}}'

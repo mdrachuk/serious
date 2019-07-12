@@ -3,7 +3,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Any, Dict, List
 
-from serious.dict import DictSerializer
+from serious.dict import DictSchema
 
 
 @dataclass(frozen=True)
@@ -17,7 +17,7 @@ class User:
 class TestAny:
 
     def setup_class(self):
-        self.schema = DictSerializer(User)
+        self.schema = DictSchema(User)
         now = datetime.now()
         height = Decimal('1.76')
 

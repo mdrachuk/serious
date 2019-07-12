@@ -5,8 +5,10 @@ VT = TypeVar('VT')  # Value type.
 
 
 class FrozenDict(dict, Generic[KT, VT]):
-    """ A dictionary which cannot be changed a la frozenset.
-    Implementation from https://www.python.org/dev/peps/pep-0351/.
+    """
+    A dictionary which cannot be changed a la frozenset.
+
+    Implementation from [PEP-351](https://www.python.org/dev/peps/pep-0351/).
     """
 
     def __hash__(self):
@@ -27,4 +29,10 @@ class FrozenDict(dict, Generic[KT, VT]):
     popitem = _immutable
 
 
+class FrozenList(tuple, Generic[VT]):
+    """A list that cannot be changed. `FrozenList[VT]` is equal to saying `Tuple[VT, ...]`."""
+    pass
+
+
 frozendict = FrozenDict
+frozenlist = FrozenList

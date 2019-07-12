@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Dict, List
 
-from serious.json import JsonSerializer
+from serious.json import JsonSchema
 
 
 class MyEnum(Enum):
@@ -37,7 +37,7 @@ class EnumContainer:
 class TestEncoder:
 
     def test_data_with_enum(self):
-        schema = JsonSerializer(DataWithEnum)
+        schema = JsonSchema(DataWithEnum)
 
         enum = DataWithEnum('name1', MyEnum.STR1)
         enum_json = '{"name": "name1", "my_enum": "str1"}'
@@ -52,17 +52,17 @@ class TestEncoder:
         assert schema.dump(float_enum) == float_enum_json
 
     def test_data_with_str_enum(self):
-        schema = JsonSerializer(DataWithStrEnum)
+        schema = JsonSchema(DataWithStrEnum)
         o = DataWithStrEnum(MyStrEnum.STR1)
         assert schema.dump(o) == '{"my_str_enum": "str1"}'
 
     def test_data_with_enum_default_value(self):
-        schema = JsonSerializer(DataWithEnum)
+        schema = JsonSchema(DataWithEnum)
         enum_to_json = schema.dump(DataWithEnum('name2'))
         assert enum_to_json == '{"name": "name2", "my_enum": "str3"}'
 
     def test_collection_with_enum(self):
-        schema = JsonSerializer(EnumContainer)
+        schema = JsonSchema(EnumContainer)
         container = EnumContainer(
             enum_list=[MyEnum.STR3, MyEnum.INT1],
             dict_enum_value={"key1str": MyEnum.STR1, "key1float": MyEnum.FLOAT1}
@@ -74,7 +74,7 @@ class TestEncoder:
 class TestDecoder:
 
     def test_data_with_enum(self):
-        schema = JsonSerializer(DataWithEnum)
+        schema = JsonSchema(DataWithEnum)
 
         enum = DataWithEnum('name1', MyEnum.STR1)
         enum_json = '{"name": "name1", "my_enum": "str1"}'
@@ -96,14 +96,14 @@ class TestDecoder:
         assert schema.dump(float_enum_from_json) == float_enum_json
 
     def test_data_with_str_enum(self):
-        schema = JsonSerializer(DataWithStrEnum)
+        schema = JsonSchema(DataWithStrEnum)
         json = '{"my_str_enum": "str1"}'
         o = schema.load(json)
         assert DataWithStrEnum(MyStrEnum.STR1) == o
         assert schema.dump(o) == json
 
     def test_data_with_enum_default_value(self):
-        schema = JsonSerializer(DataWithEnum)
+        schema = JsonSchema(DataWithEnum)
 
         json = '{"name": "name2", "my_enum": "str3"}'
         assert schema.dump(DataWithEnum('name2')) == json
@@ -114,7 +114,7 @@ class TestDecoder:
 
     def test_collection_with_enum(self):
         json = '{"enum_list": ["str3", 1], "dict_enum_value": {"key1str": "str1", "key1float": 1.23}}'
-        schema = JsonSerializer(EnumContainer)
+        schema = JsonSchema(EnumContainer)
         container_from_json = schema.load(json)
         o = EnumContainer(
             enum_list=[MyEnum.STR3, MyEnum.INT1],

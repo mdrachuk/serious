@@ -1,1 +1,1 @@
-from .api import DictSerializer
+from .api import DictSchema
