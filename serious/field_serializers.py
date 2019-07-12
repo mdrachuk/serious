@@ -10,7 +10,7 @@ from typing import Any, Type, Callable, Optional, Iterable
 from uuid import UUID
 
 from serious._collections import frozenlist, FrozenList
-from serious.context import SerializationContext
+from serious.context import SerializationContext as Context
 from serious.descriptors import FieldDescriptor
 from serious.preconditions import _check_exactly_one_present
 from serious.utils import Primitive
@@ -30,7 +30,7 @@ def with_stack(f: Callable, entry: Optional[str] = None, entry_factory: Optional
     _check_exactly_one_present(entry, entry_factory, message='Exactly one of "entry" and "entry_factory" is expected')
 
     def _wrap(*args):
-        ctx: SerializationContext = args[-1]
+        ctx: Context = args[-1]
         with ctx.enter(entry or entry_factory()):
             return f(*args)
 
@@ -81,11 +81,11 @@ class FieldSerializer(ABC):
         return self._field
 
     @abstractmethod
-    def dump(self, value: Any, ctx: SerializationContext) -> Primitive:
+    def dump(self, value: Any, ctx: Context) -> Primitive:
         raise NotImplementedError
 
     @abstractmethod
-    def load(self, value: Primitive, ctx: SerializationContext) -> Any:
+    def load(self, value: Primitive, ctx: Context) -> Any:
         raise NotImplementedError
 
 
@@ -133,10 +133,10 @@ class MetadataSerializer(FieldSerializer):
         self._load = metadata['load']
         self._dump = metadata['dump']
 
-    def load(self, value: Primitive, ctx: SerializationContext) -> Any:
+    def load(self, value: Primitive, ctx: Context) -> Any:
         return self._load(value)
 
-    def dump(self, value: Any, ctx: SerializationContext) -> Primitive:
+    def dump(self, value: Any, ctx: Context) -> Primitive:
         return self._dump(value)
 
     @classmethod
@@ -162,10 +162,10 @@ class OptionalSerializer(FieldSerializer):
         item_descriptor = replace(field, type=field.type.non_optional())
         self._serializer = sr.field_serializer(item_descriptor, _tracked=False)
 
-    def dump(self, value: Any, ctx: SerializationContext) -> Primitive:
+    def dump(self, value: Any, ctx: Context) -> Primitive:
         return None if value is None else self._serializer.dump(value, ctx)
 
-    def load(self, value: Primitive, ctx: SerializationContext) -> Any:
+    def load(self, value: Primitive, ctx: Context) -> Any:
         return None if value is None else self._serializer.load(value, ctx)
 
     @classmethod
@@ -176,10 +176,10 @@ class OptionalSerializer(FieldSerializer):
 class AnySerializer(FieldSerializer):
     """Serializer for [Any] fields."""
 
-    def load(self, value: Primitive, ctx: SerializationContext) -> Any:
+    def load(self, value: Primitive, ctx: Context) -> Any:
         return value
 
-    def dump(self, value: Any, ctx: SerializationContext) -> Primitive:
+    def dump(self, value: Any, ctx: Context) -> Primitive:
         return value
 
     @classmethod
@@ -207,20 +207,20 @@ class DictSerializer(FieldSerializer):
         setattr(serializer, 'load_value', with_stack(self.load_value, entry_factory=self._value_entry))
         return serializer
 
-    def load(self, data: Primitive, ctx: SerializationContext) -> Any:
+    def load(self, data: Primitive, ctx: Context) -> Any:
         items = {
             key: self.load_value(value, ctx)
             for key, value in data.items()  # type: ignore # data is always a dict
         }
         return self.field.type.cls(items)
 
-    def dump(self, d: Any, ctx: SerializationContext) -> Primitive:
+    def dump(self, d: Any, ctx: Context) -> Primitive:
         return {key: self.dump_value(value, ctx) for key, value in d.items()}
 
-    def load_value(self, value: Primitive, ctx: SerializationContext) -> Any:
+    def load_value(self, value: Primitive, ctx: Context) -> Any:
         return self._val_sr.load(value, ctx)
 
-    def dump_value(self, value: Any, ctx: SerializationContext) -> Primitive:
+    def dump_value(self, value: Any, ctx: Context) -> Primitive:
         return self._val_sr.dump(value, ctx)
 
     @staticmethod
@@ -251,17 +251,17 @@ class CollectionSerializer(FieldSerializer):
 
         return serializer
 
-    def load(self, value: Primitive, ctx: SerializationContext) -> Any:
+    def load(self, value: Primitive, ctx: Context) -> Any:
         items = [self.load_item(i, item, ctx) for i, item in enumerate(value)]  # type: ignore # value is a collection
         return self._field.type.cls(items)
 
-    def dump(self, value: Any, ctx: SerializationContext) -> Primitive:
+    def dump(self, value: Any, ctx: Context) -> Primitive:
         return [self.dump_item(i, item, ctx) for i, item in enumerate(value)]
 
-    def load_item(self, i: int, value: Primitive, ctx: SerializationContext):
+    def load_item(self, i: int, value: Primitive, ctx: Context):
         return self._load_item(value, ctx)
 
-    def dump_item(self, i: int, value: Any, ctx: SerializationContext):
+    def dump_item(self, i: int, value: Any, ctx: Context):
         return self._dump_item(value, ctx)
 
 
@@ -272,10 +272,10 @@ class PrimitiveSerializer(FieldSerializer):
     def fits(cls, field: FieldDescriptor) -> bool:
         return issubclass(field.type.cls, (str, int, float, bool))
 
-    def load(self, value: Primitive, ctx: SerializationContext) -> Any:
+    def load(self, value: Primitive, ctx: Context) -> Any:
         return self.field.type.cls(value)
 
-    def dump(self, value: Any, ctx: SerializationContext) -> Primitive:
+    def dump(self, value: Any, ctx: Context) -> Primitive:
         return self.field.type.cls(value)
 
 
@@ -290,10 +290,10 @@ class DataclassSerializer(FieldSerializer):
     def fits(cls, field: FieldDescriptor) -> bool:
         return field.type.is_dataclass
 
-    def load(self, value: Primitive, ctx: SerializationContext) -> Any:
+    def load(self, value: Primitive, ctx: Context) -> Any:
         return self._serializer.load(value, ctx)  # type: ignore # type: ignore # value always a mapping
 
-    def dump(self, value: Any, ctx: SerializationContext) -> Primitive:
+    def dump(self, value: Any, ctx: Context) -> Primitive:
         return self._serializer.dump(value, ctx)
 
 
@@ -316,10 +316,10 @@ class DateTimeUtcTimestampSerializer(FieldSerializer):
     def fits(cls, field: FieldDescriptor) -> bool:
         return issubclass(field.type.cls, datetime)
 
-    def load(self, value: Primitive, ctx: SerializationContext) -> Any:
+    def load(self, value: Primitive, ctx: Context) -> Any:
         return datetime.fromtimestamp(value, tz=timezone.utc)  # type: ignore # gonna be float
 
-    def dump(self, value: Any, ctx: SerializationContext) -> Primitive:
+    def dump(self, value: Any, ctx: Context) -> Primitive:
         return value.timestamp()
 
 
@@ -340,10 +340,10 @@ class DateTimeIsoSerializer(FieldSerializer):
     [1]: https://en.wikipedia.org/wiki/ISO_8601
     """
 
-    def load(self, value: Primitive, ctx: SerializationContext) -> Any:
+    def load(self, value: Primitive, ctx: Context) -> Any:
         return datetime.fromisoformat(value)  # type: ignore # expecting datetime
 
-    def dump(self, value: Any, ctx: SerializationContext) -> Primitive:
+    def dump(self, value: Any, ctx: Context) -> Primitive:
         return datetime.isoformat(value)
 
     @classmethod
@@ -354,10 +354,10 @@ class DateTimeIsoSerializer(FieldSerializer):
 class UuidSerializer(FieldSerializer):
     """A [UUID] value serializer to `str`."""
 
-    def load(self, value: Primitive, ctx: SerializationContext) -> Any:
+    def load(self, value: Primitive, ctx: Context) -> Any:
         return UUID(value)  # type: ignore # expecting str
 
-    def dump(self, value: Any, ctx: SerializationContext) -> Primitive:
+    def dump(self, value: Any, ctx: Context) -> Primitive:
         return str(value)
 
     @classmethod
@@ -368,10 +368,10 @@ class UuidSerializer(FieldSerializer):
 class DecimalSerializer(FieldSerializer):
     """[Decimal] value serializer to `str`."""
 
-    def load(self, value: Primitive, ctx: SerializationContext) -> Any:
+    def load(self, value: Primitive, ctx: Context) -> Any:
         return Decimal(value)  # type: ignore # expecting str
 
-    def dump(self, value: Any, ctx: SerializationContext) -> Primitive:
+    def dump(self, value: Any, ctx: Context) -> Primitive:
         return str(value)
 
     @classmethod
@@ -382,10 +382,10 @@ class DecimalSerializer(FieldSerializer):
 class EnumSerializer(FieldSerializer):
     """Enum value serializer. Note that output depends on enum value, so it can be `str`, `int`, etc."""
 
-    def load(self, value: Primitive, ctx: SerializationContext) -> Any:
+    def load(self, value: Primitive, ctx: Context) -> Any:
         return self.field.type.cls(value)
 
-    def dump(self, value: Any, ctx: SerializationContext) -> Primitive:
+    def dump(self, value: Any, ctx: Context) -> Primitive:
         return value.value
 
     @classmethod
