@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Collection, Deque, Dict, FrozenSet, List, Optional, Set, Tuple, TypeVar, Union, NoReturn
+from typing import Dict, FrozenSet, List, Optional, Set, Tuple, TypeVar, Union
 from uuid import UUID
 
 A = TypeVar('A')
@@ -38,11 +38,6 @@ class DataclassWithTuple:
 @dataclass(frozen=True)
 class DataclassWithFrozenSet:
     xs: FrozenSet[int]
-
-
-@dataclass(frozen=True)
-class DataclassWithDeque:
-    xs: Deque[int]
 
 
 @dataclass(frozen=True)
@@ -93,7 +88,6 @@ class DataclassMutableDefaultList:
 @dataclass(frozen=True)
 class DataclassMutableDefaultDict:
     xs: Dict[str, int] = field(default_factory=dict)
-
 
 
 @dataclass

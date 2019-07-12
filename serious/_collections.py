@@ -27,4 +27,9 @@ class FrozenDict(dict, Generic[KT, VT]):
     popitem = _immutable
 
 
+class FrozenList(tuple, Generic[VT]):
+    pass
+
+
 frozendict = FrozenDict
+frozenlist = FrozenList

@@ -3,7 +3,7 @@ from typing import Dict, Set, List
 from urllib import request
 
 from config import config
-from serious.json import JsonSerializer
+from serious.json import JsonSchema
 
 
 @dataclass
@@ -22,7 +22,7 @@ class VersionExists(Exception):
 
 
 def check_exists(pkg_config):
-    package_schema = JsonSerializer(Package, allow_unexpected=True)
+    package_schema = JsonSchema(Package, allow_unexpected=True)
     with request.urlopen('https://pypi.org/pypi/serious/json') as pypi:
         package_data = pypi.read()
     package = package_schema.load(package_data)

@@ -1,1 +1,1 @@
-from .api import JsonSerializer
+from .api import JsonSchema

@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from decimal import Decimal
 
-from serious.dict import DictSerializer
+from serious.dict import DictSchema
 
 
 @dataclass(frozen=True)
@@ -10,7 +10,7 @@ class Person:
     height: Decimal
 
 
-schema = DictSerializer(Person)
+schema = DictSchema(Person)
 keith = Person('Keith', Decimal('1.76'))
 keith_dict = dict(name='Keith', height='1.76')
 

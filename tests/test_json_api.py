@@ -7,10 +7,8 @@ import pytest
 from serious.context import SerializationContext
 from serious.descriptors import FieldDescriptor
 from serious.errors import LoadError
-from serious.field_serializers import FieldSerializer
-from serious.json.api import JsonSerializer
-from serious.serializer import DataclassSerializer
-from serious.serializer_options import FieldSerializerOption
+from serious.field_serializers import FieldSerializer, field_serializers
+from serious.json.api import JsonSchema
 from serious.utils import Primitive
 from tests.entities import (DataclassWithDataclass, DataclassWithOptional,
                             DataclassWithOptionalNested, DataclassWithUuid)
@@ -29,23 +27,14 @@ class User:
     age: Optional[int]
 
 
-class UserIdSerializer(FieldSerializer):
-
-    def dump(self, value: Any, ctx: SerializationContext) -> Primitive:
-        return value.value
-
-    def load(self, value: Primitive, ctx: SerializationContext) -> Any:
-        return UserId(value)
-
-
 class TestDefaults:
 
     def setup_class(self):
-        self.schema = JsonSerializer(User)
+        self.schema = JsonSchema(User)
 
     def test_invalid_class(self):
         with pytest.raises(TypeError):
-            JsonSerializer(dict, field_serializers=[])
+            JsonSchema(dict, serializers=[])
 
     def test_load(self):
         user = self.schema.load('{"id": {"value": 0}, "username": "admin", "password": "admin", "age": null}')
@@ -73,21 +62,24 @@ class TestDefaults:
         assert actual == expected
 
 
-class UserIdSerializerOption(FieldSerializerOption):
+class UserIdSerializer(FieldSerializer):
 
-    def fits(self, field: FieldDescriptor) -> bool:
+    def dump(self, value: Any, ctx: SerializationContext) -> Primitive:
+        return value.value
+
+    def load(self, value: Primitive, ctx: SerializationContext) -> Any:
+        return UserId(value)
+
+    @classmethod
+    def fits(cls, field: FieldDescriptor) -> bool:
         return field.type is UserId
-
-    def create(self, field: FieldDescriptor, sr: DataclassSerializer) -> FieldSerializer:
-        return UserIdSerializer(field)
 
 
 class TestSerializer:
 
     def setup_class(self):
-        serializers = FieldSerializerOption.defaults()
-        serializers.insert(0, UserIdSerializerOption())
-        self.schema = JsonSerializer(User, field_serializers=serializers)
+        serializers = field_serializers([UserIdSerializer])
+        self.schema = JsonSchema(User, serializers=serializers)
 
     def test_dump(self):
         actual = self.schema.dump(User(id=UserId(0), username='admin', password='admin', age=None))
@@ -104,7 +96,7 @@ class TestTypes:
     def setup_class(self):
         self.uuid_s = 'd1d61dd7-c036-47d3-a6ed-91cc2e885fc8'
         self.dc_uuid_json = f'{{"id": "{self.uuid_s}"}}'
-        self.uuid_schema = JsonSerializer(DataclassWithUuid)
+        self.uuid_schema = JsonSchema(DataclassWithUuid)
 
     def test_uuid_decode(self):
         actual = self.uuid_schema.load(self.dc_uuid_json)
@@ -117,48 +109,48 @@ class TestTypes:
 
 class TestAllowMissing:
     def test_allow_missing(self):
-        actual = JsonSerializer(DataclassWithOptional, allow_missing=True).load('{}')
+        actual = JsonSchema(DataclassWithOptional, allow_missing=True).load('{}')
         assert actual == DataclassWithOptional(None)
 
     def test_allow_unexpected_is_recursive(self):
-        actual = JsonSerializer(DataclassWithOptionalNested, allow_missing=True).load('{"x": {}}')
+        actual = JsonSchema(DataclassWithOptionalNested, allow_missing=True).load('{"x": {}}')
         expected = DataclassWithOptionalNested(DataclassWithOptional(None))
         assert actual == expected
 
     def test_allow_missing_terminates_at_first_missing(self):
-        actual = JsonSerializer(DataclassWithOptionalNested, allow_missing=True).load('{"x": null}')
+        actual = JsonSchema(DataclassWithOptionalNested, allow_missing=True).load('{"x": null}')
         assert actual == DataclassWithOptionalNested(None)
 
     def test_error_when_missing_required(self):
         with pytest.raises(LoadError) as exc_info:
-            JsonSerializer(DataclassWithDataclass, allow_missing=False).load('{"dc_with_list": {}}')
+            JsonSchema(DataclassWithDataclass, allow_missing=False).load('{"dc_with_list": {}}')
         assert 'dc_with_list' in exc_info.value.message
         assert 'xs' in exc_info.value.message
 
     def test_error_when_missing_required_by_default(self):
         with pytest.raises(LoadError) as exc_info:
-            JsonSerializer(DataclassWithDataclass).load('{"dc_with_list": {}}')
+            JsonSchema(DataclassWithDataclass).load('{"dc_with_list": {}}')
         assert 'dc_with_list' in exc_info.value.message
         assert 'xs' in exc_info.value.message
 
 
 class TestAllowUnexpected:
     def test_allow_unexpected(self):
-        actual = JsonSerializer(DataclassWithOptional, allow_unexpected=True).load('{"x": null, "y": true}')
+        actual = JsonSchema(DataclassWithOptional, allow_unexpected=True).load('{"x": null, "y": true}')
         assert actual == DataclassWithOptional(None)
 
     def test_allow_unexpected_is_recursive(self):
-        actual = JsonSerializer(DataclassWithOptionalNested, allow_unexpected=True).load(
+        actual = JsonSchema(DataclassWithOptionalNested, allow_unexpected=True).load(
             '{"x": {"x": null, "y": "test"}}')
         expected = DataclassWithOptionalNested(DataclassWithOptional(None))
         assert actual == expected
 
     def test_error_when_unexpected(self):
         with pytest.raises(LoadError) as exc_info:
-            JsonSerializer(DataclassWithOptional, allow_unexpected=False).load('{"x": 1, "y": 1}')
+            JsonSchema(DataclassWithOptional, allow_unexpected=False).load('{"x": 1, "y": 1}')
         assert '"y"' in exc_info.value.message
 
     def test_error_when_unexpected_by_default(self):
         with pytest.raises(LoadError) as exc_info:
-            JsonSerializer(DataclassWithOptional).load('{"x": 1, "y": 1}')
+            JsonSchema(DataclassWithOptional).load('{"x": 1, "y": 1}')
         assert '"y"' in exc_info.value.message

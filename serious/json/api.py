@@ -5,10 +5,10 @@ from dataclasses import dataclass
 from typing import Optional, TypeVar, Type, Generic, List, MutableMapping, Collection, Iterable, Any, Dict
 
 from serious.descriptors import describe, TypeDescriptor
+from serious.field_serializers import FieldSerializer, field_serializers
 from serious.json.preconditions import _check_that_loading_an_object, _check_that_loading_a_list
 from serious.preconditions import _check_is_instance, _check_is_dataclass
-from serious.serializer import DataclassSerializer
-from serious.serializer_options import FieldSerializerOption
+from serious.schema import SeriousSchema
 
 T = TypeVar('T')
 
@@ -30,10 +30,10 @@ class _Config:
     dumping: _Dumping
 
 
-class JsonSerializer(Generic[T]):
+class JsonSchema(Generic[T]):
 
     def __init__(self, cls: Type[T], *,
-                 field_serializers: Iterable[FieldSerializerOption] = None,
+                 serializers: Iterable[Type[FieldSerializer]] = field_serializers(),
                  allow_missing: bool = _Loading.allow_missing,
                  allow_unexpected: bool = _Loading.allow_unexpected,
                  indent: Optional[int] = _Dumping.indent):
@@ -42,10 +42,9 @@ class JsonSerializer(Generic[T]):
             loading=_Loading(allow_missing=allow_missing, allow_unexpected=allow_unexpected),
             dumping=_Dumping(indent=indent)
         )
-        field_serializers = field_serializers if field_serializers is not None else FieldSerializerOption.defaults()
-        self._serializer = DataclassSerializer(
+        self._serializer = SeriousSchema(
             self.descriptor,
-            field_serializers,
+            serializers,
             self.config.loading.allow_missing,
             self.config.loading.allow_unexpected
         )
