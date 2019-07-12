@@ -6,9 +6,10 @@ from dataclasses import replace
 from datetime import datetime, timezone
 from decimal import Decimal
 from enum import Enum
-from typing import Any, Type, Callable, Optional, Tuple, Iterable
+from typing import Any, Type, Callable, Optional, Iterable
 from uuid import UUID
 
+from serious._collections import frozenlist, FrozenList
 from serious.context import SerializationContext
 from serious.descriptors import FieldDescriptor
 from serious.preconditions import _check_exactly_one_present
@@ -88,13 +89,13 @@ class FieldSerializer(ABC):
         raise NotImplementedError
 
 
-def field_serializers(custom: Iterable[Type[FieldSerializer]] = tuple()) -> Tuple[Type[FieldSerializer], ...]:
+def field_serializers(custom: Iterable[Type[FieldSerializer]] = tuple()) -> FrozenList[Type[FieldSerializer]]:
     """
     A tuple of field serializers in a default order.
     Provide a custom list of field serializers to include them after metadata and optional serializers.
     The order in the collection defines the order in which the serializers will be tested for fitness for each field.
     """
-    return tuple([
+    return frozenlist([
         MetadataSerializer,
         OptionalSerializer,
         *custom,
@@ -187,14 +188,13 @@ class AnySerializer(FieldSerializer):
 
 
 class DictSerializer(FieldSerializer):
-    """Serializer for [dict] fields."""
+    """Serializer for `dict` fields with `str` keys (Dict[str, Any])."""
 
     def __init__(self, field: FieldDescriptor, sr: SeriousSchema):
         super().__init__(field, sr)
-        key_type = field.type.parameters[0]
-        assert key_type.cls is str and not key_type.is_optional, \
-            'Dict keys must have explicit str type (Dict[str, Any])'
-        self._val_sr = generic_item_serializer(field, sr, type_index=1)
+        key = field.type.parameters[0]
+        assert key.cls is str and not key.is_optional, 'Dict keys must have explicit str type (Dict[str, Any]).'
+        self._val_sr = generic_item_serializer(field, sr, param_index=1)
 
     @classmethod
     def fits(cls, field: FieldDescriptor) -> bool:
@@ -233,7 +233,7 @@ class CollectionSerializer(FieldSerializer):
 
     def __init__(self, field: FieldDescriptor, sr: SeriousSchema):
         super().__init__(field, sr)
-        item = generic_item_serializer(field, sr, type_index=0)
+        item = generic_item_serializer(field, sr, param_index=0)
         self._load_item = item.load
         self._dump_item = item.dump
 
@@ -393,8 +393,8 @@ class EnumSerializer(FieldSerializer):
         return issubclass(field.type.cls, Enum)
 
 
-def generic_item_serializer(field: FieldDescriptor, sr: SeriousSchema, *, type_index) -> FieldSerializer:
-    new_type = field.type.parameters[type_index]
+def generic_item_serializer(field: FieldDescriptor, sr: SeriousSchema, *, param_index: int) -> FieldSerializer:
+    new_type = field.type.parameters[param_index]
     item_descriptor = replace(field, type=new_type)
     item_serializer = sr.field_serializer(item_descriptor, _tracked=False)
     return item_serializer

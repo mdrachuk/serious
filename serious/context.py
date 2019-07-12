@@ -3,6 +3,8 @@ from __future__ import annotations
 from contextlib import contextmanager
 from typing import List, Tuple
 
+from serious._collections import FrozenList, frozenlist
+
 
 class SerializationContext:
     def __init__(self):
@@ -15,5 +17,5 @@ class SerializationContext:
         self._stack.pop()
 
     @property
-    def stack(self) -> Tuple[str, ...]:
-        return tuple(self._stack)
+    def stack(self) -> FrozenList[str]:
+        return frozenlist(self._stack)
