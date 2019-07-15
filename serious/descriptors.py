@@ -107,10 +107,6 @@ def _collect_type_vars(alias: Any, generic_params: GenericParams) -> GenericPara
                     (describe(arg, generic_params) for arg in alias.__args__)))
 
 
-def _fill_with_any(params: List[TypeDescriptor], *, size):
-    [Any] * (size - len(params))
-
-
 @dataclass(frozen=True)
 class FieldDescriptor:
     """A descriptor of a dataclass field."""
