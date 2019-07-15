@@ -6,6 +6,7 @@ from serious.descriptors import describe, TypeDescriptor
 from serious.field_serializers import FieldSerializer, field_serializers
 from serious.preconditions import _check_is_instance, _check_is_dataclass
 from serious.schema import SeriousSchema
+from serious.utils import _class_path
 
 T = TypeVar('T')
 
@@ -66,3 +67,9 @@ class DictSchema(Generic[T]):
 
     def _from_dict(self, data: Mapping):
         return self._serializer.load(data)
+
+    def __repr__(self):
+        path = _class_path(type(self))
+        if path == 'serious.dict.api.DictSchema':
+            path = 'serious.DictSchema'
+        return f'<{path}[{_class_path(self.cls)}] at {hex(id(self))}>'
