@@ -5,7 +5,7 @@ from dataclasses import replace
 from datetime import datetime, timezone
 from decimal import Decimal
 from enum import Enum
-from typing import Any, Type, Iterable
+from typing import Any, Type, Iterable, List
 from uuid import UUID
 
 from serious._collections import frozenlist, FrozenList
@@ -231,7 +231,7 @@ class TupleSerializer(FieldSerializer):
 
     def __init__(self, field: FieldDescriptor, sr: SeriousSchema):
         super().__init__(field, sr)
-        self.serializers = []
+        self.serializers: List[FieldSerializer] = []
         for i in field.type.parameters:
             item_serializer = generic_item_serializer(field, sr, param_index=i)
             self.serializers.append(item_serializer)

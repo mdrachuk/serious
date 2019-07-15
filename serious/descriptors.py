@@ -1,6 +1,6 @@
 from collections import ChainMap
 from dataclasses import dataclass, fields, is_dataclass, replace
-from typing import Type, Any, TypeVar, Generic, get_type_hints, Dict, Mapping, Collection, Iterable, List
+from typing import Type, Any, TypeVar, Generic, get_type_hints, Dict, Mapping, Collection, List
 
 from serious._collections import FrozenDict, frozendict
 from serious.utils import _is_optional
@@ -15,8 +15,8 @@ GenericParams = Mapping[Any, 'TypeDescriptor']
 class TypeDescriptor(Generic[T]):
     _cls: Type[T]
     parameters: FrozenGenericParams
-    is_optional: bool
-    is_dataclass: bool
+    is_optional: bool = False
+    is_dataclass: bool = False
 
     @property
     def cls(self):  # Python fails when providing cls as a keyword parameter to dataclasses
@@ -48,14 +48,15 @@ def describe(type_: Type[T], generic_params: GenericParams = None) -> TypeDescri
     return _unwrap_generic(type_, generic_params)
 
 
-_any_type_desc = TypeDescriptor(Any, frozendict({}), False, False)
+_any_type_desc = TypeDescriptor(Any, frozendict())  # type: ignore
+_ellipses_type_desc = TypeDescriptor(Ellipsis, frozendict())  # type: ignore
 _generic_params = {
     list: {0: _any_type_desc},
     set: {0: _any_type_desc},
     frozenset: {0: _any_type_desc},
-    tuple: {0: _any_type_desc, 1: Ellipsis},
+    tuple: {0: _any_type_desc, 1: _ellipses_type_desc},
     dict: {0: _any_type_desc, 1: _any_type_desc},
-}
+}  # type: Dict[Type, Dict[int, TypeDescriptor]]
 
 
 def _get_default_generic_params(cls: Type, params: GenericParams) -> GenericParams:
@@ -118,14 +119,14 @@ class FieldDescriptor:
     metadata: Any
 
 
-def _scan_types(desc: TypeDescriptor, _known_descriptors: List[TypeDescriptor] = None) -> Iterable[Type]:
+def _scan_types(desc: TypeDescriptor, _known_descriptors: List[TypeDescriptor] = None) -> Collection[Type]:
     if _known_descriptors is None:
         _known_descriptors = [desc]
     elif desc in _known_descriptors:
         return []
     else:
         _known_descriptors.append(desc)
-    types = []
+    types = []  # type: List[Type]
     for param in desc.parameters.values():
         types.extend(_scan_types(param, _known_descriptors))
     for field in desc.fields:
