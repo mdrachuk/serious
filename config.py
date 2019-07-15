@@ -17,7 +17,7 @@ class Config:
 
 config = Config(
     name='serious',
-    version='1.0.0-dev2',
+    version='1.0.0-dev3',
     readme_path='README.md',
     author='mdrachuk',
     author_email='misha@drach.uk'

@@ -71,3 +71,13 @@ class MissingField(LoadError):
             return f'Missing field "{field}" in loaded {_class_path(self._cls)}'
         else:
             return f'Missing fields {self._fields} in loaded {_class_path(self._cls)}'
+
+
+class ModelContainsAny(Exception):
+    def __init__(self, cls: Type):
+        super().__init__(
+            f'${_class_path(cls)} contains fields annotated as Any or missing type annotation. '
+            f'Provide a type annotation or pass `allow_any=True` to the serializer. '
+            f'This may also be an ambiguous `Generic` definitions like `x: list`, `x: List` '
+            f'which are resolved as `List[Any]`. '
+        )

@@ -5,7 +5,7 @@ from dataclasses import replace
 from datetime import datetime, timezone
 from decimal import Decimal
 from enum import Enum
-from typing import Any, Type, Iterable
+from typing import Any, Type, Iterable, List
 from uuid import UUID
 
 from serious._collections import frozenlist, FrozenList
@@ -77,6 +77,7 @@ def field_serializers(custom: Iterable[Type[FieldSerializer]] = tuple()) -> Froz
         AnySerializer,
         DictSerializer,
         CollectionSerializer,
+        TupleSerializer,
         PrimitiveSerializer,
         DataclassSerializer,
         DateTimeUtcTimestampSerializer,
@@ -205,7 +206,9 @@ class CollectionSerializer(FieldSerializer):
 
     @classmethod
     def fits(cls, field: FieldDescriptor) -> bool:
-        return issubclass(field.type.cls, (list, set, frozenset, tuple))
+        type_ = field.type
+        return (issubclass(type_.cls, (list, set, frozenset))
+                or (issubclass(type_.cls, tuple) and len(type_.parameters) == 2 and type_.parameters[1] is Ellipsis))
 
     def load(self, value: Primitive, ctx: Context) -> Any:
         items = [self.load_item(i, item, ctx) for i, item in enumerate(value)]  # type: ignore # value is a collection
@@ -221,6 +224,37 @@ class CollectionSerializer(FieldSerializer):
     def dump_item(self, i: int, value: Any, ctx: Context):
         with ctx.enter(CollectionStep(i)):
             return self._dump_item(value, ctx)
+
+
+class TupleSerializer(FieldSerializer):
+    """Serializer for lists, tuples, sets, frozensets and deques."""
+
+    def __init__(self, field: FieldDescriptor, sr: SeriousSchema):
+        super().__init__(field, sr)
+        self.serializers: List[FieldSerializer] = []
+        for i in field.type.parameters:
+            item_serializer = generic_item_serializer(field, sr, param_index=i)
+            self.serializers.append(item_serializer)
+
+    @classmethod
+    def fits(cls, field: FieldDescriptor) -> bool:
+        type_ = field.type
+        return issubclass(type_.cls, tuple)
+
+    def load(self, value: Primitive, ctx: Context) -> Any:
+        items = [self.load_item(i, item, ctx) for i, item in enumerate(value)]  # type: ignore # value is a collection
+        return self._field.type.cls(items)
+
+    def dump(self, value: Any, ctx: Context) -> Primitive:
+        return [self.dump_item(i, item, ctx) for i, item in enumerate(value)]
+
+    def load_item(self, i: int, value: Primitive, ctx: Context):
+        with ctx.enter(CollectionStep(i)):
+            return self.serializers[i].load(value, ctx)
+
+    def dump_item(self, i: int, value: Any, ctx: Context):
+        with ctx.enter(CollectionStep(i)):
+            return self.serializers[i].dump(value, ctx)
 
 
 class CollectionStep(SerializationStep):

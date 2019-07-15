@@ -22,7 +22,7 @@ class VersionExists(Exception):
 
 
 def check_exists(pkg_config):
-    package_schema = JsonSchema(Package, allow_unexpected=True)
+    package_schema = JsonSchema(Package, allow_unexpected=True, allow_any=True)
     with request.urlopen('https://pypi.org/pypi/serious/json') as pypi:
         package_data = pypi.read()
     package = package_schema.load(package_data)

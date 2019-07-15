@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import TypeVar, Type, Generic, List, Collection, Dict, Iterable, Any, Mapping
 
 from serious.descriptors import describe, TypeDescriptor
@@ -11,39 +10,32 @@ from serious.schema import SeriousSchema
 T = TypeVar('T')
 
 
-@dataclass(frozen=True)
-class _Loading:
-    allow_missing: bool = False
-    allow_unexpected: bool = False
-
-
-@dataclass(frozen=True)
-class _Dumping:
-    pass
-
-
-@dataclass(frozen=True)
-class _Config:
-    loading: _Loading
-    dumping: _Dumping
-
-
 class DictSchema(Generic[T]):
 
-    def __init__(self, cls: Type[T], *,
-                 serializers: Iterable[Type[FieldSerializer]] = field_serializers(),
-                 allow_missing: bool = _Loading.allow_missing,
-                 allow_unexpected: bool = _Loading.allow_unexpected):
+    def __init__(
+            self,
+            cls: Type[T],
+            *,
+            serializers: Iterable[Type[FieldSerializer]] = field_serializers(),
+            allow_any: bool = False,
+            allow_missing: bool = False,
+            allow_unexpected: bool = False,
+    ):
+        """
+        @param cls the descriptor of the dataclass to load/dump.
+        @param serializers field serializer classes in an order they will be tested for fitness for each field.
+        @param allow_any False to raise if the model contains fields annotated with Any
+                (this includes generics like List[Any], or simply list).
+        @param allow_missing False to raise during load if data is missing the optional fields.
+        @param allow_unexpected False to raise during load if data is missing the contains some unknown fields.
+        """
         self.descriptor = self._describe(cls)
-        self.config = _Config(
-            loading=_Loading(allow_missing=allow_missing, allow_unexpected=allow_unexpected),
-            dumping=_Dumping()
-        )
         self._serializer = SeriousSchema(
             self.descriptor,
             serializers,
-            self.config.loading.allow_missing,
-            self.config.loading.allow_unexpected
+            allow_any=allow_any,
+            allow_missing=allow_missing,
+            allow_unexpected=allow_unexpected
         )
 
     @staticmethod
