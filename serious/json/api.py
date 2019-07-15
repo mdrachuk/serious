@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
 from typing import Optional, TypeVar, Type, Generic, List, MutableMapping, Collection, Iterable, Any, Dict
 
 from serious.descriptors import describe, TypeDescriptor
@@ -13,41 +12,36 @@ from serious.schema import SeriousSchema
 T = TypeVar('T')
 
 
-@dataclass(frozen=True)
-class _Loading:
-    allow_missing: bool = False
-    allow_unexpected: bool = False
-
-
-@dataclass(frozen=True)
-class _Dumping:
-    indent: Optional[int] = None
-
-
-@dataclass(frozen=True)
-class _Config:
-    loading: _Loading
-    dumping: _Dumping
-
-
 class JsonSchema(Generic[T]):
 
-    def __init__(self, cls: Type[T], *,
-                 serializers: Iterable[Type[FieldSerializer]] = field_serializers(),
-                 allow_missing: bool = _Loading.allow_missing,
-                 allow_unexpected: bool = _Loading.allow_unexpected,
-                 indent: Optional[int] = _Dumping.indent):
+    def __init__(
+            self,
+            cls: Type[T],
+            *,
+            serializers: Iterable[Type[FieldSerializer]] = field_serializers(),
+            allow_any: bool = False,
+            allow_missing: bool = False,
+            allow_unexpected: bool = False,
+            indent: Optional[int] = None,
+    ):
+        """
+        @param cls the descriptor of the dataclass to load/dump.
+        @param serializers field serializer classes in an order they will be tested for fitness for each field.
+        @param allow_any False to raise if the model contains fields annotated with Any
+                (this includes generics like List[Any], or simply list).
+        @param allow_missing False to raise during load if data is missing the optional fields.
+        @param allow_unexpected False to raise during load if data is missing the contains some unknown fields.
+        @param indent number of spaces JSON output will be indented by; `None` for most compact representation.
+        """
         self.descriptor = self._describe(cls)
-        self.config = _Config(
-            loading=_Loading(allow_missing=allow_missing, allow_unexpected=allow_unexpected),
-            dumping=_Dumping(indent=indent)
-        )
         self._serializer = SeriousSchema(
             self.descriptor,
             serializers,
-            self.config.loading.allow_missing,
-            self.config.loading.allow_unexpected
+            allow_any=allow_any,
+            allow_missing=allow_missing,
+            allow_unexpected=allow_unexpected,
         )
+        self._dump_indentation = indent
 
     @property
     def cls(self):
@@ -94,7 +88,7 @@ class JsonSchema(Generic[T]):
                           ensure_ascii=False,
                           check_circular=True,
                           allow_nan=False,
-                          indent=self.config.dumping.indent,
+                          indent=self._dump_indentation,
                           separators=None,
                           default=None,
                           sort_keys=False)

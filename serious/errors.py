@@ -71,3 +71,7 @@ class MissingField(LoadError):
             return f'Missing field "{field}" in loaded {_class_path(self._cls)}'
         else:
             return f'Missing fields {self._fields} in loaded {_class_path(self._cls)}'
+
+
+class ModelContainsAny(Exception):
+    pass

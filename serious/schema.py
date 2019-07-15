@@ -4,8 +4,8 @@ from dataclasses import fields, MISSING, Field
 from typing import Mapping, Type, Any, Dict, Iterator, Generic, TypeVar, Optional, Iterable
 
 from serious.context import SerializationContext
-from serious.descriptors import FieldDescriptor, TypeDescriptor
-from serious.errors import LoadError, DumpError, UnexpectedItem, MissingField
+from serious.descriptors import FieldDescriptor, TypeDescriptor, contains_any
+from serious.errors import LoadError, DumpError, UnexpectedItem, MissingField, ModelContainsAny
 from serious.field_serializers import FieldSerializer
 from serious.preconditions import _check_present, _check_is_instance
 from serious.utils import DataclassType
@@ -20,6 +20,8 @@ class SeriousSchema(Generic[T]):
             self,
             descriptor: TypeDescriptor[T],
             serializers: Iterable[Type[FieldSerializer]],
+            *,
+            allow_any: bool,
             allow_missing: bool,
             allow_unexpected: bool,
             _registry: Dict[TypeDescriptor, SeriousSchema] = None
@@ -27,14 +29,19 @@ class SeriousSchema(Generic[T]):
         """
         @param descriptor the descriptor of the dataclass to load/dump.
         @param serializers field serializer classes in an order they will be tested for fitness for each field.
+        @param allow_any False to raise if the model contains fields annotated with Any
+                (this includes generics like List[Any], or simply list).
         @param allow_missing False to raise during load if data is missing the optional fields.
-        @param allow_unexpected False to raise during load if data is missing the contains some uknown fields.
+        @param allow_unexpected False to raise during load if data is missing the contains some unknown fields.
         @param _registry a mapping of dataclass type descriptors to corresponding serious serializer.
         """
+        if not allow_any and contains_any(descriptor):
+            raise ModelContainsAny(descriptor)
         self._descriptor = descriptor
         self._serializers = tuple(serializers)
         self._allow_missing = allow_missing
         self._allow_unexpected = allow_unexpected
+        self._allow_any = allow_any
         self._serializer_registry = {descriptor: self} if _registry is None else _registry
         self._field_serializers = [self.field_serializer(field) for field in descriptor.fields]
 
@@ -56,6 +63,7 @@ class SeriousSchema(Generic[T]):
             serializers=self._serializers,
             allow_missing=self._allow_missing,
             allow_unexpected=self._allow_unexpected,
+            allow_any=self._allow_any,
             _registry=self._serializer_registry
         )
         self._serializer_registry[descriptor] = new_serializer
