@@ -3,7 +3,7 @@ from dataclasses import dataclass, fields, is_dataclass, replace
 from typing import Type, Any, TypeVar, Generic, get_type_hints, Dict, Mapping, Collection, List
 
 from serious._collections import FrozenDict, frozendict
-from serious.utils import _is_optional
+from serious.utils import is_optional
 
 T = TypeVar('T')
 
@@ -68,7 +68,7 @@ def _get_default_generic_params(cls: Type, params: GenericParams) -> GenericPara
 
 def _unwrap_generic(cls: Type, generic_params: GenericParams) -> TypeDescriptor:
     params: GenericParams = {}
-    is_optional = _is_optional(cls)
+    is_optional = is_optional(cls)
     if is_optional:
         cls = cls.__args__[0]
     if hasattr(cls, '__orig_bases__') and is_dataclass(cls):

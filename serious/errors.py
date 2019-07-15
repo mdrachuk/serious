@@ -1,7 +1,7 @@
 from typing import Type, Mapping, Collection
 
 from serious.context import SerializationStep
-from serious.utils import DataclassType, _class_path
+from serious.utils import DataclassType, class_path
 
 
 class SerializationError(Exception):
@@ -32,7 +32,7 @@ class LoadError(SerializationError):
 
     @property
     def message(self):
-        return f'Failed to load "{self._path}" of {_class_path(self._cls)} from {self._data}: {self.__cause__}'
+        return f'Failed to load "{self._path}" of {class_path(self._cls)} from {self._data}: {self.__cause__}'
 
 
 class DumpError(SerializationError):
@@ -54,9 +54,9 @@ class UnexpectedItem(LoadError):
     def message(self):
         if len(self._fields) == 1:
             field = next(iter(self._fields))
-            return f'Unexpected field "{field}" in loaded {_class_path(self._cls)}'
+            return f'Unexpected field "{field}" in loaded {class_path(self._cls)}'
         else:
-            return f'Unexpected fields {self._fields} in loaded {_class_path(self._cls)}'
+            return f'Unexpected fields {self._fields} in loaded {class_path(self._cls)}'
 
 
 class MissingField(LoadError):
@@ -68,15 +68,15 @@ class MissingField(LoadError):
     def message(self):
         if len(self._fields) == 1:
             field = next(iter(self._fields))
-            return f'Missing field "{field}" in loaded {_class_path(self._cls)}'
+            return f'Missing field "{field}" in loaded {class_path(self._cls)}'
         else:
-            return f'Missing fields {self._fields} in loaded {_class_path(self._cls)}'
+            return f'Missing fields {self._fields} in loaded {class_path(self._cls)}'
 
 
 class ModelContainsAny(Exception):
     def __init__(self, cls: Type):
         super().__init__(
-            f'${_class_path(cls)} contains fields annotated as Any or missing type annotation. '
+            f'${class_path(cls)} contains fields annotated as Any or missing type annotation. '
             f'Provide a type annotation or pass `allow_any=True` to the serializer. '
             f'This may also be an ambiguous `Generic` definitions like `x: list`, `x: List` '
             f'which are resolved as `List[Any]`. '
