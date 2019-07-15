@@ -36,7 +36,7 @@ class SeriousSchema(Generic[T]):
         @param _registry a mapping of dataclass type descriptors to corresponding serious serializer.
         """
         if not allow_any and contains_any(descriptor):
-            raise ModelContainsAny(descriptor)
+            raise ModelContainsAny(descriptor.cls)
         self._descriptor = descriptor
         self._serializers = tuple(serializers)
         self._allow_missing = allow_missing
