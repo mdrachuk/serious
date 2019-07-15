@@ -131,6 +131,6 @@ def _scan_types(desc: TypeDescriptor, _known_descriptors: List[TypeDescriptor] =
     return types
 
 
-def contains_any(desc: TypeDescriptor) -> bool:
+def _contains_any(desc: TypeDescriptor) -> bool:
     all_types = _scan_types(desc)
     return Any in all_types

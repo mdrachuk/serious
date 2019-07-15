@@ -4,7 +4,7 @@ from dataclasses import fields, MISSING, Field
 from typing import Mapping, Type, Any, Dict, Iterator, Generic, TypeVar, Optional, Iterable
 
 from serious.context import SerializationContext
-from serious.descriptors import FieldDescriptor, TypeDescriptor, contains_any
+from serious.descriptors import FieldDescriptor, TypeDescriptor, _contains_any
 from serious.errors import LoadError, DumpError, UnexpectedItem, MissingField, ModelContainsAny
 from serious.field_serializers import FieldSerializer
 from serious.preconditions import _check_present, _check_is_instance
@@ -33,9 +33,10 @@ class SeriousSchema(Generic[T]):
                 (this includes generics like List[Any], or simply list).
         @param allow_missing False to raise during load if data is missing the optional fields.
         @param allow_unexpected False to raise during load if data is missing the contains some unknown fields.
-        @param _registry a mapping of dataclass type descriptors to corresponding serious serializer.
+        @param _registry a mapping of dataclass type descriptors to corresponding serious serializer;
+                used internally to create child serializers.
         """
-        if not allow_any and contains_any(descriptor):
+        if not allow_any and _contains_any(descriptor):
             raise ModelContainsAny(descriptor.cls)
         self._descriptor = descriptor
         self._serializers = tuple(serializers)
