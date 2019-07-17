@@ -8,6 +8,7 @@ from serious.field_serializers import FieldSerializer, field_serializers
 from serious.json.preconditions import _check_that_loading_an_object, _check_that_loading_a_list
 from serious.preconditions import _check_is_instance, _check_is_dataclass
 from serious.schema import SeriousSchema
+from serious.utils import class_path
 
 T = TypeVar('T')
 
@@ -92,3 +93,9 @@ class JsonSchema(Generic[T]):
                           separators=None,
                           default=None,
                           sort_keys=False)
+
+    def __repr__(self):
+        path = class_path(type(self))
+        if path == 'serious.json.api.JsonSchema':
+            path = 'serious.JsonSchema'
+        return f'<{path}[{class_path(self.cls)}] at {hex(id(self))}>'

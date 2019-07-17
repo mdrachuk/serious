@@ -1,9 +1,8 @@
 from collections import ChainMap
 from dataclasses import dataclass, fields, is_dataclass, replace
-from typing import Type, Any, TypeVar, Generic, get_type_hints, Dict, Mapping, Collection, List
+from typing import Type, Any, TypeVar, Generic, get_type_hints, Dict, Mapping, Collection, List, Union
 
 from serious._collections import FrozenDict, frozendict
-from serious.utils import _is_optional
 
 T = TypeVar('T')
 
@@ -134,3 +133,11 @@ def _scan_types(desc: TypeDescriptor, _known_descriptors: List[TypeDescriptor] =
 def _contains_any(desc: TypeDescriptor) -> bool:
     all_types = _scan_types(desc)
     return Any in all_types
+
+
+def _is_optional(cls: Type) -> bool:
+    """Returns True if the provided type is Optional."""
+    return hasattr(cls, '__origin__') \
+           and cls.__origin__ == Union \
+           and len(cls.__args__) == 2 \
+           and cls.__args__[1] == type(None)
