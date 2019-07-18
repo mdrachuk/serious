@@ -134,3 +134,31 @@ class TestDecoder:
         )
         assert o == container_from_json
         assert schema.dump(container_from_json) == json
+
+
+class Permission(IntFlag):
+    READ = 4
+    WRITE = 2
+    EXECUTE = 1
+
+
+@dataclass(frozen=True)
+class File:
+    name: str
+    permission: Permission
+
+
+class TestIntFlag:
+    def setup(self):
+        self.schema = DictSchema(File)
+        f_name = 'readme.txt'
+        self.dict = {'name': f_name, 'permission': 7}
+        self.dataclass = File(f_name, Permission.READ | Permission.WRITE | Permission.EXECUTE)
+
+    def test_load(self):
+        actual = self.schema.load(self.dict)
+        assert actual == self.dataclass
+
+    def test_dump(self):
+        actual = self.schema.dump(self.dataclass)
+        assert actual == self.dict
