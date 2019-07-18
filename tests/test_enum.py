@@ -17,104 +17,43 @@ class Symbol(Enum):
     PI = 3.14
 
 
-class Gender(str, Enum):
-    MALE = 'male'
-    FEMALE = 'female'
-    OTHER = 'other'
-    NA = 'not specified'
-
-
 @dataclass(frozen=True)
 class DataWithEnum:
     name: str
     enum: Symbol = Symbol.GAMMA
 
 
-@dataclass(frozen=True)
-class Profile:
-    gender: Gender = Gender.NA
+class TestEnum:
+    def setup(self):
+        self.schema = JsonSchema(DataWithEnum)
 
-
-@dataclass(frozen=True)
-class EnumContainer:
-    enum_list: List[Symbol]
-    enum_mapping: Dict[str, Symbol]
-
-
-class TestEncoder:
-
-    def test_data_with_enum(self):
-        schema = JsonSchema(DataWithEnum)
-
+    def test_load(self):
         enum = DataWithEnum('name1', Symbol.ALPHA)
         enum_json = '{"name": "name1", "enum": "alpha"}'
-        assert schema.dump(enum) == enum_json
+        assert self.schema.dump(enum) == enum_json
 
         int_enum = DataWithEnum('name1', Symbol.ONE)
         int_enum_json = '{"name": "name1", "enum": 1}'
-        assert schema.dump(int_enum) == int_enum_json
+        assert self.schema.dump(int_enum) == int_enum_json
 
         float_enum = DataWithEnum('name1', Symbol.PI)
         float_enum_json = '{"name": "name1", "enum": 3.14}'
-        assert schema.dump(float_enum) == float_enum_json
+        assert self.schema.dump(float_enum) == float_enum_json
 
-    def test_data_with_str_enum(self):
-        schema = JsonSchema(Profile)
-        o = Profile(Gender.MALE)
-        assert schema.dump(o) == '{"gender": "male"}'
-
-    def test_data_with_enum_default_value(self):
-        schema = JsonSchema(DataWithEnum)
-        enum_to_json = schema.dump(DataWithEnum('name2'))
-        assert enum_to_json == '{"name": "name2", "enum": "gamma"}'
-
-    def test_collection_with_enum(self):
-        schema = JsonSchema(EnumContainer)
-        container = EnumContainer(
-            enum_list=[Symbol.GAMMA, Symbol.ONE],
-            enum_mapping={"first": Symbol.ALPHA, "second": Symbol.PI}
-        )
-        json = '{"enum_list": ["gamma", 1], "enum_mapping": {"first": "alpha", "second": 3.14}}'
-        assert schema.dump(container) == json
-
-
-class TestDecoder:
-
-    def test_data_with_enum(self):
-        schema = JsonSchema(DataWithEnum)
-
+    def test_dump(self):
         enum = DataWithEnum('name1', Symbol.ALPHA)
         enum_json = '{"name": "name1", "enum": "alpha"}'
-
-        enum_from_json = schema.load(enum_json)
-        assert enum == enum_from_json
-        assert schema.dump(enum_from_json) == enum_json
+        assert self.schema.dump(enum) == enum_json
 
         int_enum = DataWithEnum('name1', Symbol.ONE)
         int_enum_json = '{"name": "name1", "enum": 1}'
-        int_enum_from_json = schema.load(int_enum_json)
-        assert int_enum == int_enum_from_json
-        assert schema.dump(int_enum_from_json) == int_enum_json
+        assert self.schema.dump(int_enum) == int_enum_json
 
         float_enum = DataWithEnum('name1', Symbol.PI)
         float_enum_json = '{"name": "name1", "enum": 3.14}'
-        float_enum_from_json = schema.load(float_enum_json)
-        assert float_enum == float_enum_from_json
-        assert schema.dump(float_enum_from_json) == float_enum_json
+        assert self.schema.dump(float_enum) == float_enum_json
 
-    def test_data_with_str_enum(self):
-        schema = JsonSchema(Profile)
-        json = '{"gender": "male"}'
-        o = schema.load(json)
-        assert Profile(Gender.MALE) == o
-        assert schema.dump(o) == json
-
-    def test_data_with_invalid_data(self):
-        schema = JsonSchema(Profile)
-        with pytest.raises(LoadError):
-            schema.load('{"gender": "python"}')
-
-    def test_data_with_enum_default_value(self):
+    def test_default(self):
         schema = JsonSchema(DataWithEnum)
 
         json = '{"name": "name2", "enum": "gamma"}'
@@ -124,16 +63,61 @@ class TestDecoder:
         json_from_enum = schema.dump(enum_from_json)
         assert json_from_enum == json
 
-    def test_collection_with_enum(self):
-        json = '{"enum_list": ["gamma", 1], "enum_mapping": {"first": "alpha", "second": 3.14}}'
-        schema = JsonSchema(EnumContainer)
-        container_from_json = schema.load(json)
-        o = EnumContainer(
+
+class Gender(str, Enum):
+    MALE = 'male'
+    FEMALE = 'female'
+    OTHER = 'other'
+    NA = 'not specified'
+
+
+@dataclass(frozen=True)
+class Profile:
+    gender: Gender = Gender.NA
+
+
+class TestStrEnum:
+    def setup(self):
+        self.schema = JsonSchema(Profile)
+        self.json = '{"gender": "male"}'
+        self.dataclass = Profile(Gender.MALE)
+
+    def test_load(self):
+        actual = self.schema.load(self.json)
+        assert actual == self.dataclass
+
+    def test_dump(self):
+        actual = self.schema.dump(self.dataclass)
+        assert actual == self.json
+
+    def test_load_with_invalid_enum_value(self):
+        schema = JsonSchema(Profile)
+        with pytest.raises(LoadError):
+            schema.load('{"gender": "python"}')
+
+
+@dataclass(frozen=True)
+class EnumContainer:
+    enum_list: List[Symbol]
+    enum_mapping: Dict[str, Symbol]
+
+
+class TestEnumCollection:
+    def setup(self):
+        self.schema = JsonSchema(EnumContainer)
+        self.json = '{"enum_list": ["gamma", 1], "enum_mapping": {"first": "alpha", "second": 3.14}}'
+        self.dataclass = EnumContainer(
             enum_list=[Symbol.GAMMA, Symbol.ONE],
             enum_mapping={"first": Symbol.ALPHA, "second": Symbol.PI}
         )
-        assert o == container_from_json
-        assert schema.dump(container_from_json) == json
+
+    def test_load(self):
+        actual = self.schema.load(self.json)
+        assert actual == self.dataclass
+
+    def test_dump(self):
+        actual = self.schema.dump(self.dataclass)
+        assert actual == self.json
 
 
 class Permission(IntFlag):
