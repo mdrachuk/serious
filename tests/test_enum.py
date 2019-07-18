@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import date
 from enum import Enum, IntFlag
 from typing import Dict, List
 
@@ -138,6 +139,33 @@ class TestIntFlag:
         f_name = 'readme.txt'
         self.dict = {'name': f_name, 'permission': 7}
         self.dataclass = File(f_name, Permission.READ | Permission.WRITE | Permission.EXECUTE)
+
+    def test_load(self):
+        actual = self.schema.load(self.dict)
+        assert actual == self.dataclass
+
+    def test_dump(self):
+        actual = self.schema.dump(self.dataclass)
+        assert actual == self.dict
+
+
+class Date(date, Enum):
+    TRINITY = 1945, 6, 16
+    GAGARIN = 1961, 4, 11
+
+
+@dataclass(frozen=True)
+class HistoricEvent:
+    name: str
+    date: Date
+
+
+class TestDateEnum:
+    def setup(self):
+        self.schema = DictSchema(HistoricEvent)
+        name = 'First Man in Space'
+        self.dict = {'name': name, 'date': '1961-04-11'}
+        self.dataclass = HistoricEvent(name, Date.GAGARIN)
 
     def test_load(self):
         actual = self.schema.load(self.dict)
