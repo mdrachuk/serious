@@ -106,7 +106,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 
 @dataclass
-class DataclassWithIsoDatetime:
+class Creatable:
     created_at: datetime = field(
         metadata={'serious': {
             'dump': datetime.isoformat,

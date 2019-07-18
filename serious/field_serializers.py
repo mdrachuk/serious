@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import abstractmethod, ABC
 from dataclasses import replace
-from datetime import datetime, timezone
+from datetime import datetime, timezone, date, time
 from decimal import Decimal
 from enum import Enum
 from typing import Any, Type, Iterable, List
@@ -80,7 +80,9 @@ def field_serializers(custom: Iterable[Type[FieldSerializer]] = tuple()) -> Froz
         TupleSerializer,
         PrimitiveSerializer,
         DataclassSerializer,
-        DateTimeUtcTimestampSerializer,
+        DateTimeIsoSerializer,
+        DateIsoSerializer,
+        TimeIsoSerializer,
         UuidSerializer,
         DecimalSerializer,
         EnumSerializer,
@@ -304,12 +306,12 @@ class DateTimeUtcTimestampSerializer(FieldSerializer):
     ```
     @dataclass
     class Post:
-        created_at: datetime
+        timestamp: datetime
 
     timestamp = datetime(2018, 11, 17, 16, 55, 28, 456753, tzinfo=timezone.utc)
     post = Post(timestamp)
     ```
-    Dumping the `post` will return `{"created_at": 1542473728.456753}`.
+    Dumping the `post` will return `{"timestamp": 1542473728.456753}`.
     """
 
     @classmethod
@@ -330,12 +332,12 @@ class DateTimeIsoSerializer(FieldSerializer):
     ```
     @dataclass
     class Post:
-        created_at: datetime
+        timestamp: datetime
 
     timestamp = datetime(2018, 11, 17, 16, 55, 28, 456753, tzinfo=timezone.utc)
     post = Post(timestamp)
     ```
-    Dumping the `post` will return `'{"created_at": "2018-11-17T16:55:28.456753+00:00"}'`.
+    Dumping the `post` will return `'{"timestamp": "2018-11-17T16:55:28.456753+00:00"}'`.
 
     [1]: https://en.wikipedia.org/wiki/ISO_8601
     """
@@ -349,6 +351,62 @@ class DateTimeIsoSerializer(FieldSerializer):
     @classmethod
     def fits(cls, field: FieldDescriptor) -> bool:
         return issubclass(field.type.cls, datetime)
+
+
+class DateIsoSerializer(FieldSerializer):
+    """A serializer of `date` field values to a timestamp represented by an [ISO formatted string][1].
+
+    Example:
+    ```
+    @dataclass
+    class Event:
+        name: str
+        when: date
+
+    event = Event('Albert Einstein won Nobel Prize in Physics', date(1922, 9, 9))
+    ```
+    Dumping the `event` will return `'{"name": "…", "when": "1922-09-09"}'`.
+
+    [1]: https://en.wikipedia.org/wiki/ISO_8601
+    """
+
+    def load(self, value: Primitive, ctx: Context) -> Any:
+        return date.fromisoformat(value)  # type: ignore # expecting datetime
+
+    def dump(self, value: Any, ctx: Context) -> Primitive:
+        return date.isoformat(value)
+
+    @classmethod
+    def fits(cls, field: FieldDescriptor) -> bool:
+        return issubclass(field.type.cls, date)
+
+
+class TimeIsoSerializer(FieldSerializer):
+    """A serializer for `time` field values to an [ISO formatted string][1].
+
+    Example:
+    ```
+    @dataclass
+    class Alarm:
+        at: time
+        enabled: bool
+
+    alarm = Alarm(time(7, 0, 0), enabled=True)
+    ```
+    Dumping the `post` will return `'{"at": "07:00:00", "enabled": True}'`.
+
+    [1]: https://en.wikipedia.org/wiki/ISO_8601
+    """
+
+    def load(self, value: Primitive, ctx: Context) -> Any:
+        return time.fromisoformat(value)  # type: ignore # expecting datetime
+
+    def dump(self, value: Any, ctx: Context) -> Primitive:
+        return time.isoformat(value)
+
+    @classmethod
+    def fits(cls, field: FieldDescriptor) -> bool:
+        return issubclass(field.type.cls, time)
 
 
 class UuidSerializer(FieldSerializer):
