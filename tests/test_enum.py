@@ -170,6 +170,7 @@ class TestDateEnum:
     def test_load(self):
         actual = self.schema.load(self.dict)
         assert actual == self.dataclass
+        assert isinstance(actual.date, Date)
 
     def test_dump(self):
         actual = self.schema.dump(self.dataclass)
