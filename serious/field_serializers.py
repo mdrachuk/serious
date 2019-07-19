@@ -153,7 +153,26 @@ class OptionalSerializer(FieldSerializer):
 
 
 class EnumSerializer(FieldSerializer):
-    """Enum value serializer. Note that output depends on enum value, so it can be `str`, `int`, etc."""
+    """Enum value serializer. Note that output depends on enum value, so it can be `str`, `int`, etc.
+
+    It is possible to serialize enums of non-primitive type if the enum is supplying this type as parent class.
+    For example a date serialized to ISO string:
+    ```python
+    class Date(date, Enum):
+        TRINITY = 1945, 6, 16
+        GAGARIN = 1961, 4, 11
+
+
+    @dataclass(frozen=True)
+    class HistoricEvent:
+        name: str
+        date: Date
+
+    schema = DictSchema(HistoricEvent)
+    dict = {'name': name, 'date': '1961-04-11'}
+    dataclass = HistoricEvent(name, Date.GAGARIN)
+    assert schema.load(dict) == dataclass  # True
+    ```"""
 
     def __init__(self, field: FieldDescriptor, sr: SeriousSchema):
         super().__init__(field, sr)
