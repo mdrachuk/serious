@@ -31,15 +31,15 @@ class TestEnum:
     def test_load(self):
         enum = DataWithEnum('name1', Symbol.ALPHA)
         enum_json = '{"name": "name1", "enum": "alpha"}'
-        assert self.schema.dump(enum) == enum_json
+        assert self.schema.load(enum_json) == enum
 
         int_enum = DataWithEnum('name1', Symbol.ONE)
         int_enum_json = '{"name": "name1", "enum": 1}'
-        assert self.schema.dump(int_enum) == int_enum_json
+        assert self.schema.load(int_enum_json) == int_enum
 
         float_enum = DataWithEnum('name1', Symbol.PI)
         float_enum_json = '{"name": "name1", "enum": 3.14}'
-        assert self.schema.dump(float_enum) == float_enum_json
+        assert self.schema.load(float_enum_json) == float_enum
 
     def test_dump(self):
         enum = DataWithEnum('name1', Symbol.ALPHA)

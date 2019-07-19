@@ -73,8 +73,9 @@ def field_serializers(custom: Iterable[Type[FieldSerializer]] = tuple()) -> Froz
     return frozenlist([
         MetadataSerializer,
         OptionalSerializer,
-        *custom,
         AnySerializer,
+        EnumSerializer,
+        *custom,
         DictSerializer,
         CollectionSerializer,
         TupleSerializer,
@@ -86,7 +87,6 @@ def field_serializers(custom: Iterable[Type[FieldSerializer]] = tuple()) -> Froz
         TimeIsoSerializer,
         UuidSerializer,
         DecimalSerializer,
-        EnumSerializer,
     ])
 
 
@@ -138,7 +138,7 @@ class OptionalSerializer(FieldSerializer):
 
     def __init__(self, field: FieldDescriptor, sr: SeriousSchema):
         super().__init__(field, sr)
-        item_descriptor = replace(field, type=field.type.non_optional())
+        item_descriptor = replace(field, type=replace(field.type, is_optional=False))
         self._serializer = sr.field_serializer(item_descriptor)
 
     def dump(self, value: Any, ctx: Context) -> Primitive:
@@ -150,6 +150,40 @@ class OptionalSerializer(FieldSerializer):
     @classmethod
     def fits(cls, field: FieldDescriptor) -> bool:
         return field.type.is_optional
+
+
+class EnumSerializer(FieldSerializer):
+    """Enum value serializer. Note that output depends on enum value, so it can be `str`, `int`, etc."""
+
+    def __init__(self, field: FieldDescriptor, sr: SeriousSchema):
+        super().__init__(field, sr)
+        cls = field.type.cls
+        bases = cls.__bases__
+        while len(bases) == 1:
+            cls = bases[0]
+            bases = cls.__bases__
+        if len(bases) == 0:
+            self._serializer = None
+        else:
+            item_descriptor = replace(field, type=field.type.describe(bases[0]))
+            self._serializer = sr.field_serializer(item_descriptor)
+
+    def load(self, value: Primitive, ctx: Context) -> Any:
+        enum_cls = self.field.type.cls
+        if self._serializer is not None:
+            loaded_value = self._serializer.load(value, ctx)
+            return enum_cls(loaded_value)
+        return enum_cls(value)
+
+    def dump(self, value: Any, ctx: Context) -> Primitive:
+        enum_value = value.value
+        if self._serializer is not None:
+            return self._serializer.dump(enum_value, ctx)
+        return enum_value
+
+    @classmethod
+    def fits(cls, field: FieldDescriptor) -> bool:
+        return issubclass(field.type.cls, Enum)
 
 
 class AnySerializer(FieldSerializer):
@@ -437,20 +471,6 @@ class DecimalSerializer(FieldSerializer):
     @classmethod
     def fits(cls, field: FieldDescriptor) -> bool:
         return issubclass(field.type.cls, Decimal)
-
-
-class EnumSerializer(FieldSerializer):
-    """Enum value serializer. Note that output depends on enum value, so it can be `str`, `int`, etc."""
-
-    def load(self, value: Primitive, ctx: Context) -> Any:
-        return self.field.type.cls(value)
-
-    def dump(self, value: Any, ctx: Context) -> Primitive:
-        return value.value
-
-    @classmethod
-    def fits(cls, field: FieldDescriptor) -> bool:
-        return issubclass(field.type.cls, Enum)
 
 
 def generic_item_serializer(field: FieldDescriptor, sr: SeriousSchema, *, param_index: int) -> FieldSerializer:

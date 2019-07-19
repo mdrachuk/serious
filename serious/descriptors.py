@@ -21,9 +21,6 @@ class TypeDescriptor(Generic[T]):
     def cls(self):  # Python fails when providing cls as a keyword parameter to dataclasses
         return self._cls
 
-    def non_optional(self):
-        return replace(self, is_optional=False)
-
     @property
     def fields(self) -> Collection['FieldDescriptor']:
         if not is_dataclass(self.cls):
