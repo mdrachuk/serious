@@ -2,7 +2,7 @@ from collections import ChainMap
 from dataclasses import dataclass, fields, is_dataclass, replace
 from typing import Type, Any, TypeVar, Generic, get_type_hints, Dict, Mapping, Collection, List, Union
 
-from serious._collections import FrozenDict, frozendict
+from serious.types import FrozenDict, frozendict
 
 T = TypeVar('T')
 

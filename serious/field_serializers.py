@@ -2,15 +2,15 @@ from __future__ import annotations
 
 from abc import abstractmethod, ABC
 from dataclasses import replace
-from datetime import datetime, timezone, date, time
+from datetime import datetime, date, time
 from decimal import Decimal
 from enum import Enum
 from typing import Any, Type, Iterable, List
 from uuid import UUID
 
-from serious._collections import frozenlist, FrozenList
 from serious.context import SerializationContext as Context, SerializationStep
 from serious.descriptors import FieldDescriptor
+from serious.types import frozenlist, FrozenList, Timestamp, timestamp
 from serious.utils import Primitive
 
 if False:  # To reference in typings
@@ -80,6 +80,7 @@ def field_serializers(custom: Iterable[Type[FieldSerializer]] = tuple()) -> Froz
         TupleSerializer,
         PrimitiveSerializer,
         DataclassSerializer,
+        DateTimeUtcTimestampSerializer,
         DateTimeIsoSerializer,
         DateIsoSerializer,
         TimeIsoSerializer,
@@ -300,29 +301,30 @@ class DataclassSerializer(FieldSerializer):
 
 
 class DateTimeUtcTimestampSerializer(FieldSerializer):
-    """A serializer for datetime field values to a UTC timestamp represented by float.
+    """A serializer of UTC timestamp field values to/from float value.
 
     Example:
     ```
-    @dataclass
-    class Post:
-        timestamp: datetime
+    from serious.types import timestamp
 
-    timestamp = datetime(2018, 11, 17, 16, 55, 28, 456753, tzinfo=timezone.utc)
-    post = Post(timestamp)
+    @dataclass
+    class Transaction:
+        created_at: timestamp
+
+    transaction = Transaction(timestamp(1542473728.456753))
     ```
-    Dumping the `post` will return `{"timestamp": 1542473728.456753}`.
+    Dumping the `post` will return `{"created_at": 1542473728.456753}`.
     """
 
     @classmethod
     def fits(cls, field: FieldDescriptor) -> bool:
-        return issubclass(field.type.cls, datetime)
+        return issubclass(field.type.cls, Timestamp)
 
     def load(self, value: Primitive, ctx: Context) -> Any:
-        return datetime.fromtimestamp(value, tz=timezone.utc)  # type: ignore # gonna be float
+        return timestamp(value)  # type: ignore # expecting float
 
     def dump(self, value: Any, ctx: Context) -> Primitive:
-        return value.timestamp()
+        return value.value
 
 
 class DateTimeIsoSerializer(FieldSerializer):

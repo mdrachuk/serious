@@ -2,6 +2,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone, time, date
 
 from serious.json import JsonSchema
+from serious.types import Timestamp, timestamp
 
 
 @dataclass
@@ -26,7 +27,7 @@ class TestDefaultDatetime:
 
 
 @dataclass
-class DateTime:
+class CustomDateTime:
     timestamp: datetime = field(
         metadata={'serious': {
             'dump': lambda x: x.timestamp(),
@@ -37,11 +38,32 @@ class DateTime:
 class TestCustomDatetime:
 
     def setup_class(self):
-        self.schema = JsonSchema(DateTime)
+        self.schema = JsonSchema(CustomDateTime)
         dt = datetime(2018, 11, 17, 16, 55, 28, 456753, tzinfo=timezone.utc)
         ts = dt.timestamp()
         self.json = f'{{"timestamp": {ts}}}'
-        self.dataclass = DateTime(timestamp=datetime.fromtimestamp(ts, tz=timezone.utc))
+        self.dataclass = CustomDateTime(timestamp=datetime.fromtimestamp(ts, tz=timezone.utc))
+
+    def test_load(self):
+        assert self.schema.load(self.json) == self.dataclass
+
+    def test_dump(self):
+        assert self.schema.dump(self.dataclass) == self.json
+
+
+@dataclass
+class TimestampDatetime:
+    value: Timestamp
+
+
+class TestTimestamp:
+
+    def setup_class(self):
+        self.schema = JsonSchema(TimestampDatetime)
+        dt = datetime(2018, 11, 17, 16, 55, 28, 456753, tzinfo=timezone.utc)
+        ts = dt.timestamp()
+        self.json = f'{{"value": {ts}}}'
+        self.dataclass = TimestampDatetime(timestamp(dt))
 
     def test_load(self):
         assert self.schema.load(self.json) == self.dataclass
