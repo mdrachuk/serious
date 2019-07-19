@@ -63,12 +63,12 @@ class Timestamp:
         pass
 
     @overload
-    def __init__(self, timestamp: float):
+    def __init__(self, timestamp: int):
         """Creates a timestamp with provided number of seconds since UNIX epoch (January 1st, 1970)."""
         pass
 
     @overload
-    def __init__(self, timestamp: int):
+    def __init__(self, timestamp: float):
         """Creates a timestamp with provided number of seconds since UNIX epoch (January 1st, 1970)."""
         pass
 
@@ -111,7 +111,7 @@ class Timestamp:
         """Restricts mutation of object value"""
         raise AttributeError('Cannot change timestamp. Timestamp objects are immutable.')
 
-    def __eq__(self, other: 'Timestamp'):
+    def __eq__(self, other: object):
         """Overrides the default implementation"""
         if not isinstance(other, Timestamp):
             raise NotImplementedError('Cannot compare Timestamp to anything other than Timestamp.')
