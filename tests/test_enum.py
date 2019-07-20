@@ -1,124 +1,177 @@
 from dataclasses import dataclass
-from enum import Enum
+from datetime import date
+from enum import Enum, IntFlag
 from typing import Dict, List
 
+import pytest
+
+from serious.dict import DictSchema
+from serious.errors import LoadError
 from serious.json import JsonSchema
 
 
-class MyEnum(Enum):
-    STR1 = "str1"
-    STR2 = "str2"
-    STR3 = "str3"
-    INT1 = 1
-    FLOAT1 = 1.23
-
-
-class MyStrEnum(str, Enum):
-    STR1 = "str1"
+class Symbol(Enum):
+    ALPHA = "alpha"
+    BETA = "beta"
+    GAMMA = "gamma"
+    ONE = 1
+    PI = 3.14
 
 
 @dataclass(frozen=True)
 class DataWithEnum:
     name: str
-    my_enum: MyEnum = MyEnum.STR3
+    enum: Symbol = Symbol.GAMMA
 
 
-@dataclass(frozen=True)
-class DataWithStrEnum:
-    my_str_enum: MyStrEnum = MyEnum.STR1
+class TestEnum:
+    def setup(self):
+        self.schema = JsonSchema(DataWithEnum)
 
+    def test_load(self):
+        enum = DataWithEnum('name1', Symbol.ALPHA)
+        enum_json = '{"name": "name1", "enum": "alpha"}'
+        assert self.schema.load(enum_json) == enum
 
-@dataclass(frozen=True)
-class EnumContainer:
-    enum_list: List[MyEnum]
-    dict_enum_value: Dict[str, MyEnum]
+        int_enum = DataWithEnum('name1', Symbol.ONE)
+        int_enum_json = '{"name": "name1", "enum": 1}'
+        assert self.schema.load(int_enum_json) == int_enum
 
+        float_enum = DataWithEnum('name1', Symbol.PI)
+        float_enum_json = '{"name": "name1", "enum": 3.14}'
+        assert self.schema.load(float_enum_json) == float_enum
 
-class TestEncoder:
+    def test_dump(self):
+        enum = DataWithEnum('name1', Symbol.ALPHA)
+        enum_json = '{"name": "name1", "enum": "alpha"}'
+        assert self.schema.dump(enum) == enum_json
 
-    def test_data_with_enum(self):
+        int_enum = DataWithEnum('name1', Symbol.ONE)
+        int_enum_json = '{"name": "name1", "enum": 1}'
+        assert self.schema.dump(int_enum) == int_enum_json
+
+        float_enum = DataWithEnum('name1', Symbol.PI)
+        float_enum_json = '{"name": "name1", "enum": 3.14}'
+        assert self.schema.dump(float_enum) == float_enum_json
+
+    def test_default(self):
         schema = JsonSchema(DataWithEnum)
 
-        enum = DataWithEnum('name1', MyEnum.STR1)
-        enum_json = '{"name": "name1", "my_enum": "str1"}'
-        assert schema.dump(enum) == enum_json
-
-        int_enum = DataWithEnum('name1', MyEnum.INT1)
-        int_enum_json = '{"name": "name1", "my_enum": 1}'
-        assert schema.dump(int_enum) == int_enum_json
-
-        float_enum = DataWithEnum('name1', MyEnum.FLOAT1)
-        float_enum_json = '{"name": "name1", "my_enum": 1.23}'
-        assert schema.dump(float_enum) == float_enum_json
-
-    def test_data_with_str_enum(self):
-        schema = JsonSchema(DataWithStrEnum)
-        o = DataWithStrEnum(MyStrEnum.STR1)
-        assert schema.dump(o) == '{"my_str_enum": "str1"}'
-
-    def test_data_with_enum_default_value(self):
-        schema = JsonSchema(DataWithEnum)
-        enum_to_json = schema.dump(DataWithEnum('name2'))
-        assert enum_to_json == '{"name": "name2", "my_enum": "str3"}'
-
-    def test_collection_with_enum(self):
-        schema = JsonSchema(EnumContainer)
-        container = EnumContainer(
-            enum_list=[MyEnum.STR3, MyEnum.INT1],
-            dict_enum_value={"key1str": MyEnum.STR1, "key1float": MyEnum.FLOAT1}
-        )
-        json = '{"enum_list": ["str3", 1], "dict_enum_value": {"key1str": "str1", "key1float": 1.23}}'
-        assert schema.dump(container) == json
-
-
-class TestDecoder:
-
-    def test_data_with_enum(self):
-        schema = JsonSchema(DataWithEnum)
-
-        enum = DataWithEnum('name1', MyEnum.STR1)
-        enum_json = '{"name": "name1", "my_enum": "str1"}'
-
-        enum_from_json = schema.load(enum_json)
-        assert enum == enum_from_json
-        assert schema.dump(enum_from_json) == enum_json
-
-        int_enum = DataWithEnum('name1', MyEnum.INT1)
-        int_enum_json = '{"name": "name1", "my_enum": 1}'
-        int_enum_from_json = schema.load(int_enum_json)
-        assert int_enum == int_enum_from_json
-        assert schema.dump(int_enum_from_json) == int_enum_json
-
-        float_enum = DataWithEnum('name1', MyEnum.FLOAT1)
-        float_enum_json = '{"name": "name1", "my_enum": 1.23}'
-        float_enum_from_json = schema.load(float_enum_json)
-        assert float_enum == float_enum_from_json
-        assert schema.dump(float_enum_from_json) == float_enum_json
-
-    def test_data_with_str_enum(self):
-        schema = JsonSchema(DataWithStrEnum)
-        json = '{"my_str_enum": "str1"}'
-        o = schema.load(json)
-        assert DataWithStrEnum(MyStrEnum.STR1) == o
-        assert schema.dump(o) == json
-
-    def test_data_with_enum_default_value(self):
-        schema = JsonSchema(DataWithEnum)
-
-        json = '{"name": "name2", "my_enum": "str3"}'
+        json = '{"name": "name2", "enum": "gamma"}'
         assert schema.dump(DataWithEnum('name2')) == json
 
         enum_from_json = schema.load(json)
         json_from_enum = schema.dump(enum_from_json)
         assert json_from_enum == json
 
-    def test_collection_with_enum(self):
-        json = '{"enum_list": ["str3", 1], "dict_enum_value": {"key1str": "str1", "key1float": 1.23}}'
-        schema = JsonSchema(EnumContainer)
-        container_from_json = schema.load(json)
-        o = EnumContainer(
-            enum_list=[MyEnum.STR3, MyEnum.INT1],
-            dict_enum_value={"key1str": MyEnum.STR1, "key1float": MyEnum.FLOAT1}
+
+class Gender(str, Enum):
+    MALE = 'male'
+    FEMALE = 'female'
+    OTHER = 'other'
+    NA = 'not specified'
+
+
+@dataclass(frozen=True)
+class Profile:
+    gender: Gender = Gender.NA
+
+
+class TestStrEnum:
+    def setup(self):
+        self.schema = JsonSchema(Profile)
+        self.json = '{"gender": "male"}'
+        self.dataclass = Profile(Gender.MALE)
+
+    def test_load(self):
+        actual = self.schema.load(self.json)
+        assert actual == self.dataclass
+
+    def test_dump(self):
+        actual = self.schema.dump(self.dataclass)
+        assert actual == self.json
+
+    def test_load_with_invalid_enum_value(self):
+        schema = JsonSchema(Profile)
+        with pytest.raises(LoadError):
+            schema.load('{"gender": "python"}')
+
+
+@dataclass(frozen=True)
+class EnumContainer:
+    enum_list: List[Symbol]
+    enum_mapping: Dict[str, Symbol]
+
+
+class TestEnumCollection:
+    def setup(self):
+        self.schema = JsonSchema(EnumContainer)
+        self.json = '{"enum_list": ["gamma", 1], "enum_mapping": {"first": "alpha", "second": 3.14}}'
+        self.dataclass = EnumContainer(
+            enum_list=[Symbol.GAMMA, Symbol.ONE],
+            enum_mapping={"first": Symbol.ALPHA, "second": Symbol.PI}
         )
-        assert o == container_from_json
-        assert schema.dump(container_from_json) == json
+
+    def test_load(self):
+        actual = self.schema.load(self.json)
+        assert actual == self.dataclass
+
+    def test_dump(self):
+        actual = self.schema.dump(self.dataclass)
+        assert actual == self.json
+
+
+class Permission(IntFlag):
+    READ = 4
+    WRITE = 2
+    EXECUTE = 1
+
+
+@dataclass(frozen=True)
+class File:
+    name: str
+    permission: Permission
+
+
+class TestIntFlag:
+    def setup(self):
+        self.schema = DictSchema(File)
+        f_name = 'readme.txt'
+        self.dict = {'name': f_name, 'permission': 7}
+        self.dataclass = File(f_name, Permission.READ | Permission.WRITE | Permission.EXECUTE)
+
+    def test_load(self):
+        actual = self.schema.load(self.dict)
+        assert actual == self.dataclass
+
+    def test_dump(self):
+        actual = self.schema.dump(self.dataclass)
+        assert actual == self.dict
+
+
+class Date(date, Enum):
+    TRINITY = 1945, 6, 16
+    GAGARIN = 1961, 4, 11
+
+
+@dataclass(frozen=True)
+class HistoricEvent:
+    name: str
+    date: Date
+
+
+class TestDateEnum:
+    def setup(self):
+        self.schema = DictSchema(HistoricEvent)
+        name = 'First Man in Space'
+        self.dict = {'name': name, 'date': '1961-04-11'}
+        self.dataclass = HistoricEvent(name, Date.GAGARIN)
+
+    def test_load(self):
+        actual = self.schema.load(self.dict)
+        assert actual == self.dataclass
+        assert isinstance(actual.date, Date)
+
+    def test_dump(self):
+        actual = self.schema.dump(self.dataclass)
+        assert actual == self.dict

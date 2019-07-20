@@ -2,15 +2,15 @@ from __future__ import annotations
 
 from abc import abstractmethod, ABC
 from dataclasses import replace
-from datetime import datetime, timezone
+from datetime import datetime, date, time
 from decimal import Decimal
 from enum import Enum
 from typing import Any, Type, Iterable, List
 from uuid import UUID
 
-from serious._collections import frozenlist, FrozenList
 from serious.context import SerializationContext as Context, SerializationStep
 from serious.descriptors import FieldDescriptor
+from serious.types import frozenlist, FrozenList, Timestamp, timestamp
 from serious.utils import Primitive
 
 if False:  # To reference in typings
@@ -73,17 +73,20 @@ def field_serializers(custom: Iterable[Type[FieldSerializer]] = tuple()) -> Froz
     return frozenlist([
         MetadataSerializer,
         OptionalSerializer,
-        *custom,
         AnySerializer,
+        EnumSerializer,
+        *custom,
         DictSerializer,
         CollectionSerializer,
         TupleSerializer,
         PrimitiveSerializer,
         DataclassSerializer,
         DateTimeUtcTimestampSerializer,
+        DateTimeIsoSerializer,
+        DateIsoSerializer,
+        TimeIsoSerializer,
         UuidSerializer,
         DecimalSerializer,
-        EnumSerializer,
     ])
 
 
@@ -135,7 +138,7 @@ class OptionalSerializer(FieldSerializer):
 
     def __init__(self, field: FieldDescriptor, sr: SeriousSchema):
         super().__init__(field, sr)
-        item_descriptor = replace(field, type=field.type.non_optional())
+        item_descriptor = replace(field, type=replace(field.type, is_optional=False))
         self._serializer = sr.field_serializer(item_descriptor)
 
     def dump(self, value: Any, ctx: Context) -> Primitive:
@@ -147,6 +150,59 @@ class OptionalSerializer(FieldSerializer):
     @classmethod
     def fits(cls, field: FieldDescriptor) -> bool:
         return field.type.is_optional
+
+
+class EnumSerializer(FieldSerializer):
+    """Enum value serializer. Note that output depends on enum value, so it can be `str`, `int`, etc.
+
+    It is possible to serialize enums of non-primitive type if the enum is supplying this type as parent class.
+    For example a date serialized to ISO string:
+    ```python
+    class Date(date, Enum):
+        TRINITY = 1945, 6, 16
+        GAGARIN = 1961, 4, 11
+
+
+    @dataclass(frozen=True)
+    class HistoricEvent:
+        name: str
+        date: Date
+
+    schema = DictSchema(HistoricEvent)
+    dict = {'name': name, 'date': '1961-04-11'}
+    dataclass = HistoricEvent(name, Date.GAGARIN)
+    assert schema.load(dict) == dataclass  # True
+    ```"""
+
+    def __init__(self, field: FieldDescriptor, sr: SeriousSchema):
+        super().__init__(field, sr)
+        cls = field.type.cls
+        bases = cls.__bases__
+        while len(bases) == 1:
+            cls = bases[0]
+            bases = cls.__bases__
+        if len(bases) == 0:
+            self._serializer = None
+        else:
+            item_descriptor = replace(field, type=field.type.describe(bases[0]))
+            self._serializer = sr.field_serializer(item_descriptor)
+
+    def load(self, value: Primitive, ctx: Context) -> Any:
+        enum_cls = self.field.type.cls
+        if self._serializer is not None:
+            loaded_value = self._serializer.load(value, ctx)
+            return enum_cls(loaded_value)
+        return enum_cls(value)
+
+    def dump(self, value: Any, ctx: Context) -> Primitive:
+        enum_value = value.value
+        if self._serializer is not None:
+            return self._serializer.dump(enum_value, ctx)
+        return enum_value
+
+    @classmethod
+    def fits(cls, field: FieldDescriptor) -> bool:
+        return issubclass(field.type.cls, Enum)
 
 
 class AnySerializer(FieldSerializer):
@@ -298,29 +354,30 @@ class DataclassSerializer(FieldSerializer):
 
 
 class DateTimeUtcTimestampSerializer(FieldSerializer):
-    """A serializer for datetime field values to a UTC timestamp represented by float.
+    """A serializer of UTC timestamp field values to/from float value.
 
     Example:
     ```
-    @dataclass
-    class Post:
-        created_at: datetime
+    from serious.types import timestamp
 
-    timestamp = datetime(2018, 11, 17, 16, 55, 28, 456753, tzinfo=timezone.utc)
-    post = Post(timestamp)
+    @dataclass
+    class Transaction:
+        created_at: timestamp
+
+    transaction = Transaction(timestamp(1542473728.456753))
     ```
     Dumping the `post` will return `{"created_at": 1542473728.456753}`.
     """
 
     @classmethod
     def fits(cls, field: FieldDescriptor) -> bool:
-        return issubclass(field.type.cls, datetime)
+        return issubclass(field.type.cls, Timestamp)
 
     def load(self, value: Primitive, ctx: Context) -> Any:
-        return datetime.fromtimestamp(value, tz=timezone.utc)  # type: ignore # gonna be float
+        return timestamp(value)  # type: ignore # expecting float
 
     def dump(self, value: Any, ctx: Context) -> Primitive:
-        return value.timestamp()
+        return value.value
 
 
 class DateTimeIsoSerializer(FieldSerializer):
@@ -330,12 +387,12 @@ class DateTimeIsoSerializer(FieldSerializer):
     ```
     @dataclass
     class Post:
-        created_at: datetime
+        timestamp: datetime
 
     timestamp = datetime(2018, 11, 17, 16, 55, 28, 456753, tzinfo=timezone.utc)
     post = Post(timestamp)
     ```
-    Dumping the `post` will return `'{"created_at": "2018-11-17T16:55:28.456753+00:00"}'`.
+    Dumping the `post` will return `'{"timestamp": "2018-11-17T16:55:28.456753+00:00"}'`.
 
     [1]: https://en.wikipedia.org/wiki/ISO_8601
     """
@@ -349,6 +406,62 @@ class DateTimeIsoSerializer(FieldSerializer):
     @classmethod
     def fits(cls, field: FieldDescriptor) -> bool:
         return issubclass(field.type.cls, datetime)
+
+
+class DateIsoSerializer(FieldSerializer):
+    """A serializer of `date` field values to a timestamp represented by an [ISO formatted string][1].
+
+    Example:
+    ```
+    @dataclass
+    class Event:
+        name: str
+        when: date
+
+    event = Event('Albert Einstein won Nobel Prize in Physics', date(1922, 9, 9))
+    ```
+    Dumping the `event` will return `'{"name": "…", "when": "1922-09-09"}'`.
+
+    [1]: https://en.wikipedia.org/wiki/ISO_8601
+    """
+
+    def load(self, value: Primitive, ctx: Context) -> Any:
+        return date.fromisoformat(value)  # type: ignore # expecting datetime
+
+    def dump(self, value: Any, ctx: Context) -> Primitive:
+        return date.isoformat(value)
+
+    @classmethod
+    def fits(cls, field: FieldDescriptor) -> bool:
+        return issubclass(field.type.cls, date)
+
+
+class TimeIsoSerializer(FieldSerializer):
+    """A serializer for `time` field values to an [ISO formatted string][1].
+
+    Example:
+    ```
+    @dataclass
+    class Alarm:
+        at: time
+        enabled: bool
+
+    alarm = Alarm(time(7, 0, 0), enabled=True)
+    ```
+    Dumping the `post` will return `'{"at": "07:00:00", "enabled": True}'`.
+
+    [1]: https://en.wikipedia.org/wiki/ISO_8601
+    """
+
+    def load(self, value: Primitive, ctx: Context) -> Any:
+        return time.fromisoformat(value)  # type: ignore # expecting datetime
+
+    def dump(self, value: Any, ctx: Context) -> Primitive:
+        return time.isoformat(value)
+
+    @classmethod
+    def fits(cls, field: FieldDescriptor) -> bool:
+        return issubclass(field.type.cls, time)
 
 
 class UuidSerializer(FieldSerializer):
@@ -377,20 +490,6 @@ class DecimalSerializer(FieldSerializer):
     @classmethod
     def fits(cls, field: FieldDescriptor) -> bool:
         return issubclass(field.type.cls, Decimal)
-
-
-class EnumSerializer(FieldSerializer):
-    """Enum value serializer. Note that output depends on enum value, so it can be `str`, `int`, etc."""
-
-    def load(self, value: Primitive, ctx: Context) -> Any:
-        return self.field.type.cls(value)
-
-    def dump(self, value: Any, ctx: Context) -> Primitive:
-        return value.value
-
-    @classmethod
-    def fits(cls, field: FieldDescriptor) -> bool:
-        return issubclass(field.type.cls, Enum)
 
 
 def generic_item_serializer(field: FieldDescriptor, sr: SeriousSchema, *, param_index: int) -> FieldSerializer:

@@ -2,7 +2,7 @@ from collections import ChainMap
 from dataclasses import dataclass, fields, is_dataclass, replace
 from typing import Type, Any, TypeVar, Generic, get_type_hints, Dict, Mapping, Collection, List, Union
 
-from serious._collections import FrozenDict, frozendict
+from serious.types import FrozenDict, frozendict
 
 T = TypeVar('T')
 
@@ -20,9 +20,6 @@ class TypeDescriptor(Generic[T]):
     @property
     def cls(self):  # Python fails when providing cls as a keyword parameter to dataclasses
         return self._cls
-
-    def non_optional(self):
-        return replace(self, is_optional=False)
 
     @property
     def fields(self) -> Collection['FieldDescriptor']:

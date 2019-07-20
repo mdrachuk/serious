@@ -23,12 +23,3 @@ def _check_present(optional: Optional[T], message: str = 'Value must be present'
     assert optional is not None, message
     value: T = optional
     return value
-
-
-def _check_exactly_one_present(*args, message: str = 'Exactly one parameter is expected to be non-None'):
-    flag = False
-    for arg in args:
-        if arg is not None:
-            _check_present(message)
-            flag = True
-    assert flag, message
