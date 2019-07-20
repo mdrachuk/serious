@@ -1,13 +1,14 @@
 from typing import Type, Mapping, Collection
 
 from serious.context import SerializationStep
+from serious.descriptors import FieldDescriptor
 from serious.utils import DataclassType, class_path
 
 
 class SerializationError(Exception):
     def __init__(self, cls: Type[DataclassType], serializer_stack: Collection[SerializationStep]):
         super().__init__()
-        self._cls = cls
+        self.cls = cls
         self._path = self.__parse_stack(serializer_stack)
 
     @staticmethod
@@ -18,7 +19,7 @@ class SerializationError(Exception):
 
     @property
     def message(self):
-        return f'Error during serialization of "{self._cls}"'
+        return f'Error during serialization of "{self.cls}"'
 
     def __str__(self):
         exc_type = super().__str__()
@@ -32,7 +33,7 @@ class LoadError(SerializationError):
 
     @property
     def message(self):
-        return f'Failed to load "{self._path}" of {class_path(self._cls)} from {self._data}: {self.__cause__}'
+        return f'Failed to load "{self._path}" of {class_path(self.cls)} from {self._data}: {self.__cause__}'
 
 
 class DumpError(SerializationError):
@@ -54,9 +55,9 @@ class UnexpectedItem(LoadError):
     def message(self):
         if len(self._fields) == 1:
             field = next(iter(self._fields))
-            return f'Unexpected field "{field}" in loaded {class_path(self._cls)}'
+            return f'Unexpected field "{field}" in loaded {class_path(self.cls)}'
         else:
-            return f'Unexpected fields {self._fields} in loaded {class_path(self._cls)}'
+            return f'Unexpected fields {self._fields} in loaded {class_path(self.cls)}'
 
 
 class MissingField(LoadError):
@@ -68,16 +69,40 @@ class MissingField(LoadError):
     def message(self):
         if len(self._fields) == 1:
             field = next(iter(self._fields))
-            return f'Missing field "{field}" in loaded {class_path(self._cls)}'
+            return f'Missing field "{field}" in loaded {class_path(self.cls)}'
         else:
-            return f'Missing fields {self._fields} in loaded {class_path(self._cls)}'
+            return f'Missing fields {self._fields} in loaded {class_path(self.cls)}'
 
 
-class ModelContainsAny(Exception):
+class ModelError(Exception):
     def __init__(self, cls: Type):
-        super().__init__(
-            f'${class_path(cls)} contains fields annotated as Any or missing type annotation. '
-            f'Provide a type annotation or pass `allow_any=True` to the serializer. '
-            f'This may also be an ambiguous `Generic` definitions like `x: list`, `x: List` '
-            f'which are resolved as `List[Any]`. '
-        )
+        self.cls = cls
+
+    @property
+    def message(self):
+        return f'Model error in class "{self.cls}ю"'
+
+
+class ModelContainsAny(ModelError):
+
+    @property
+    def message(self):
+        return (f'{class_path(self.cls)} contains fields annotated as Any or missing type annotation. '
+                f'Provide a type annotation or pass `allow_any=True` to the serializer. '
+                f'This may also be an ambiguous `Generic` definitions like `x: list`, `x: List` '
+                f'which are resolved as `List[Any]`. ')
+
+
+class InvalidFieldMetadata(ModelError):
+    def __init__(self, field: FieldDescriptor, metadata_error: str):
+        super().__init__(field.type.cls)
+        self.field = field
+        self.metadata_error = metadata_error
+
+    @property
+    def message(self):
+        return f'{class_path(self.cls)}.{self.field.name} contains invalid serious metadata. {self.metadata_error}.'
+
+
+class ValidationError(Exception):
+    pass

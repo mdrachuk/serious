@@ -10,6 +10,7 @@ from uuid import UUID
 
 from serious.context import SerializationContext as Context, SerializationStep
 from serious.descriptors import FieldDescriptor
+from serious.errors import InvalidFieldMetadata
 from serious.types import frozenlist, FrozenList, Timestamp, timestamp
 from serious.utils import Primitive
 
@@ -54,6 +55,10 @@ class FieldSerializer(SerializationStep, ABC):
     def field(self) -> FieldDescriptor:
         """Read access to the field processed by the serializer."""
         return self._field
+
+    @abstractmethod
+    def load(self, value: Primitive, ctx: Context) -> Any:
+        raise NotImplementedError
 
     @abstractmethod
     def dump(self, value: Any, ctx: Context) -> Primitive:
@@ -120,7 +125,17 @@ class MetadataSerializer(FieldSerializer):
 
     @classmethod
     def fits(cls, field: FieldDescriptor) -> bool:
-        return field.metadata is not None and 'serious' in field.metadata
+        metadata = field.metadata
+        if 'serious' not in metadata:
+            return False
+        contains_load = 'load' in metadata['serious']
+        contains_dump = 'dump' in metadata['serious']
+        if not contains_dump and not contains_load:
+            return False
+        if (contains_load and not contains_dump) or (contains_dump and not contains_load):
+            error = 'Both "load" and "dump" must be present in serious metadata to use it for serialization.'
+            raise InvalidFieldMetadata(field, error)
+        return True
 
 
 class OptionalSerializer(FieldSerializer):
@@ -141,11 +156,11 @@ class OptionalSerializer(FieldSerializer):
         item_descriptor = replace(field, type=replace(field.type, is_optional=False))
         self._serializer = sr.field_serializer(item_descriptor)
 
-    def dump(self, value: Any, ctx: Context) -> Primitive:
-        return None if value is None else self._serializer.dump(value, ctx)
-
     def load(self, value: Primitive, ctx: Context) -> Any:
         return None if value is None else self._serializer.load(value, ctx)
+
+    def dump(self, value: Any, ctx: Context) -> Primitive:
+        return None if value is None else self._serializer.dump(value, ctx)
 
     @classmethod
     def fits(cls, field: FieldDescriptor) -> bool:
@@ -176,16 +191,20 @@ class EnumSerializer(FieldSerializer):
 
     def __init__(self, field: FieldDescriptor, sr: SeriousSchema):
         super().__init__(field, sr)
+        self._serializer = self._value_serializer(field, sr)
+        self._enum_values = {e.value for e in self.field.type.cls}
+
+    @staticmethod
+    def _value_serializer(field: FieldDescriptor, sr: SeriousSchema) -> Optional[FieldSerializer]:
         cls = field.type.cls
         bases = cls.__bases__
         while len(bases) == 1:
             cls = bases[0]
             bases = cls.__bases__
         if len(bases) == 0:
-            self._serializer = None
-        else:
-            item_descriptor = replace(field, type=field.type.describe(bases[0]))
-            self._serializer = sr.field_serializer(item_descriptor)
+            return None
+        item_descriptor = replace(field, type=field.type.describe(bases[0]))
+        return sr.field_serializer(item_descriptor)
 
     def load(self, value: Primitive, ctx: Context) -> Any:
         enum_cls = self.field.type.cls
@@ -226,7 +245,7 @@ class DictSerializer(FieldSerializer):
         super().__init__(field, sr)
         key = field.type.parameters[0]
         assert key.cls is str and not key.is_optional, 'Dict keys must have explicit str type (Dict[str, Any]).'
-        self._val_sr = generic_item_serializer(field, sr, param_index=1)
+        self._val_sr = _generic_item_serializer(field, sr, param_index=1)
 
     @classmethod
     def fits(cls, field: FieldDescriptor) -> bool:
@@ -256,7 +275,7 @@ class CollectionSerializer(FieldSerializer):
 
     def __init__(self, field: FieldDescriptor, sr: SeriousSchema):
         super().__init__(field, sr)
-        item = generic_item_serializer(field, sr, param_index=0)
+        item = _generic_item_serializer(field, sr, param_index=0)
         self._load_item = item.load
         self._dump_item = item.dump
 
@@ -289,7 +308,7 @@ class TupleSerializer(FieldSerializer):
         super().__init__(field, sr)
         self.serializers: List[FieldSerializer] = []
         for i in field.type.parameters:
-            item_serializer = generic_item_serializer(field, sr, param_index=i)
+            item_serializer = _generic_item_serializer(field, sr, param_index=i)
             self.serializers.append(item_serializer)
 
     @classmethod
@@ -492,7 +511,7 @@ class DecimalSerializer(FieldSerializer):
         return issubclass(field.type.cls, Decimal)
 
 
-def generic_item_serializer(field: FieldDescriptor, sr: SeriousSchema, *, param_index: int) -> FieldSerializer:
+def _generic_item_serializer(field: FieldDescriptor, sr: SeriousSchema, *, param_index: int) -> FieldSerializer:
     new_type = field.type.parameters[param_index]
     item_descriptor = replace(field, type=new_type)
     item_serializer = sr.field_serializer(item_descriptor)
