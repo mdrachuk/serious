@@ -41,10 +41,10 @@ class Timestamp:
     """An immutable(frozen) UTC timestamp.
 
     Constructor accepts a single arguments. One of:
-        - datetime object
-        - ISO 8601 formatted string
-        - number of seconds since UNIX epoch in int or float
-        - a Timestamp object to create its copy
+    - datetime object
+    - ISO 8601 formatted string
+    - number of seconds since UNIX epoch in int or float
+    - a Timestamp object to create its copy
 
     Supports comparison with another Timestamp objects.
 
