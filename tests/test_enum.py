@@ -6,7 +6,7 @@ from typing import Dict, List
 import pytest
 
 from serious.dict import DictSchema
-from serious.errors import LoadError, ValidationError
+from serious.errors import ValidationError
 from serious.json import JsonSchema
 
 
