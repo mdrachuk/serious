@@ -343,7 +343,7 @@ class CollectionSerializer(FieldSerializer):
 
 
 class TupleSerializer(FieldSerializer):
-    """Serializer for lists, tuples, sets, frozensets and deques."""
+    """Serializer for Python tuples."""
 
     def __init__(self, field: FieldDescriptor, root_serializer: SeriousSchema):
         super().__init__(field, root_serializer)
