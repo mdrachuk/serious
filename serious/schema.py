@@ -5,10 +5,11 @@ from typing import Mapping, Type, Any, Dict, Iterator, Generic, TypeVar, Optiona
 
 from serious.context import SerializationContext
 from serious.descriptors import FieldDescriptor, TypeDescriptor, _contains_any
-from serious.errors import LoadError, DumpError, UnexpectedItem, MissingField, ModelContainsAny
+from serious.errors import LoadError, DumpError, UnexpectedItem, MissingField, ModelContainsAny, ValidationError
 from serious.field_serializers import FieldSerializer
 from serious.preconditions import _check_present, _check_is_instance
 from serious.utils import DataclassType
+from serious.validation import validate_object
 
 T = TypeVar('T')
 
@@ -18,7 +19,7 @@ class SeriousSchema(Generic[T]):
 
     def __init__(
             self,
-            descriptor: TypeDescriptor[T],
+            descriptor: TypeDescriptor,
             serializers: Iterable[Type[FieldSerializer]],
             *,
             allow_any: bool,
@@ -90,10 +91,15 @@ class SeriousSchema(Generic[T]):
                 for serializer in self._field_serializers
                 if serializer.field.name in mut_data
             }
-            return self._cls(**init_kwargs)  # type: ignore # not an object
+            result = self._cls(**init_kwargs)  # type: ignore # not an object
+            validate_object(result)
+            return result
         except Exception as e:
             if root:
-                raise LoadError(self._cls, ctx.stack, data) from e
+                if isinstance(e, ValidationError):
+                    raise ValidationError() from e
+                else:
+                    raise LoadError(self._cls, ctx.stack, data) from e
             raise
 
     @staticmethod

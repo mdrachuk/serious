@@ -11,8 +11,8 @@ from serious.json import JsonSchema
 class CustomDateTime:
     timestamp: datetime = field(
         metadata={'serious': {
-            'dump': lambda x: x.timestamp(),
-            'load': lambda x: datetime.fromtimestamp(x, timezone.utc),
+            'dump': lambda x, ctx: x.timestamp(),
+            'load': lambda x, ctx: datetime.fromtimestamp(x, timezone.utc),
         }})
 
 

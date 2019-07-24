@@ -86,15 +86,5 @@ class DataclassMutableDefaultDict:
 
 
 @dataclass
-class DataclassJsonDecorator:
-    x: str
-
-
-@dataclass
 class DataclassWithUuid:
     id: UUID
-
-
-@dataclass
-class DataclassChild:
-    name: str

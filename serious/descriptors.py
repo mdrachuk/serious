@@ -11,8 +11,8 @@ GenericParams = Mapping[Any, 'TypeDescriptor']
 
 
 @dataclass(frozen=True)
-class TypeDescriptor(Generic[T]):
-    _cls: Type[T]
+class TypeDescriptor:
+    _cls: Type
     parameters: FrozenGenericParams
     is_optional: bool = False
     is_dataclass: bool = False
@@ -36,7 +36,7 @@ class TypeDescriptor(Generic[T]):
         return describe(type_, self.parameters)
 
 
-def describe(type_: Type[T], generic_params: GenericParams = None) -> TypeDescriptor[T]:
+def describe(type_: Type, generic_params: GenericParams = None) -> TypeDescriptor:
     generic_params = generic_params if generic_params is not None else {}
     param = generic_params.get(type_, None)
     if param is not None:

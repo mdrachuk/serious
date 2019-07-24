@@ -49,7 +49,7 @@ class JsonSchema(Generic[T]):
         return self.descriptor.cls
 
     @staticmethod
-    def _describe(cls: Type[T]) -> TypeDescriptor[T]:
+    def _describe(cls: Type) -> TypeDescriptor:
         descriptor = describe(cls)
         _check_is_dataclass(descriptor.cls, 'Serious can only operate on dataclasses.')
         return descriptor

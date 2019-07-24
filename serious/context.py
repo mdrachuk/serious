@@ -8,6 +8,7 @@ from serious.types import FrozenList, frozenlist
 
 
 class SerializationStep(ABC):
+
     @abstractmethod
     def step_name(self) -> str:
         raise NotImplementedError

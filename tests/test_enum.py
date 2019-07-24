@@ -6,7 +6,7 @@ from typing import Dict, List
 import pytest
 
 from serious.dict import DictSchema
-from serious.errors import LoadError
+from serious.errors import LoadError, ValidationError
 from serious.json import JsonSchema
 
 
@@ -93,7 +93,7 @@ class TestStrEnum:
 
     def test_load_with_invalid_enum_value(self):
         schema = JsonSchema(Profile)
-        with pytest.raises(LoadError):
+        with pytest.raises(ValidationError):
             schema.load('{"gender": "python"}')
 
 

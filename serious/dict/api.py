@@ -40,7 +40,7 @@ class DictSchema(Generic[T]):
         )
 
     @staticmethod
-    def _describe(cls: Type[T]) -> TypeDescriptor[T]:
+    def _describe(cls: Type) -> TypeDescriptor:
         descriptor = describe(cls)
         _check_is_dataclass(descriptor.cls, 'Serious can only operate on dataclasses.')
         return descriptor
