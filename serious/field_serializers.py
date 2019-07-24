@@ -20,8 +20,8 @@ if False:  # To reference in typings
     from serious.schema import SeriousSchema
 
 
-def _matches(regex: Pattern, value: str) -> bool:
-    return regex.match(value) is not None
+def _matches(regex: Pattern, value: Primitive) -> bool:
+    return regex.match(value) is not None  # type: ignore # caller ensures str
 
 
 class FieldSerializer(SerializationStep, ABC):
@@ -371,7 +371,7 @@ class TupleSerializer(FieldSerializer):
 
     def _validate_data(self, value: Primitive, ctx: Context) -> None:
         validate(isinstance(value, list), f'Expecting a list of {self._size} tuple values')
-        validate(len(value) == self._size, f'Expecting a list of {self._size} tuple values')
+        validate(len(value) == self._size, f'Expecting a list of {self._size} tuple values')  # type: ignore
 
 
 class CollectionStep(SerializationStep):

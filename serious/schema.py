@@ -60,7 +60,7 @@ class SeriousSchema(Generic[T]):
         descriptor = field.type
         if descriptor in self._serializer_registry:
             return self._serializer_registry[descriptor]
-        new_serializer = SeriousSchema(
+        new_serializer: SeriousSchema = SeriousSchema(
             descriptor=descriptor,
             serializers=self._serializers,
             allow_missing=self._allow_missing,

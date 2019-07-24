@@ -31,7 +31,7 @@ class DictSchema(Generic[T]):
         @param allow_unexpected False to raise during load if data is missing the contains some unknown fields.
         """
         self.descriptor = self._describe(cls)
-        self._serializer = SeriousSchema(
+        self._serializer: SeriousSchema = SeriousSchema(
             self.descriptor,
             serializers,
             allow_any=allow_any,
