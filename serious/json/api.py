@@ -35,7 +35,7 @@ class JsonSchema(Generic[T]):
         @param indent number of spaces JSON output will be indented by; `None` for most compact representation.
         """
         self.descriptor = self._describe(cls)
-        self._serializer = SeriousSchema(
+        self._serializer: SeriousSchema = SeriousSchema(
             self.descriptor,
             serializers,
             allow_any=allow_any,
@@ -49,7 +49,7 @@ class JsonSchema(Generic[T]):
         return self.descriptor.cls
 
     @staticmethod
-    def _describe(cls: Type[T]) -> TypeDescriptor[T]:
+    def _describe(cls: Type) -> TypeDescriptor:
         descriptor = describe(cls)
         _check_is_dataclass(descriptor.cls, 'Serious can only operate on dataclasses.')
         return descriptor

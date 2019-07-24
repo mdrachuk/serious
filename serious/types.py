@@ -47,8 +47,7 @@ class Timestamp:
     - a Timestamp object to create its copy
 
     Supports comparison with another Timestamp objects.
-
-    TODO: implement adding/subtraction of timedelta."""
+    """
 
     value: float
 

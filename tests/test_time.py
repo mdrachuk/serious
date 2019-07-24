@@ -1,4 +1,4 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timezone, time, date
 
 from serious.json import JsonSchema
@@ -25,30 +25,6 @@ class TestDefaultDatetime:
     def test_dump(self):
         assert self.schema.dump(self.dataclass) == self.json
 
-
-@dataclass
-class CustomDateTime:
-    timestamp: datetime = field(
-        metadata={'serious': {
-            'dump': lambda x: x.timestamp(),
-            'load': lambda x: datetime.fromtimestamp(x, timezone.utc),
-        }})
-
-
-class TestCustomDatetime:
-
-    def setup_class(self):
-        self.schema = JsonSchema(CustomDateTime)
-        dt = datetime(2018, 11, 17, 16, 55, 28, 456753, tzinfo=timezone.utc)
-        ts = dt.timestamp()
-        self.json = f'{{"timestamp": {ts}}}'
-        self.dataclass = CustomDateTime(timestamp=datetime.fromtimestamp(ts, tz=timezone.utc))
-
-    def test_load(self):
-        assert self.schema.load(self.json) == self.dataclass
-
-    def test_dump(self):
-        assert self.schema.dump(self.dataclass) == self.json
 
 
 @dataclass

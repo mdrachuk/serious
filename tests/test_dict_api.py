@@ -29,10 +29,10 @@ class User:
 
 class UserIdSerializer(FieldSerializer):
 
-    def dump(self, value: Any, ctx: SerializationContext) -> Primitive:
+    def _dump(self, value: Any, ctx: SerializationContext) -> Primitive:
         return value.value
 
-    def load(self, value: Primitive, ctx: SerializationContext) -> Any:
+    def _load(self, value: Primitive, ctx: SerializationContext) -> Any:
         return UserId(value)
 
     @classmethod
