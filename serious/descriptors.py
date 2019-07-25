@@ -2,7 +2,7 @@ from collections import ChainMap
 from dataclasses import dataclass, fields, is_dataclass
 from typing import Type, Any, TypeVar, get_type_hints, Dict, Mapping, Collection, List, Union, Iterable
 
-from serious.types import FrozenDict, frozendict, frozenlist, FrozenList
+from serious.types import FrozenDict, FrozenDict, FrozenList, FrozenList
 
 T = TypeVar('T')
 
@@ -44,8 +44,8 @@ def describe(type_: Type, generic_params: GenericParams = None) -> TypeDescripto
     return _unwrap_generic(type_, generic_params)
 
 
-_any_type_desc = TypeDescriptor(Any, frozendict())  # type: ignore
-_ellipses_type_desc = TypeDescriptor(Ellipsis, frozendict())  # type: ignore
+_any_type_desc = TypeDescriptor(Any, FrozenDict())  # type: ignore
+_ellipses_type_desc = TypeDescriptor(Ellipsis, FrozenDict())  # type: ignore
 _generic_params = {
     list: {0: _any_type_desc},
     set: {0: _any_type_desc},
@@ -71,7 +71,7 @@ def _unwrap_generic(cls: Type, generic_params: GenericParams) -> TypeDescriptor:
         params = dict(ChainMap(*(_unwrap_generic(base, generic_params).parameters for base in cls.__orig_bases__)))
         return TypeDescriptor(
             _cls=cls,
-            parameters=frozendict(params),
+            parameters=FrozenDict(params),
             is_optional=is_optional,
             is_dataclass=True
         )
@@ -84,7 +84,7 @@ def _unwrap_generic(cls: Type, generic_params: GenericParams) -> TypeDescriptor:
             params = dict(enumerate(map(describe_, cls.__args__)))
         return TypeDescriptor(
             _cls=cls.__origin__,
-            parameters=frozendict(params),
+            parameters=FrozenDict(params),
             is_optional=is_optional,
             is_dataclass=origin_is_dc
         )
@@ -92,7 +92,7 @@ def _unwrap_generic(cls: Type, generic_params: GenericParams) -> TypeDescriptor:
         params = _get_default_generic_params(cls, params)
     return TypeDescriptor(
         _cls=cls,
-        parameters=frozendict(params),
+        parameters=FrozenDict(params),
         is_optional=is_optional,
         is_dataclass=is_dataclass(cls)
     )
@@ -115,7 +115,7 @@ class DescriptorTypes:
     types: FrozenList[Type]
 
     def __init__(self, types: Iterable[Type]):
-        super().__setattr__('types', frozenlist(types))
+        super().__setattr__('types', FrozenList(types))
 
     @classmethod
     def scan(cls, desc: TypeDescriptor, _known_descriptors: List[TypeDescriptor] = None) -> 'DescriptorTypes':

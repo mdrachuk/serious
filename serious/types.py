@@ -144,9 +144,3 @@ class Timestamp:
         """An unambiguous representation of an object."""
         iso_str = self.as_iso()
         return f'<{self.__class__.__name__} {iso_str} ({self.value})>'
-
-
-# Lowercase aliases for consistency in definitions with built-in types: frozenset, str, int, etc.
-frozendict = FrozenDict
-frozenlist = FrozenList
-timestamp = Timestamp

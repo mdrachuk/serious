@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone, time, date
 
 from serious.json import JsonSchema
-from serious.types import Timestamp, timestamp
+from serious.types import Timestamp, Timestamp
 
 
 @dataclass
@@ -26,7 +26,6 @@ class TestDefaultDatetime:
         assert self.schema.dump(self.dataclass) == self.json
 
 
-
 @dataclass
 class TimestampDatetime:
     value: Timestamp
@@ -39,7 +38,7 @@ class TestTimestamp:
         dt = datetime(2018, 11, 17, 16, 55, 28, 456753, tzinfo=timezone.utc)
         ts = dt.timestamp()
         self.json = f'{{"value": {ts}}}'
-        self.dataclass = TimestampDatetime(timestamp(dt))
+        self.dataclass = TimestampDatetime(Timestamp(dt))
 
     def test_load(self):
         assert self.schema.load(self.json) == self.dataclass
