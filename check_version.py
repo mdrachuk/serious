@@ -14,6 +14,19 @@ class Package:
     def versions(self) -> Set[str]:
         return set(self.releases.keys())
 
+    def contains_version(self, target: str) -> bool:
+        target = simplify(target)
+        existing = {simplify(version) for version in self.versions}
+        return target in existing
+
+
+def simplify(value: str) -> str:
+    value = value.replace('.', '')
+    value = value.replace('-', '')
+    value = value.replace('_', '')
+    value = value.replace(' ', '')
+    return value
+
 
 class VersionExists(Exception):
     def __init__(self, pkg_config):
@@ -26,7 +39,7 @@ def check_exists(pkg_config):
     with request.urlopen('https://pypi.org/pypi/serious/json') as pypi:
         package_data = pypi.read()
     package = package_schema.load(package_data)
-    if pkg_config.version in package.versions:
+    if package.contains_version(pkg_config.version):
         raise VersionExists(pkg_config)
 
 
