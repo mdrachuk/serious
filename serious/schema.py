@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 from dataclasses import fields, MISSING, Field
-from typing import Mapping, Type, Any, Dict, Iterator, Generic, TypeVar, Optional, Iterable
+from typing import Mapping, Type, Any, Dict, Iterator, Generic, TypeVar, Optional, Iterable, Union
 
 from serious.context import SerializationContext
-from serious.descriptors import FieldDescriptor, TypeDescriptor, _contains_any
-from serious.errors import LoadError, DumpError, UnexpectedItem, MissingField, ModelContainsAny, ValidationError
+from serious.descriptors import FieldDescriptor, TypeDescriptor, _scan_types
+from serious.errors import LoadError, DumpError, UnexpectedItem, MissingField, ModelContainsAny, ValidationError, \
+    ModelContainsUnion
 from serious.field_serializers import FieldSerializer
 from serious.preconditions import _check_present, _check_is_instance
 from serious.utils import DataclassType
@@ -37,8 +38,11 @@ class SeriousSchema(Generic[T]):
         @param _registry a mapping of dataclass type descriptors to corresponding serious serializer;
                 used internally to create child serializers.
         """
-        if not allow_any and _contains_any(descriptor):
+        all_types = _scan_types(descriptor)
+        if not allow_any and Any in all_types:
             raise ModelContainsAny(descriptor.cls)
+        if Union in all_types:
+            raise ModelContainsUnion(descriptor.cls)
         self._descriptor = descriptor
         self._serializers = tuple(serializers)
         self._allow_missing = allow_missing

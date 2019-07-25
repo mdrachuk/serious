@@ -1,8 +1,8 @@
 from collections import ChainMap
-from dataclasses import dataclass, fields, is_dataclass, replace
-from typing import Type, Any, TypeVar, Generic, get_type_hints, Dict, Mapping, Collection, List, Union
+from dataclasses import dataclass, fields, is_dataclass
+from typing import Type, Any, TypeVar, get_type_hints, Dict, Mapping, Collection, List, Union, Iterable
 
-from serious.types import FrozenDict, frozendict
+from serious.types import FrozenDict, frozendict, frozenlist, FrozenList
 
 T = TypeVar('T')
 
@@ -111,25 +111,41 @@ class FieldDescriptor:
     metadata: Any
 
 
-def _scan_types(desc: TypeDescriptor, _known_descriptors: List[TypeDescriptor] = None) -> Collection[Type]:
-    if _known_descriptors is None:
-        _known_descriptors = [desc]
-    elif desc in _known_descriptors:
-        return []
-    else:
-        _known_descriptors.append(desc)
-    types = []  # type: List[Type]
-    for param in desc.parameters.values():
-        types.extend(_scan_types(param, _known_descriptors))
-    for field in desc.fields:
-        types.extend(_scan_types(field.type, _known_descriptors))
-    types.append(desc.cls)
-    return types
+class DescriptorTypes:
+    types: FrozenList[Type]
+
+    def __init__(self, types: Iterable[Type]):
+        super().__setattr__('types', frozenlist(types))
+
+    @classmethod
+    def scan(cls, desc: TypeDescriptor, _known_descriptors: List[TypeDescriptor] = None) -> 'DescriptorTypes':
+        if _known_descriptors is None:
+            _known_descriptors = [desc]
+        elif desc in _known_descriptors:
+            return _empty_descriptor_types
+        else:
+            _known_descriptors.append(desc)
+        dts = []  # type: List[DescriptorTypes]
+        for param in desc.parameters.values():
+            dts.append(cls.scan(param, _known_descriptors))
+        for field in desc.fields:
+            dts.append(cls.scan(field.type, _known_descriptors))
+        types = [type_ for dt in dts for type_ in dt.types]
+        types.append(desc.cls)
+        return cls(types)
+
+    def __setattr__(self, key, value):
+        raise AttributeError('Attempt to modify an immutable object')
+
+    def __contains__(self, item):
+        return item in self.types
 
 
-def _contains_any(desc: TypeDescriptor) -> bool:
-    all_types = _scan_types(desc)
-    return Any in all_types
+_empty_descriptor_types = DescriptorTypes([])
+
+
+def _scan_types(desc: TypeDescriptor) -> DescriptorTypes:
+    return DescriptorTypes.scan(desc)
 
 
 def _is_optional(cls: Type) -> bool:
