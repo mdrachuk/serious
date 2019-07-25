@@ -14,4 +14,4 @@ class Something:
 
 def test_union():
     with pytest.raises(ModelContainsUnion):
-        schema = DictSchema(Something)
+        DictSchema(Something)
