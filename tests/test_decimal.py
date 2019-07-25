@@ -10,16 +10,18 @@ class Person:
     height: Decimal
 
 
-schema = DictSchema(Person)
 keith = Person('Keith', Decimal('1.76'))
 keith_dict = dict(name='Keith', height='1.76')
 
 
 class TestDecimal:
+    def setup_class(self):
+        self.schema = DictSchema(Person)
+
     def test_load(self):
-        actual = schema.load(keith_dict)
+        actual = self.schema.load(keith_dict)
         assert actual == keith
 
     def test_dump(self):
-        actual = schema.dump(keith)
+        actual = self.schema.dump(keith)
         assert actual == keith_dict

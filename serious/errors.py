@@ -93,6 +93,14 @@ class ModelContainsAny(ModelError):
                 f'which are resolved as `List[Any]`. ')
 
 
+class ModelContainsUnion(ModelError):
+
+    @property
+    def message(self):
+        return (f'{class_path(self.cls)} contains fields annotated as Union. '
+                f'Union types are not supported by serious.')
+
+
 class InvalidFieldMetadata(ModelError):
     def __init__(self, field: FieldDescriptor, metadata_error: str):
         super().__init__(field.type.cls)
