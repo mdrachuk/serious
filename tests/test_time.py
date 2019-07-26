@@ -1,8 +1,7 @@
 from dataclasses import dataclass
 from datetime import datetime, timezone, time, date
 
-from serious.json import JsonSchema
-from serious.types import Timestamp, Timestamp
+from serious import JsonSchema, Timestamp
 
 
 @dataclass

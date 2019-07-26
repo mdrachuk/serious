@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from decimal import Decimal
 
-from serious.dict import DictSchema
+from serious import DictSchema
 
 
 @dataclass(frozen=True)

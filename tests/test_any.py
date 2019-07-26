@@ -5,9 +5,8 @@ from typing import Any, Dict, List
 
 import pytest
 
-from serious.dict import DictSchema
+from serious import DictSchema, JsonSchema
 from serious.errors import ModelContainsAny
-from serious.json import JsonSchema
 
 
 @dataclass(frozen=True)

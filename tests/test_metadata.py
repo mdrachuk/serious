@@ -3,8 +3,8 @@ from datetime import datetime, timezone
 
 import pytest
 
+from serious import JsonSchema
 from serious.errors import InvalidFieldMetadata
-from serious.json import JsonSchema
 
 
 @dataclass

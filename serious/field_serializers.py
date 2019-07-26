@@ -14,7 +14,7 @@ from serious.descriptors import FieldDescriptor
 from serious.errors import InvalidFieldMetadata, ValidationError
 from serious.types import FrozenList, FrozenList, Timestamp, Timestamp
 from serious.utils import Primitive
-from serious.validation import validate, validate_object
+from serious.validation import validate, _perform_validation
 
 if False:  # To reference in typings
     from serious.schema import SeriousSchema
@@ -67,7 +67,7 @@ class FieldSerializer(SerializationStep, ABC):
     def load(self, value: Primitive, ctx: Context) -> Any:
         self._validate_data(value, ctx)
         result = self._load(value, ctx)
-        validate_object(result)
+        _perform_validation(result)
         return result
 
     def dump(self, value: Any, ctx: Context) -> Primitive:

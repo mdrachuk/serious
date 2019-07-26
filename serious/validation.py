@@ -11,6 +11,6 @@ def validate(rule: bool, message='Failed validation') -> None:
         raise ValidationError(message)
 
 
-def validate_object(obj: Any) -> None:
+def _perform_validation(obj: Any) -> None:
     if hasattr(obj, '__validate__'):
         obj.__validate__()

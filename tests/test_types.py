@@ -3,7 +3,7 @@ from typing import Any
 
 import pytest
 
-from serious.types import Timestamp, Timestamp
+from serious import Timestamp
 
 
 class TestTimestamp:

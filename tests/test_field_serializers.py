@@ -7,15 +7,14 @@ from uuid import UUID
 
 import pytest
 
-from serious import DictSchema
+from serious import DictSchema, FieldSerializer, ValidationError
 from serious.context import SerializationContext
 from serious.descriptors import FieldDescriptor, describe
-from serious.errors import ValidationError
-from serious.field_serializers import FieldSerializer, BooleanSerializer, StringSerializer, FloatSerializer, \
+from serious.field_serializers import BooleanSerializer, StringSerializer, FloatSerializer, \
     IntegerSerializer, EnumSerializer, DictSerializer, AnySerializer, CollectionSerializer, TupleSerializer, \
     DataclassSerializer, UtcTimestampSerializer, OptionalSerializer, DateTimeIsoSerializer, DateIsoSerializer, \
     TimeIsoSerializer, UuidSerializer, DecimalSerializer
-from serious.types import FrozenList, FrozenList, Timestamp, Timestamp
+from serious.types import FrozenList, Timestamp
 
 
 class AbstractFieldSerializer(FieldSerializer):

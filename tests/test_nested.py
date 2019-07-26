@@ -1,6 +1,6 @@
 import json
 
-from serious.json import JsonSchema
+from serious import JsonSchema
 from tests.entities import DataclassWithDataclass, DataclassWithList, DataclassX, DataclassXs
 
 

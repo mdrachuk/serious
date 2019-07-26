@@ -1,6 +1,4 @@
-from collections import deque
-
-from serious.json import JsonSchema
+from serious import JsonSchema
 from tests.entities import (DataclassIntImmutableDefault,
                             DataclassMutableDefaultDict, DataclassMutableDefaultList,
                             DataclassWithDict, DataclassWithFrozenSet, DataclassWithList,

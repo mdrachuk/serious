@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Set
 
-from serious.json import JsonSchema
+from serious import JsonSchema
 
 
 @dataclass(frozen=True)

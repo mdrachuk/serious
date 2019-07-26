@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional
 
-from serious.json import JsonSchema
+from serious import JsonSchema
 
 
 @dataclass(frozen=True)

@@ -5,9 +5,7 @@ from typing import Dict, List
 
 import pytest
 
-from serious.dict import DictSchema
-from serious.errors import ValidationError
-from serious.json import JsonSchema
+from serious import DictSchema, JsonSchema, ValidationError
 
 
 class Symbol(Enum):

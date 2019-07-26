@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import TypeVar, Generic, List
 from uuid import UUID
 
-from serious.dict import DictSchema
+from serious import DictSchema
 
 ID = TypeVar('ID')
 M = TypeVar('M')

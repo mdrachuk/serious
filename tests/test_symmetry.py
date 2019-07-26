@@ -1,7 +1,7 @@
 from hypothesis import given
 from hypothesis.strategies import frozensets, integers, lists, one_of, sets, tuples
 
-from serious.json import JsonSchema
+from serious import JsonSchema
 from serious.test_utils import assert_symmetric
 from tests.entities import (DataclassWithFrozenSet, DataclassWithList, DataclassWithOptional,
                             DataclassWithSet, DataclassWithTuple)

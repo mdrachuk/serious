@@ -3,9 +3,7 @@ from typing import TypeVar, List
 
 import pytest
 
-from serious.dict import DictSchema
-from serious.errors import ValidationError
-from serious.validation import validate
+from serious import ValidationError, DictSchema, validate
 
 ID = TypeVar('ID')
 M = TypeVar('M')
