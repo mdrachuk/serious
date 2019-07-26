@@ -10,7 +10,7 @@ from serious.errors import LoadError, DumpError, UnexpectedItem, MissingField, M
 from serious.field_serializers import FieldSerializer
 from serious.preconditions import _check_present, _check_is_instance
 from serious.utils import DataclassType
-from serious.validation import _perform_validation
+from serious.validation import validate
 
 T = TypeVar('T')
 
@@ -96,7 +96,7 @@ class SeriousSchema(Generic[T]):
                 if serializer.field.name in mut_data
             }
             result = self._cls(**init_kwargs)  # type: ignore # not an object
-            _perform_validation(result)
+            validate(result)
             return result
         except Exception as e:
             if root:

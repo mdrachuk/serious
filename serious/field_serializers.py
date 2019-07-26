@@ -12,9 +12,9 @@ from uuid import UUID
 from serious.context import SerializationContext as Context, SerializationStep
 from serious.descriptors import FieldDescriptor
 from serious.errors import InvalidFieldMetadata, ValidationError
-from serious.types import FrozenList, FrozenList, Timestamp, Timestamp
+from serious.types import FrozenList, Timestamp
 from serious.utils import Primitive
-from serious.validation import validate, _perform_validation
+from serious.validation import validate
 
 if False:  # To reference in typings
     from serious.schema import SeriousSchema
@@ -67,7 +67,7 @@ class FieldSerializer(SerializationStep, ABC):
     def load(self, value: Primitive, ctx: Context) -> Any:
         self._validate_data(value, ctx)
         result = self._load(value, ctx)
-        _perform_validation(result)
+        validate(result)
         return result
 
     def dump(self, value: Any, ctx: Context) -> Primitive:
@@ -242,8 +242,8 @@ class EnumSerializer(FieldSerializer):
         return enum_cls(value)
 
     def _validate_data(self, data: Primitive, ctx: Context) -> None:
-        if self._serializer is None:
-            validate(data in self._enum_values, f'"{data}" is not part of the {self.field.type.cls} enum')
+        if self._serializer is None and data not in self._enum_values:
+            raise ValidationError(f'"{data}" is not part of the {self.field.type.cls} enum')
 
     def _dump(self, value: Any, ctx: Context) -> Primitive:
         enum_value = value.value
@@ -302,7 +302,8 @@ class DictSerializer(FieldSerializer):
             return self._val_sr.dump(value, ctx)
 
     def _validate_data(self, value: Primitive, ctx: Context) -> None:
-        validate(isinstance(value, dict), f'Expecting a dictionary')
+        if not isinstance(value, dict):
+            raise ValidationError('Expecting a dictionary')
 
 
 class CollectionSerializer(FieldSerializer):
@@ -339,7 +340,8 @@ class CollectionSerializer(FieldSerializer):
             return self._dump_item(value, ctx)
 
     def _validate_data(self, value: Primitive, ctx: Context) -> None:
-        validate(isinstance(value, list), f'Expecting a list of {self._item_type.cls} values')
+        if not isinstance(value, list):
+            raise ValidationError(f'Expecting a list of {self._item_type.cls} values')
 
 
 class TupleSerializer(FieldSerializer):
@@ -370,8 +372,10 @@ class TupleSerializer(FieldSerializer):
             return self._serializers[i].dump(value, ctx)
 
     def _validate_data(self, value: Primitive, ctx: Context) -> None:
-        validate(isinstance(value, list), f'Expecting a list of {self._size} tuple values')
-        validate(len(value) == self._size, f'Expecting a list of {self._size} tuple values')  # type: ignore
+        if not isinstance(value, list):
+            raise ValidationError(f'Expecting a list of {self._size} tuple values')
+        if len(value) != self._size:
+            raise ValidationError(f'Expecting a list of {self._size} tuple values')  # type: ignore
 
 
 class CollectionStep(SerializationStep):
@@ -398,7 +402,8 @@ class BooleanSerializer(FieldSerializer):
         return bool(value)
 
     def _validate_data(self, value: Primitive, ctx: Context) -> None:
-        validate(isinstance(value, bool), f'Invalid data type. Expecting boolean')
+        if not isinstance(value, bool):
+            raise ValidationError(f"Invalid data type. Expecting boolean")
 
 
 class StringSerializer(FieldSerializer):
@@ -415,7 +420,8 @@ class StringSerializer(FieldSerializer):
         return str(value)
 
     def _validate_data(self, value: Primitive, ctx: Context) -> None:
-        validate(isinstance(value, str), 'Invalid data type. Expecting a string')
+        if not isinstance(value, str):
+            raise ValidationError('Invalid data type. Expecting a string')
 
 
 class IntegerSerializer(FieldSerializer):
@@ -435,7 +441,8 @@ class IntegerSerializer(FieldSerializer):
         return int(value)
 
     def _validate_data(self, value: Primitive, ctx: Context) -> None:
-        validate(isinstance(value, int) and not isinstance(value, bool), 'Invalid data type. Expecting an integer')
+        if not isinstance(value, int) or isinstance(value, bool):
+            raise ValidationError('Invalid data type. Expecting an integer')
 
 
 class FloatSerializer(FieldSerializer):
@@ -456,7 +463,8 @@ class FloatSerializer(FieldSerializer):
 
     def _validate_data(self, value: Primitive, ctx: Context) -> None:
         is_numeric = isinstance(value, (int, float)) and not isinstance(value, bool)
-        validate(is_numeric, 'Invalid data type. Expecting a numeric value')
+        if not is_numeric:
+            raise ValidationError('Invalid data type. Expecting a numeric value')
 
 
 class DataclassSerializer(FieldSerializer):
@@ -478,7 +486,8 @@ class DataclassSerializer(FieldSerializer):
         return self._serializer.dump(value, ctx)
 
     def _validate_data(self, value: Primitive, ctx: Context) -> None:
-        validate(isinstance(value, dict), f'Invalid data type. Expecting a mapping matching {self._dc_name} schema')
+        if not isinstance(value, dict):
+            raise ValidationError(f'Invalid data type. Expecting a mapping matching {self._dc_name} schema')
 
 
 class UtcTimestampSerializer(FieldSerializer):
@@ -508,7 +517,8 @@ class UtcTimestampSerializer(FieldSerializer):
         return value.value
 
     def _validate_data(self, value: Primitive, ctx: Context) -> None:
-        validate(isinstance(value, (int, float)), f'Invalid data type. Expecting int or float')
+        if not isinstance(value, (int, float)):
+            raise ValidationError('Invalid data type. Expecting int or float')
 
 
 _iso_date_time_re = re.compile(  # https://stackoverflow.com/a/43931246/8677389
@@ -547,8 +557,10 @@ class DateTimeIsoSerializer(FieldSerializer):
         return issubclass(field.type.cls, datetime)
 
     def _validate_data(self, value: Primitive, ctx: Context) -> None:
-        validate(isinstance(value, str), 'Invalid data type. Expecting a string')
-        validate(_matches(_iso_date_time_re, value), 'Invalid date/time format. Check the ISO 8601 specification')
+        if not isinstance(value, str):
+            raise ValidationError('Invalid data type. Expecting a string')
+        if not _matches(_iso_date_time_re, value):
+            raise ValidationError('Invalid date/time format. Check the ISO 8601 specification')
 
 
 class DateIsoSerializer(FieldSerializer):
@@ -579,8 +591,10 @@ class DateIsoSerializer(FieldSerializer):
         return issubclass(field.type.cls, date)
 
     def _validate_data(self, value: Primitive, ctx: Context) -> None:
-        validate(isinstance(value, str), 'Invalid data type. Expecting a string')
-        validate(_matches(_iso_date_re, value), 'Invalid date format. Check the ISO 8601 specification')
+        if not isinstance(value, str):
+            raise ValidationError('Invalid data type. Expecting a string')
+        if not _matches(_iso_date_re, value):
+            raise ValidationError('Invalid date format. Check the ISO 8601 specification')
 
 
 class TimeIsoSerializer(FieldSerializer):
@@ -611,8 +625,10 @@ class TimeIsoSerializer(FieldSerializer):
         return issubclass(field.type.cls, time)
 
     def _validate_data(self, value: Primitive, ctx: Context) -> None:
-        validate(isinstance(value, str), 'Invalid data type. Expecting a string')
-        validate(_matches(_iso_time_re, value), 'Invalid time format. Check the ISO 8601 specification')
+        if not isinstance(value, str):
+            raise ValidationError('Invalid data type. Expecting a string')
+        if not _matches(_iso_time_re, value):
+            raise ValidationError('Invalid time format. Check the ISO 8601 specification')
 
 
 _uuid4_hex_re = re.compile(r'\A([a-f0-9]{8}-?[a-f0-9]{4}-?4[a-f0-9]{3}-?[89ab][a-f0-9]{3}-?[a-f0-9]{12})\Z', re.I)
@@ -632,8 +648,10 @@ class UuidSerializer(FieldSerializer):
         return issubclass(field.type.cls, UUID)
 
     def _validate_data(self, value: Primitive, ctx: Context) -> None:
-        validate(isinstance(value, str), 'Invalid data type. Expecting a string')
-        validate(_matches(_uuid4_hex_re, value), 'Invalid UUID4 hex format')
+        if not isinstance(value, str):
+            raise ValidationError('Invalid data type. Expecting a string')
+        if not _matches(_uuid4_hex_re, value):
+            raise ValidationError('Invalid UUID4 hex format')
 
 
 _decimal_re = re.compile(r'\A\d+?\.\d+?\Z')
@@ -653,6 +671,7 @@ class DecimalSerializer(FieldSerializer):
         return issubclass(field.type.cls, Decimal)
 
     def _validate_data(self, value: Primitive, ctx: Context) -> None:
-        validate(isinstance(value, str), 'Invalid data type. Expecting a string')
-        validate(_matches(_decimal_re, value),
-                 'Invalid decimal format. A number with a "." as a decimal separator is expected')
+        if not isinstance(value, str):
+            raise ValidationError('Invalid data type. Expecting a string')
+        if not _matches(_decimal_re, value):
+            raise ValidationError('Invalid decimal format. A number with a "." as a decimal separator is expected')

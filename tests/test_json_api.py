@@ -70,7 +70,7 @@ class UserIdSerializer(FieldSerializer):
 
     @classmethod
     def fits(cls, field: FieldDescriptor) -> bool:
-        return field.type is UserId
+        return field.type.cls is UserId
 
 
 class TestSerializer:
@@ -81,11 +81,11 @@ class TestSerializer:
 
     def test_dump(self):
         actual = self.schema.dump(User(id=UserId(0), username='admin', password='admin', age=None))
-        expected = '{"id": {"value": 0}, "username": "admin", "password": "admin", "age": null}'
+        expected = '{"id": 0, "username": "admin", "password": "admin", "age": null}'
         assert actual == expected
 
     def test_load(self):
-        actual = self.schema.load('{"id": {"value": 0}, "username": "admin", "password": "admin", "age": null}')
+        actual = self.schema.load('{"id": 0, "username": "admin", "password": "admin", "age": null}')
         expected = User(id=UserId(0), username='admin', password='admin', age=None)
         assert actual == expected
 

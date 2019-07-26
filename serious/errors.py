@@ -113,4 +113,5 @@ class InvalidFieldMetadata(ModelError):
 
 
 class ValidationError(Exception):
-    pass
+    def __init__(self, message='Failed validation'):
+        super().__init__(message)
