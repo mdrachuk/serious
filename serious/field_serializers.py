@@ -12,7 +12,7 @@ from uuid import UUID
 from serious.context import SerializationContext as Context, SerializationStep
 from serious.descriptors import FieldDescriptor
 from serious.errors import InvalidFieldMetadata, ValidationError
-from serious.types import frozenlist, FrozenList, Timestamp, timestamp
+from serious.types import FrozenList, FrozenList, Timestamp, Timestamp
 from serious.utils import Primitive
 from serious.validation import validate, validate_object
 
@@ -98,7 +98,7 @@ def field_serializers(custom: Iterable[Type[FieldSerializer]] = tuple()) -> Froz
     Provide a custom list of field serializers to include them after metadata and optional serializers.
     The order in the collection defines the order in which the serializers will be tested for fitness for each field.
     """
-    return frozenlist([
+    return FrozenList([
         MetadataSerializer,
         OptionalSerializer,
         AnySerializer,
@@ -502,7 +502,7 @@ class UtcTimestampSerializer(FieldSerializer):
         return issubclass(field.type.cls, Timestamp)
 
     def _load(self, value: Primitive, ctx: Context) -> Any:
-        return timestamp(value)  # type: ignore # expecting float
+        return Timestamp(value)  # type: ignore # expecting float
 
     def _dump(self, value: Any, ctx: Context) -> Primitive:
         return value.value

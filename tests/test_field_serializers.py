@@ -15,7 +15,7 @@ from serious.field_serializers import FieldSerializer, BooleanSerializer, String
     IntegerSerializer, EnumSerializer, DictSerializer, AnySerializer, CollectionSerializer, TupleSerializer, \
     DataclassSerializer, UtcTimestampSerializer, OptionalSerializer, DateTimeIsoSerializer, DateIsoSerializer, \
     TimeIsoSerializer, UuidSerializer, DecimalSerializer
-from serious.types import FrozenList, frozenlist, Timestamp, timestamp
+from serious.types import FrozenList, FrozenList, Timestamp, Timestamp
 
 
 class AbstractFieldSerializer(FieldSerializer):
@@ -162,7 +162,7 @@ def test_frozen_list_load_validation():
     ctx = SerializationContext()
     with pytest.raises(ValidationError):
         serializer.load('string', ctx)
-    assert serializer.load([1, 2, 3], ctx) == frozenlist([1, 2, 3])
+    assert serializer.load([1, 2, 3], ctx) == FrozenList([1, 2, 3])
 
 
 def test_tuple_load_validation():
@@ -201,8 +201,8 @@ def test_timestamp_load_validation():
     ctx = SerializationContext()
     with pytest.raises(ValidationError):
         serializer.load('123421', ctx)
-    assert serializer.load(123421, ctx) == timestamp(123421.0)
-    assert serializer.load(123421.0, ctx) == timestamp(123421)
+    assert serializer.load(123421, ctx) == Timestamp(123421.0)
+    assert serializer.load(123421.0, ctx) == Timestamp(123421)
 
 
 def test_date_time_load_validation():

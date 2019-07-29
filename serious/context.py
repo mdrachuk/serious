@@ -4,7 +4,7 @@ from abc import abstractmethod, ABC
 from contextlib import contextmanager
 from typing import List
 
-from serious.types import FrozenList, frozenlist
+from serious.types import FrozenList, FrozenList
 
 
 class SerializationStep(ABC):
@@ -26,4 +26,4 @@ class SerializationContext:
 
     @property
     def stack(self) -> FrozenList[SerializationStep]:
-        return frozenlist(self._steps)
+        return FrozenList(self._steps)
