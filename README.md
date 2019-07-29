@@ -1,39 +1,92 @@
 # serious
 [![Build Status](https://dev.azure.com/misha-drachuk/serious/_apis/build/status/serious-release?branchName=master)](https://dev.azure.com/misha-drachuk/serious/_build/latest?definitionId=1&branchName=master)
+[![Supported Python](https://img.shields.io/pypi/pyversions/serious)](https://pypi.org/project/serious/)
 
-This library is for JSON encoding/decoding and validation of [dataclasses](https://docs.python.org/3/library/dataclasses.html) without magic.
+Python [dataclasses][dataclass] serialization and validation in a [Zen][zen] and [fast][benchmarks] manner.
 
-In addition to the supported types in the 
-[py to JSON table](https://docs.python.org/3/library/json.html#py-to-json-table), this library supports the following:
-- any arbitrary [Collection](https://docs.python.org/3/library/collections.abc.html#collections.abc.Collection) type is supported.
-[Mapping](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping) types are encoded as JSON objects and `str` types as JSON strings. 
-Any other Collection types are encoded into JSON arrays, but decoded into the original collection types.
-- [datetime](https://docs.python.org/3/library/datetime.html#available-types) 
-objects. `datetime` objects are encoded to `float` (JSON number) using 
-[timestamp](https://docs.python.org/3/library/datetime.html#datetime.datetime.timestamp).
-As specified in the `datetime` docs, if your `datetime` object is naive, it will 
-assume your system local timezone when calling `.timestamp()`. JSON nunbers 
-corresponding to a `datetime` field in your dataclass are decoded 
-into a datetime-aware object, with `tzinfo` set to your system local timezone.
-Thus, if you encode a datetime-naive object, you will decode into a 
-datetime-aware object. This is important, because encoding and decoding won't 
-strictly be inverses. See this section if you want to override this default
-behavior (for example, if you want to use ISO).
-- [Decimal](https://docs.python.org/3/library/decimal.html) objects as strings.
-- [UUID](https://docs.python.org/3/library/uuid.html#uuid.UUID) objects as strings.
-- [Enums](https://docs.python.org/3/library/enum.html) objects by values.
+**Compatible with Python 3.7+.**
 
+On top of coupling of data with its behaviour, using proper objects adds semantic meaning to your code.
+Good classes manifest the intentions behind the APIs and restrictions imposed on them.
+They make code cleaner, changes become simpler to implement, and maintenance becomes cheaper.
 
-**Compatible with Python 3.7.**
-
-## Quickstart
+## Basics
+### Installation
 `pip install serious`
 
-#### schema.load() and schema.dump()
+### Quick Example
+
+A regular dataclass can contain validation:
+```python
+from dataclasses import dataclass
+from serious import ValidationError
+
+@dataclass
+class Person:
+    name: str
+
+    def __validate__(self):
+        if len(self.name) == '':
+            raise ValidationError('Every person needs a name')
+```
+
+Create an instance of `JsonSchema`:  
+```python
+from serious.json import JsonSchema
+    
+schema = JsonSchema(Person)
+```
+
+And use its [dump/load methods](#Encode/Decode):
+```python
+person = Person('Albert Einstein')
+
+schema.dump(person) # {"name": "Albert Einstein"}
+```
+
+### Features
+- clearly define models
+- make use of pure python objects
+- ensure typing with mypy
+- Type-annotations for all public-facing APIs.
+- (optionally) ensure immutability
+- define APIs
+- store object JSON to document databases 
+- load JSON/YAML configurations to objects
+
+
+### Supported formats:
+- [x] JSON
+- [x] dict
+- [ ] YAML
+- [ ] Form data
+
+
+### Supported field types
+- other dataclasses
+- primitives: `str`, `int`, `float`, `bool`
+- dicts: only with string keys: `Dict[str, Any]`  
+- lists, [sets][set], [deques][deque]: python collections of any serializable type
+- [tuples][tuple] both with and without ellipsis:
+    - tuples as set of independent elements (e.g. `Tuple[str, int, date]`) 
+    - with ellipses, acting as a frozen list (`Tuple[str, ...]`)
+- [enumerations][enum] by value:
+    - of primitives (e.g. `OperatingSystem(Enum)`) 
+    - typed enums (`Color(str, Enum)` and `FilePermission(IntFlag)`)
+- [Decimal][decimal]: encoded to JSON as string 
+- [datetime][datetime], [date][date] and [time][time]: encoded to the [ISO 8601][iso8601] formatted string
+- [UUID][uuid]
+- `serious.types.Timestamp`: a UTC timestamp since [UNIX epoch][epoch] as float ms value 
+- custom immutable alternatives to native python types in `serious.types`: `FrozenList`, `FrozenDict`
+
+## Encode/Decode
+
+Both of these operations are performed by schema. Just like when using Python native `json` or `pickle`
+to decode the value use `#load(value)` and to encode call `#dump(dataclass)`.
 
 ```python
 from dataclasses import dataclass
-from serious.json import JsonSerializer
+from serious import JsonSchema
 
 @dataclass
 class Person:
@@ -53,10 +106,9 @@ schema.load('{"name": "lidatong"}')  # Person(name='lidatong')
 schema.load_many('[{"name": "mdrachuk"}, {"name": "lidatong"}]')  # [Person(name='mdrachuk'), Person(name='lidatong')]
 ```
 
-## How do I...
+Multiple values can be manipulated by corresponding `#load_many(values)` and `#dump_many(dataclasses)` schema methods.
 
-
-### Handle missing or optional field values when decoding?
+### Optionals
 
 By default, any fields in your dataclass that use `default` or 
 `default_factory` will have the values filled with the provided default, if the
@@ -66,7 +118,7 @@ corresponding field is missing from the JSON you're decoding.
 
 ```python
 from dataclasses import dataclass
-from serious.json import JsonSchema
+from serious import JsonSchema
  
 @dataclass
 class Student:
@@ -83,34 +135,34 @@ If the default is missing
 **Decode optional field without default**
 
 ```python
+from dataclasses import dataclass
+from typing import Optional
+from serious import JsonSchema
+
+
 @dataclass
 class Tutor:
     id: int
     student: Optional[Student]
 
-serious.json.JsonSchema(Tutor).load('{"id": 1}')  # Tutor(id=1, student=None)
+JsonSchema(Tutor).load('{"id": 1}')  # Tutor(id=1, student=None)
 ```
-
-Personally I recommend you leverage dataclass defaults rather than using 
-`infer_missing`, but if for some reason you need to decouple the behavior of 
-JSON decoding from the field's default value, this will allow you to do so.
-
 
 ### Override field load/dump?
 
-For example, you might want to encode/decode `datetime` objects using ISO format
-rather than the default `timestamp`.
+For example, you might want to load/dump `datetime` objects using timestamp format rather than [ISO strings][iso8601].
 
 ```python
 from dataclasses import dataclass, field
 from datetime import datetime
+from datetime import timezone
 
 @dataclass
-class Creatable:
+class Post:
     created_at: datetime = field(
         metadata={'serious': {
-            'dump': datetime.isoformat,
-            'load': datetime.fromisoformat,
+            'dump': lambda x, ctx: x.timestamp(),
+            'load': lambda x, ctx: datetime.fromtimestamp(x, timezone.utc),
         }})
 ```
 
@@ -118,7 +170,7 @@ class Creatable:
 
 ```python
 from dataclasses import dataclass
-from serious.json import JsonSchema
+from serious import JsonSchema
 from typing import List
 
 @dataclass(frozen=True)
@@ -152,4 +204,19 @@ assert schema.load(boss_json) == boss
 
 
 ## Acknowledgements
-This is a fork of [@lidatong/dataclasses-json](https://github.com/lidatong/dataclasses-json).
+Initially, a fork of [@lidatong/dataclasses-json](https://github.com/lidatong/dataclasses-json).
+
+[dataclass]: https://docs.python.org/3/library/dataclasses.html
+[iso8601]: https://en.wikipedia.org/wiki/ISO_8601
+[epoch]: https://en.wikipedia.org/wiki/Unix_time
+[enum]: https://docs.python.org/3/library/enum.html
+[decimal]: https://docs.python.org/3/library/decimal.html
+[tuple]: https://docs.python.org/3/library/stdtypes.html#tuple
+[list]: https://docs.python.org/3/library/stdtypes.html#list
+[set]: https://docs.python.org/3/library/stdtypes.html#set
+[deque]: https://docs.python.org/3.7/library/collections.html#collections.deque
+[datetime]: https://docs.python.org/3.7/library/datetime.html?highlight=datetime#datetime.datetime
+[date]: https://docs.python.org/3.7/library/datetime.html?highlight=datetime#datetime.date
+[time]: https://docs.python.org/3.7/library/datetime.html?highlight=datetime#datetime.time
+[uuid]: https://docs.python.org/3.7/library/uuid.html?highlight=uuid#uuid.UUID
+[zen]: https://github.com/mdrachuk/serious/ZEN.md
