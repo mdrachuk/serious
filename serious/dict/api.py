@@ -3,9 +3,8 @@ from __future__ import annotations
 from typing import TypeVar, Type, Generic, List, Collection, Dict, Iterable, Any, Mapping
 
 from serious.descriptors import describe, TypeDescriptor
-from serious.field_serializers import FieldSerializer, field_serializers
+from serious.serialization import FieldSerializer, field_serializers, SeriousSerializer
 from serious.preconditions import _check_is_instance, _check_is_dataclass
-from serious.schema import SeriousSchema
 from serious.utils import class_path
 
 T = TypeVar('T')
@@ -31,7 +30,7 @@ class DictSchema(Generic[T]):
         @param allow_unexpected False to raise during load if data is missing the contains some unknown fields.
         """
         self.descriptor = self._describe(cls)
-        self._serializer: SeriousSchema = SeriousSchema(
+        self._serializer: SeriousSerializer = SeriousSerializer(
             self.descriptor,
             serializers,
             allow_any=allow_any,

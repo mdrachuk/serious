@@ -1,7 +1,7 @@
 from typing import Any, overload
 
-from serious.dict import DictSchema
-from serious.json import JsonSchema
+from .dict import DictSchema
+from .json import JsonSchema
 
 Dataclass = Any  # a dataclass instance
 

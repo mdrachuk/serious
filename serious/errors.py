@@ -5,7 +5,7 @@ from typing import Type, Mapping, Collection
 from .utils import DataclassType, class_path, TYPING
 
 if TYPING:  # To reference in typings
-    from .context import SerializationStep
+    from .serialization import SerializationStep
     from .descriptors import FieldDescriptor
 
 

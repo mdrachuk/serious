@@ -2,26 +2,47 @@ from __future__ import annotations
 
 import re
 from abc import abstractmethod, ABC
-from dataclasses import replace
+from contextlib import contextmanager
+from dataclasses import replace, fields, MISSING, Field
 from datetime import datetime, date, time
 from decimal import Decimal
 from enum import Enum
-from typing import Any, Type, Iterable, Optional, Pattern
+from typing import Any, Type, Iterable, Optional, Pattern, List, TypeVar, Generic, Dict, Union, Mapping, Iterator
 from uuid import UUID
 
-from .context import SerializationContext as Context, SerializationStep
-from .descriptors import FieldDescriptor
-from .errors import InvalidFieldMetadata, ValidationError
+from .descriptors import FieldDescriptor, TypeDescriptor, _scan_types
+from .errors import ModelContainsAny, ModelContainsUnion, MissingField, UnexpectedItem, LoadError, DumpError, \
+    InvalidFieldMetadata, ValidationError
+from .preconditions import _check_is_instance, _check_present
 from .types import FrozenList, Timestamp
-from .utils import Primitive, TYPING
+from .utils import DataclassType, Primitive
 from .validation import validate
 
-if TYPING:  # To reference in typings
-    from .schema import SeriousSchema
+
+class SerializationContext:
+
+    def __init__(self):
+        self._steps: List[SerializationStep] = list()
+
+    @contextmanager
+    def enter(self, step: SerializationStep):
+        self._steps.append(step)
+        yield
+        self._steps.pop()
+
+    @property
+    def stack(self) -> FrozenList[SerializationStep]:
+        return FrozenList(self._steps)
 
 
-def _matches(regex: Pattern, value: Primitive) -> bool:
-    return regex.match(value) is not None  # type: ignore # caller ensures str
+Context = SerializationContext
+
+
+class SerializationStep(ABC):
+
+    @abstractmethod
+    def step_name(self) -> str:
+        raise NotImplementedError
 
 
 class FieldSerializer(SerializationStep, ABC):
@@ -39,7 +60,7 @@ class FieldSerializer(SerializationStep, ABC):
     [3]: serious.yaml.api.YamlSchema
     """
 
-    def __init__(self, field: FieldDescriptor, root_serializer: SeriousSchema):
+    def __init__(self, field: FieldDescriptor, root_serializer: SeriousSerializer):
         self._field = field
         self._root = root_serializer
 
@@ -137,7 +158,7 @@ class MetadataSerializer(FieldSerializer):
     ```
     """
 
-    def __init__(self, field: FieldDescriptor, root_serializer: SeriousSchema):
+    def __init__(self, field: FieldDescriptor, root_serializer: SeriousSerializer):
         super().__init__(field, root_serializer)
         metadata = field.metadata['serious']
         self._load_method = metadata['load']
@@ -177,7 +198,7 @@ class OptionalSerializer(FieldSerializer):
     ```
     """
 
-    def __init__(self, field: FieldDescriptor, root_serializer: SeriousSchema):
+    def __init__(self, field: FieldDescriptor, root_serializer: SeriousSerializer):
         super().__init__(field, root_serializer)
         item_descriptor = replace(field, type=replace(field.type, is_optional=False))
         self._serializer = self._root.field_serializer(item_descriptor)
@@ -215,7 +236,7 @@ class EnumSerializer(FieldSerializer):
     assert schema.load(dict) == dataclass  # True
     ```"""
 
-    def __init__(self, field: FieldDescriptor, root_serializer: SeriousSchema):
+    def __init__(self, field: FieldDescriptor, root_serializer: SeriousSerializer):
         super().__init__(field, root_serializer)
         self._serializer = self._value_serializer()
         self._enum_values = {e.value for e in list(self.field.type.cls)}
@@ -273,7 +294,7 @@ class AnySerializer(FieldSerializer):
 class DictSerializer(FieldSerializer):
     """Serializer for `dict` fields with `str` keys (Dict[str, Any])."""
 
-    def __init__(self, field: FieldDescriptor, root_serializer: SeriousSchema):
+    def __init__(self, field: FieldDescriptor, root_serializer: SeriousSerializer):
         super().__init__(field, root_serializer)
         key = field.type.parameters[0]
         assert key.cls is str and not key.is_optional, 'Dict keys must have explicit "str" type (Dict[str, Any]).'
@@ -309,7 +330,7 @@ class DictSerializer(FieldSerializer):
 class CollectionSerializer(FieldSerializer):
     """Serializer for lists, sets, and frozensets."""
 
-    def __init__(self, field: FieldDescriptor, root_serializer: SeriousSchema):
+    def __init__(self, field: FieldDescriptor, root_serializer: SeriousSerializer):
         super().__init__(field, root_serializer)
         item = self._generic_item_serializer(param_index=0)
         self._item_type = item.field.type
@@ -347,7 +368,7 @@ class CollectionSerializer(FieldSerializer):
 class TupleSerializer(FieldSerializer):
     """Serializer for Python tuples."""
 
-    def __init__(self, field: FieldDescriptor, root_serializer: SeriousSchema):
+    def __init__(self, field: FieldDescriptor, root_serializer: SeriousSerializer):
         super().__init__(field, root_serializer)
         self._serializers = [self._generic_item_serializer(param_index=i) for i in self.field.type.parameters]
         self._size = len(self._serializers)
@@ -470,7 +491,7 @@ class FloatSerializer(FieldSerializer):
 class DataclassSerializer(FieldSerializer):
     """A serializer for field values that are dataclasses instances."""
 
-    def __init__(self, field: FieldDescriptor, root_serializer: SeriousSchema):
+    def __init__(self, field: FieldDescriptor, root_serializer: SeriousSerializer):
         super().__init__(field, root_serializer)
         self._serializer = self._root.child_serializer(field)
         self._dc_name = self.field.type.cls.__name__
@@ -675,3 +696,183 @@ class DecimalSerializer(FieldSerializer):
             raise ValidationError('Invalid data type. Expecting a string')
         if not _matches(_decimal_re, value):
             raise ValidationError('Invalid decimal format. A number with a "." as a decimal separator is expected')
+
+
+T = TypeVar('T')
+
+
+class SeriousSerializer(Generic[T]):
+    """A serializer for dataclasses from and to a dict."""
+
+    def __init__(
+            self,
+            descriptor: TypeDescriptor,
+            serializers: Iterable[Type[FieldSerializer]],
+            *,
+            allow_any: bool,
+            allow_missing: bool,
+            allow_unexpected: bool,
+            _registry: Dict[TypeDescriptor, SeriousSerializer] = None
+    ):
+        """
+        @param descriptor the descriptor of the dataclass to load/dump.
+        @param serializers field serializer classes in an order they will be tested for fitness for each field.
+        @param allow_any False to raise if the model contains fields annotated with Any
+                (this includes generics like List[Any], or simply list).
+        @param allow_missing False to raise during load if data is missing the optional fields.
+        @param allow_unexpected False to raise during load if data is missing the contains some unknown fields.
+        @param _registry a mapping of dataclass type descriptors to corresponding serious serializer;
+                used internally to create child serializers.
+        """
+        all_types = _scan_types(descriptor)
+        if not allow_any and Any in all_types:
+            raise ModelContainsAny(descriptor.cls)
+        if Union in all_types:
+            raise ModelContainsUnion(descriptor.cls)
+        self._descriptor = descriptor
+        self._serializers = tuple(serializers)
+        self._allow_missing = allow_missing
+        self._allow_unexpected = allow_unexpected
+        self._allow_any = allow_any
+        self._serializer_registry = {descriptor: self} if _registry is None else _registry
+        self._field_serializers = [self.field_serializer(field) for field in descriptor.fields]
+
+    @property
+    def _cls(self) -> Type[T]:
+        # A shortcut to root dataclass type.
+        return self._descriptor.cls
+
+    def child_serializer(self, field: FieldDescriptor) -> SeriousSerializer:
+        """
+        Creates a [SeriousSerializer] for dataclass fields nested in the current serializers.
+        The preferences of the nested dataclasses match those of the root one.
+        """
+
+        descriptor = field.type
+        if descriptor in self._serializer_registry:
+            return self._serializer_registry[descriptor]
+        new_serializer: SeriousSerializer = SeriousSerializer(
+            descriptor=descriptor,
+            serializers=self._serializers,
+            allow_missing=self._allow_missing,
+            allow_unexpected=self._allow_unexpected,
+            allow_any=self._allow_any,
+            _registry=self._serializer_registry
+        )
+        self._serializer_registry[descriptor] = new_serializer
+        return new_serializer
+
+    def load(self, data: Mapping, _ctx: Optional[Context] = None) -> T:
+        """Loads dataclass from a dictionary or other mapping. """
+
+        _check_is_instance(data, Mapping, f'Invalid data for {self._cls}')  # type: ignore
+        root = _ctx is None
+        ctx: Context = Context() if root else _ctx  # type: ignore # checked above
+        mut_data = dict(data)
+        if self._allow_missing:
+            for field in _fields_missing_from(mut_data, self._cls):
+                mut_data[field.name] = None
+        else:
+            _check_for_missing(self._cls, mut_data)
+        if not self._allow_unexpected:
+            _check_for_unexpected(self._cls, mut_data)
+        try:
+            init_kwargs = {
+                serializer.field.name: self._load_field(mut_data, serializer, ctx)
+                for serializer in self._field_serializers
+                if serializer.field.name in mut_data
+            }
+            result = self._cls(**init_kwargs)  # type: ignore # not an object
+            validate(result)
+            return result
+        except Exception as e:
+            if root:
+                if isinstance(e, ValidationError):
+                    raise
+                else:
+                    raise LoadError(self._cls, ctx.stack, data) from e
+            raise
+
+    @staticmethod
+    def _load_field(data: Mapping[str, Any], serializer: FieldSerializer, ctx: Context) -> Any:
+        field = serializer.field
+        with ctx.enter(serializer):
+            return serializer.load(data[field.name], ctx)
+
+    def dump(self, o: T, _ctx: Optional[Context] = None) -> Dict[str, Any]:
+        """Dumps a dataclass object to a dictionary."""
+
+        _check_is_instance(o, self._cls)
+        root = _ctx is None
+        ctx: Context = Context() if root else _ctx  # type: ignore # checked above
+        try:
+            return {
+                serializer.field.name: self._dump_field(o, serializer, ctx)
+                for serializer in self._field_serializers
+            }
+        except Exception as e:
+            if root:
+                raise DumpError(o, ctx.stack) from e
+            raise
+
+    @staticmethod
+    def _dump_field(o: Any, serializer: FieldSerializer, ctx: Context) -> Any:
+        field = serializer.field
+        with ctx.enter(serializer):
+            return serializer.dump(getattr(o, field.name), ctx)
+
+    def field_serializer(self, field: FieldDescriptor) -> FieldSerializer:
+        """
+        Creates a serializer fitting the provided field descriptor.
+
+        @param field descriptor of a field to serialize.
+        """
+        optional = self._get_serializer(field)
+        serializer = _check_present(optional, f'Type "{field.type.cls}" is not supported')
+        return serializer
+
+    def _get_serializer(self, field: FieldDescriptor) -> Optional[FieldSerializer]:
+        sr_generator = (serializer(field, self) for serializer in self._serializers if serializer.fits(field))
+        optional_sr = next(sr_generator, None)
+        return optional_sr
+
+
+def _check_for_missing(cls: DataclassType, data: Mapping) -> None:
+    """
+    Checks for missing keys in data that are part of the provided dataclass.
+
+    @raises MissingField
+    """
+    missing_fields = filter(lambda f: f.name not in data, fields(cls))
+    first_missing_field: Any = next(missing_fields, MISSING)
+    if first_missing_field is not MISSING:
+        field_names = {first_missing_field.name} | {field.name for field in missing_fields}
+        raise MissingField(cls, data, field_names)
+
+
+def _check_for_unexpected(cls: DataclassType, data: Mapping) -> None:
+    """
+    Checks for keys in data that are not part of the provided dataclass.
+
+    @raises UnexpectedItem
+    """
+    field_names = {field.name for field in fields(cls)}
+    data_keys = set(data.keys())
+    unexpected_fields = data_keys - field_names
+    if any(unexpected_fields):
+        raise UnexpectedItem(cls, data, unexpected_fields)
+
+
+def _fields_missing_from(data: Mapping, cls: DataclassType) -> Iterator[Field]:
+    """Fields missing from data, but present in the dataclass."""
+
+    def _is_missing(field: Field) -> bool:
+        return field.name not in data \
+               and field.default is MISSING \
+               and field.default_factory is MISSING  # type: ignore # default factory is an unbound function
+
+    return filter(_is_missing, fields(cls))
+
+
+def _matches(regex: Pattern, value: Primitive) -> bool:
+    return regex.match(value) is not None  # type: ignore # caller ensures str

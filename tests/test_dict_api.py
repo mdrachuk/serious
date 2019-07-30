@@ -5,7 +5,7 @@ from uuid import UUID
 import pytest
 
 from serious import DictSchema, LoadError, FieldSerializer, field_serializers
-from serious.context import SerializationContext
+from serious.serialization import Context
 from serious.descriptors import FieldDescriptor
 from serious.utils import Primitive
 from tests.entities import (DataclassWithDataclass, DataclassWithOptional,
@@ -27,10 +27,10 @@ class User:
 
 class UserIdSerializer(FieldSerializer):
 
-    def _dump(self, value: Any, ctx: SerializationContext) -> Primitive:
+    def _dump(self, value: Any, ctx: Context) -> Primitive:
         return value.value
 
-    def _load(self, value: Primitive, ctx: SerializationContext) -> Any:
+    def _load(self, value: Primitive, ctx: Context) -> Any:
         return UserId(value)
 
     @classmethod

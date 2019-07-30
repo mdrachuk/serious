@@ -4,11 +4,10 @@ import json
 from typing import Optional, TypeVar, Type, Generic, List, MutableMapping, Collection, Iterable, Any, Dict
 
 from serious.descriptors import describe, TypeDescriptor
-from serious.field_serializers import FieldSerializer, field_serializers
-from serious.json.preconditions import _check_that_loading_an_object, _check_that_loading_a_list
 from serious.preconditions import _check_is_instance, _check_is_dataclass
-from serious.schema import SeriousSchema
+from serious.serialization import FieldSerializer, field_serializers, SeriousSerializer
 from serious.utils import class_path
+from .preconditions import _check_that_loading_an_object, _check_that_loading_a_list
 
 T = TypeVar('T')
 
@@ -35,7 +34,7 @@ class JsonSchema(Generic[T]):
         @param indent number of spaces JSON output will be indented by; `None` for most compact representation.
         """
         self.descriptor = self._describe(cls)
-        self._serializer: SeriousSchema = SeriousSchema(
+        self._serializer: SeriousSerializer = SeriousSerializer(
             self.descriptor,
             serializers,
             allow_any=allow_any,
