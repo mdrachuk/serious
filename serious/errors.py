@@ -1,8 +1,12 @@
+from __future__ import annotations
+
 from typing import Type, Mapping, Collection
 
-from serious.context import SerializationStep
-from serious.descriptors import FieldDescriptor
-from serious.utils import DataclassType, class_path
+from .utils import DataclassType, class_path, TYPING
+
+if TYPING:  # To reference in typings
+    from .context import SerializationStep
+    from .descriptors import FieldDescriptor
 
 
 class SerializationError(Exception):

@@ -3,13 +3,11 @@ from typing import Any
 
 import pytest
 
-from serious import Timestamp
+from serious import Timestamp, validate, ValidationError
+from serious.types import Email
 
 
 class TestTimestamp:
-
-    def test_alias(self):
-        assert Timestamp is Timestamp
 
     def test_int_init(self):
         assert Timestamp(123).value == 123
@@ -76,3 +74,55 @@ class TestTimestamp:
             t.value = 2
         with pytest.raises(AttributeError):
             t.something = 3
+
+
+vader = 'vader@death-star.gov'
+luke = 'luke+jediacademy@skywalkers.org'
+
+
+class TestEmail:
+
+    def test_init(self):
+        assert Email(vader) == vader
+
+    def test_case_insensitive(self):
+        assert Email('example@example.org') == Email('eXaMPLe@exAmPLE.ORg')
+
+    def test_properties(self):
+        vader_address = Email(vader)
+        assert vader_address.username == 'vader'
+        assert vader_address.domain == 'death-star.gov'
+        assert vader_address.label is None
+
+        luke_address = Email(luke)
+        assert luke_address.username == 'luke'
+        assert luke_address.domain == 'skywalkers.org'
+        assert luke_address.label == 'jediacademy'
+
+    def test_repr(self):
+        assert repr(Email(vader)) == '<Email vader@death-star.gov>'
+
+    def test_str(self):
+        assert str(Email(vader)) == 'vader@death-star.gov'
+
+    def test_immutability(self):
+        address = Email(luke)
+        with pytest.raises(AttributeError):
+            address.username = 'leia'
+        with pytest.raises(AttributeError):
+            address.domain = 'nabu.gov'
+        with pytest.raises(AttributeError):
+            address.label = 'resistance'
+
+    def test_validation(self):
+        assert validate(Email(vader)) is None
+        assert validate(Email(luke)) is None
+        assert validate(Email('admin@example.international')) is None
+        assert validate(Email('голова@2024.укр')) is None
+        assert validate(Email('голова+пора@2024.укр')) is None
+        with pytest.raises(ValidationError):
+            validate(Email('голова++пора@2024.укр'))
+        with pytest.raises(ValidationError):
+            validate(Email('admin+example+example@example.org'))
+        with pytest.raises(ValidationError):
+            validate(Email('+admin@example.org'))

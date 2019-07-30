@@ -4,7 +4,7 @@ from abc import abstractmethod, ABC
 from contextlib import contextmanager
 from typing import List
 
-from serious.types import FrozenList, FrozenList
+from .types import FrozenList
 
 
 class SerializationStep(ABC):

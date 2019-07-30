@@ -1,10 +1,12 @@
 ### Primitives (`str`, `int`, `float`, `bool`)
+
 Fields annotated as primitive types stay themselves during serialization.
 
 Fields marked as primitive type subclasses are dumped to their corresponding primitive type 
 and loaded by supplying the primitive value as a first argument to the fields type.
 So an instance of `class Rating(int)` will be transformed to an `int` during _dump_
 and its integer value will be provided to Rating constructor during _load_: `Rating(value)`.
+
 ### Dataclasses
 Any dataclass can be used and it will be serialized to a dict/JSON object. 
 
@@ -123,6 +125,13 @@ has additional properties (username, label, domain).
 Having a separate class instead of using regular string allows adding additional methods and properties to it, 
 as well as ensuring by type checkers, that our code is valid. 
 It is a great example of implementing a [Tiny Types pattern][tiny-types].
+
+```python
+assert Email('leonardo@vinci.it') == Email('LEONARDO@vInCi.It') 
+assert Email('leonardo@vinci.it').username == 'leonardo' 
+assert Email('leonardo@vinci.it').label is None 
+assert Email('leonardo+paintings@vinci.it').label == 'paintings' 
+```
 
 [uuid]: https://docs.python.org/3/library/uuid.html
 [decimal]: https://docs.python.org/3.7/library/decimal.html

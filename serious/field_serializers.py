@@ -9,15 +9,15 @@ from enum import Enum
 from typing import Any, Type, Iterable, Optional, Pattern
 from uuid import UUID
 
-from serious.context import SerializationContext as Context, SerializationStep
-from serious.descriptors import FieldDescriptor
-from serious.errors import InvalidFieldMetadata, ValidationError
-from serious.types import FrozenList, Timestamp
-from serious.utils import Primitive
-from serious.validation import validate
+from .context import SerializationContext as Context, SerializationStep
+from .descriptors import FieldDescriptor
+from .errors import InvalidFieldMetadata, ValidationError
+from .types import FrozenList, Timestamp
+from .utils import Primitive, TYPING
+from .validation import validate
 
-if False:  # To reference in typings
-    from serious.schema import SeriousSchema
+if TYPING:  # To reference in typings
+    from .schema import SeriousSchema
 
 
 def _matches(regex: Pattern, value: Primitive) -> bool:

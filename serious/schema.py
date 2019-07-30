@@ -3,14 +3,14 @@ from __future__ import annotations
 from dataclasses import fields, MISSING, Field
 from typing import Mapping, Type, Any, Dict, Iterator, Generic, TypeVar, Optional, Iterable, Union
 
-from serious.context import SerializationContext
-from serious.descriptors import FieldDescriptor, TypeDescriptor, _scan_types
-from serious.errors import LoadError, DumpError, UnexpectedItem, MissingField, ModelContainsAny, ValidationError, \
+from .context import SerializationContext
+from .descriptors import FieldDescriptor, TypeDescriptor, _scan_types
+from .errors import LoadError, DumpError, UnexpectedItem, MissingField, ModelContainsAny, ValidationError, \
     ModelContainsUnion
-from serious.field_serializers import FieldSerializer
-from serious.preconditions import _check_present, _check_is_instance
-from serious.utils import DataclassType
-from serious.validation import validate
+from .field_serializers import FieldSerializer
+from .preconditions import _check_present, _check_is_instance
+from .utils import DataclassType
+from .validation import validate
 
 T = TypeVar('T')
 
