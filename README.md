@@ -1,5 +1,6 @@
 # serious
-[![Build Status](https://dev.azure.com/misha-drachuk/serious/_apis/build/status/serious-release?branchName=master)](https://dev.azure.com/misha-drachuk/serious/_build/latest?definitionId=1&branchName=master)
+[![PyPI](https://img.shields.io/pypi/v/serious)](https://pypi.org/project/serious/)
+[![Build Status](https://img.shields.io/azure-devops/build/misha-drachuk/serious/2)](https://dev.azure.com/misha-drachuk/serious/_build/latest?definitionId=1&branchName=master)
 [![Supported Python](https://img.shields.io/pypi/pyversions/serious)](https://pypi.org/project/serious/)
 
 Python [dataclasses][dataclass] serialization and validation in a [Zen][zen] and [fast][benchmarks] manner.
