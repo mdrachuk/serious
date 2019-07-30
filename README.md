@@ -3,13 +3,13 @@
 [![Build Status](https://img.shields.io/azure-devops/build/misha-drachuk/serious/2)](https://dev.azure.com/misha-drachuk/serious/_build/latest?definitionId=1&branchName=master)
 [![Supported Python](https://img.shields.io/pypi/pyversions/serious)](https://pypi.org/project/serious/)
 
-Python [dataclasses][dataclass] serialization and validation in a [Zen][zen] and [fast][benchmarks] manner.
+Python dataclasses serialization and validation.
 
 **Compatible with Python 3.7+.**
 
 On top of coupling of data with its behaviour, using proper objects adds semantic meaning to your code.
-Good classes manifest the intentions behind the APIs and restrictions imposed on them.
-They make code cleaner, changes become simpler to implement, and maintenance becomes cheaper.
+Good classes manifest the intentions of the system and restrictions imposed on it.
+They make APIs cleaner, changes become simpler to implement, and maintenance becomes cheaper.
 
 ## Basics
 ### Installation
@@ -17,185 +17,132 @@ They make code cleaner, changes become simpler to implement, and maintenance bec
 
 ### Quick Example
 
-A regular dataclass can contain validation:
+Central part of Serious API are different **Schemas**.
+
+Given a regular dataclass:
 ```python
 from dataclasses import dataclass
-from serious import ValidationError
 
 @dataclass
 class Person:
     name: str
-
-    def __validate__(self):
-        if len(self.name) == '':
-            raise ValidationError('Every person needs a name')
 ```
 
-Create an instance of `JsonSchema`:  
+Let’s create a `JsonSchema`:  
 ```python
 from serious.json import JsonSchema
     
 schema = JsonSchema(Person)
 ```
 
-And use its [dump/load methods](#Encode/Decode):
+And use its [dump/load methods][doc-serialization]:
 ```python
 person = Person('Albert Einstein')
 
 schema.dump(person) # {"name": "Albert Einstein"}
 ```
 
+#### Validation
+To add validation to the example above all we need is to add `__validate__` method to person:
+```python
+from dataclasses import dataclass
+from typing import Optional
+from serious import ValidationError, Email
+
+@dataclass
+class Person:
+    name: str
+    email: Optional[Email]
+    phone: Optional[str]
+
+    def __validate__(self):
+        if len(self.name) == 0:
+            raise ValidationError('Every person needs a name')
+        if self.phone is None and self.email is None:
+            raise ValidationError('At least some contact should be present')
+```
+
+[More on validation.][doc-validation]
+
 ### Features
-- clearly define models
-- make use of pure python objects
-- ensure typing with mypy
-- Type-annotations for all public-facing APIs.
-- (optionally) ensure immutability
-- define APIs
-- store object JSON to document databases 
-- load JSON/YAML configurations to objects
+- Model definitions in pure Python.
+- Validation showing up in code coverage.  
+- Type annotations for all public-facing APIs.
+- (Optionally) ensures immutability.
+- Easily extensible.
+- Documented for Humans.
 
 
 ### Supported formats:
-- [x] JSON
-- [x] dict
+- [x] [JSON][doc-json-schema]
+- [x] [Python Dictionaries][doc-dict-schema]
 - [ ] YAML
 - [ ] Form data
 
 
 ### Supported field types
-- other dataclasses
-- primitives: `str`, `int`, `float`, `bool`
-- dicts: only with string keys: `Dict[str, Any]`  
-- lists, [sets][set], [deques][deque]: python collections of any serializable type
-- [tuples][tuple] both with and without ellipsis:
+[More in docs.][doc-types]
+
+- Other dataclasses
+- Primitives: `str`, `int`, `float`, `bool`
+- Dictionaries: only with string keys: `Dict[str, Any]`  
+- Lists, [sets][set], [deques][deque]: python collections of any serializable type
+- [Tuples][tuple] both with and without ellipsis:
     - tuples as set of independent elements (e.g. `Tuple[str, int, date]`) 
     - with ellipses, acting as a frozen list (`Tuple[str, ...]`)
-- [enumerations][enum] by value:
+- [Enumerations][enum] by value:
     - of primitives (e.g. `OperatingSystem(Enum)`) 
     - typed enums (`Color(str, Enum)` and `FilePermission(IntFlag)`)
 - [Decimal][decimal]: encoded to JSON as string 
-- [datetime][datetime], [date][date] and [time][time]: encoded to the [ISO 8601][iso8601] formatted string
+- [Datetime][datetime], [date][date] and [time][time]: encoded to the [ISO 8601][iso8601] formatted string
 - [UUID][uuid]
 - `serious.types.Timestamp`: a UTC timestamp since [UNIX epoch][epoch] as float ms value 
+- `serious.types.Email`: a string Tiny Type that supports validation and contains additional properties 
 - custom immutable alternatives to native python types in `serious.types`: `FrozenList`, `FrozenDict`
 
-## Encode/Decode
-
-Both of these operations are performed by schema. Just like when using Python native `json` or `pickle`
-to decode the value use `#load(value)` and to encode call `#dump(dataclass)`.
+## A bigger example
 
 ```python
 from dataclasses import dataclass
-from serious import JsonSchema
-
-@dataclass
-class Person:
-    name: str
-
-lidatong = Person('lidatong')
-mdrachuk = Person('mdrachuk')
-
-schema = JsonSchema(Person)
-
-# Encoding to JSON
-schema.dump(lidatong)  # '{"name": "lidatong"}'
-schema.dump_many([mdrachuk, lidatong])  # '[{"name": "mdrachuk"}, {"name": "lidatong"}]'
-
-# Decoding from JSON
-schema.load('{"name": "lidatong"}')  # Person(name='lidatong')
-schema.load_many('[{"name": "mdrachuk"}, {"name": "lidatong"}]')  # [Person(name='mdrachuk'), Person(name='lidatong')]
-```
-
-Multiple values can be manipulated by corresponding `#load_many(values)` and `#dump_many(dataclasses)` schema methods.
-
-### Optionals
-
-By default, any fields in your dataclass that use `default` or 
-`default_factory` will have the values filled with the provided default, if the
-corresponding field is missing from the JSON you're decoding.
-
-**Decode JSON with missing field**
-
-```python
-from dataclasses import dataclass
-from serious import JsonSchema
- 
-@dataclass
-class Student:
-    id: int
-    name: str = 'student'
-
-JsonSchema(Student, allow_missing=True).load('{"id": 1}')  # Student(id=1, name='student')
-```
-
-Notice that `name` got default value `student` when it was missing from the JSON.
-
-If the default is missing 
-
-**Decode optional field without default**
-
-```python
-from dataclasses import dataclass
-from typing import Optional
-from serious import JsonSchema
-
-
-@dataclass
-class Tutor:
-    id: int
-    student: Optional[Student]
-
-JsonSchema(Tutor).load('{"id": 1}')  # Tutor(id=1, student=None)
-```
-
-### Override field load/dump?
-
-For example, you might want to load/dump `datetime` objects using timestamp format rather than [ISO strings][iso8601].
-
-```python
-from dataclasses import dataclass, field
-from datetime import datetime
-from datetime import timezone
-
-@dataclass
-class Post:
-    created_at: datetime = field(
-        metadata={'serious': {
-            'dump': lambda x, ctx: x.timestamp(),
-            'load': lambda x, ctx: datetime.fromtimestamp(x, timezone.utc),
-        }})
-```
-
-## A larger example
-
-```python
-from dataclasses import dataclass
-from serious import JsonSchema
+from serious import JsonSchema, ValidationError
 from typing import List
+from enum import Enum
+
+class Specialty(Enum):
+    Worker = 1
+    Fool = 2
+
 
 @dataclass(frozen=True)
 class Minion:
     name: str
+    type: Specialty
 
 
 @dataclass(frozen=True)
 class Boss:
+    name: str
     minions: List[Minion]
+    
+    def __validate__(self):
+        if len(self.minions) < 2:
+            raise ValidationError('What kind of boss are you?')
 
-boss = Boss([Minion('evil minion'), Minion('very evil minion')])
-boss_json = """
-{
+
+boss = Boss("me", [Minion('evil minion', Specialty.Fool), Minion('very evil minion', Specialty.Worker)])
+boss_json = """{
+    "name": "me",
     "minions": [
         {
-            "name": "evil minion"
+            "name": "evil minion",
+            "type": 2
         },
         {
-            "name": "very evil minion"
+            "name": "very evil minion",
+            "type": 1
         }
     ]
-}
-""".strip()
+}"""
 
 schema = JsonSchema(Boss, indent=4)
 
@@ -220,4 +167,8 @@ Initially, a fork of [@lidatong/dataclasses-json](https://github.com/lidatong/da
 [date]: https://docs.python.org/3.7/library/datetime.html?highlight=datetime#datetime.date
 [time]: https://docs.python.org/3.7/library/datetime.html?highlight=datetime#datetime.time
 [uuid]: https://docs.python.org/3.7/library/uuid.html?highlight=uuid#uuid.UUID
-[zen]: https://github.com/mdrachuk/serious/ZEN.md
+[doc-types]: TBD
+[doc-json-schema]: TBD
+[doc-dict-schema]: TBD
+[doc-serialization]: TBD
+[doc-validation]: TBD
