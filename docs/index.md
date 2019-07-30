@@ -24,6 +24,10 @@ Schema constructor allows to change the specifics of working with particular dat
 e.g. `JsonSchema(Job, allow_missing=True)` will set `None` to fields marked `Optional` in `Job` dataclass 
 when they are missing from loaded JSON.
 
+There are two types of Schema as of now:
+1. `JsonSchema`: loads/dumps JSON formatted strings
+2. `DictSchema`: loads/dumps `dict` objects 
+
 # Basic Serialization
 
 Having a dataclass:
@@ -42,16 +46,18 @@ from serious.json import JsonSchema
 schema = JsonSchema(Person)
 ```
 
-And use its [dump/load methods](#Encode/Decode):
+And use its [dump/load methods](/serialization#encodedecode):
 ```python
 person = Person('Albert Einstein')
 
 schema.dump(person) # {"name": "Albert Einstein"}
 ```
 
-# Basic Validation
-To validate instance of a dataclass on load add a `__validate__` method to it:
+[More on serialization.](/serialization)
 
+# Basic Validation
+
+To validate instance of a dataclass upon load — add a `__validate__` method to it:
 ```python
 from dataclasses import dataclass
 from typing import List
@@ -66,8 +72,14 @@ class Order:
             raise ValidationError('Order cannot be empty')
 
 schema = DictSchema(Order)
+```
+
+Now passing an invalid object for decoding to this schema will result in `ValidationError`:
+```python
 try:
     schema.load({'lines': []})
 except ValidationError as e:
     print(str(e)) # Order cannot be empty
 ```
+
+[More on validation.](/validation)
