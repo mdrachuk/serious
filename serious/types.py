@@ -164,7 +164,7 @@ class Email(str):
     """A regular email address. Email parts can be accessed via properties: `<username>+<label>@<domain>`."""
 
     def __new__(cls, content: str):
-        return super().__new__(cls, content.lower())
+        return super().__new__(cls, content.lower())  # type: ignore # __new__ is a staticmethod
 
     @property
     def username(self) -> str:
