@@ -16,27 +16,27 @@ There are two schema types at this point:
 Schema protocol is defined by 5 methods.
 
 <dl>
-    <dt><pre>def __init__(cls: Type[T], *, **options):</pre></dt>
+    <dt><code>def __init__(cls: Type[T], *, **options):</code></dt>
     <dd>A constructor from a dataclass type and implementation specific options.</dd>
 </dl>
 
 <dl>
-    <dt><pre>def load(data: D) -> T:</pre></dt>
+    <dt><code>def load(data: D) -> T:</code></dt>
     <dd>Create a new dataclass instance from a schema-specific encoded data.</dd>
 </dl>
 
 <dl>
-    <dt><pre>def dump(obj: T) -> D:</pre></dt>
+    <dt><code>def dump(obj: T) -> D:</code></dt>
     <dd>Encode a dataclass to schema-specific type.</dd>
 </dl>
 
 <dl>
-    <dt><pre>def load_many(data: DC) -> List[T]:</pre></dt>
+    <dt><code>def load_many(data: DC) -> List[T]:</code></dt>
     <dd>Load a list of dataclass instances from schema-specific encoded data collection.</dd>
 </dl>
 
 <dl>
-    <dt><pre>def dump_many(obj: Iterable[T]) -> DC:</pre></dt>
+    <dt><code>def dump_many(obj: Iterable[T]) -> DC:</code></dt>
     <dd>Dump multiple objects at once to schema-specific collection.</dd>
 </dl>
 
