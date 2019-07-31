@@ -1,6 +1,6 @@
 # Schemas
 Schema is the entry point to Serious. You create it to serialize data and validate created objects. 
-When it is created it:
+When does multiple things upon creation:
 
 - builds a hierarchy of descriptors unwrapping the generics, optionals, etc;
 - checks that this model conforms to your requirements;
@@ -18,24 +18,16 @@ Schema protocol is defined by 5 methods.
 <dl>
     <dt><code>def __init__(cls: Type[T], *, **options):</code></dt>
     <dd>A constructor from a dataclass type and implementation specific options.</dd>
-</dl>
 
-<dl>
     <dt><code>def load(data: D) -> T:</code></dt>
     <dd>Create a new dataclass instance from a schema-specific encoded data.</dd>
-</dl>
 
-<dl>
     <dt><code>def dump(obj: T) -> D:</code></dt>
     <dd>Encode a dataclass to schema-specific type.</dd>
-</dl>
 
-<dl>
     <dt><code>def load_many(data: DC) -> List[T]:</code></dt>
     <dd>Load a list of dataclass instances from schema-specific encoded data collection.</dd>
-</dl>
 
-<dl>
     <dt><code>def dump_many(obj: Iterable[T]) -> DC:</code></dt>
     <dd>Dump multiple objects at once to schema-specific collection.</dd>
 </dl>
@@ -130,24 +122,12 @@ Dinosaur(name='Yoshi', height=None)
         <li><code>allow_unexpected</code> — <code>False</code> to raise during load if data contains some unknown fields.</li>
         <li><code>indent</code> — number of spaces JSON output will be indented by; `None` for most compact representation.</li>   
      </ul></dd>
-</dl>
-
-<dl>
     <dt><code>def load(self, json_: str) -> T:</code></dt>
     <dd>Creates an instance of dataclass from a JSON string.</dd>
-</dl>
-
-<dl>
     <dt><code>def dump(self, o: Any) -> str:</code></dt>
     <dd>Dumps an instance of dataclass to a JSON string.</dd>
-</dl>
-
-<dl>
     <dt><code>def load_many(self, json_: str) -> List[T]:</code></dt>
     <dd>Loads multiple <code>T</code> dataclass objects from JSON array of objects string.</dd>
-</dl>
-
-<dl>
     <dt><code>def dump_many(self, items: Collection[T]) -> str:</code></dt>
     <dd>Dumps a list/set/collection of objects to an array of objects JSON string.</dd>
 </dl>
@@ -171,24 +151,12 @@ Dinosaur(name='Yoshi', height=None)
         <li><code>allow_missing</code> — <code>False</code> to raise during load if data is missing the optional fields.</li>
         <li><code>allow_unexpected</code> — <code>False</code> to raise during load if data contains some unknown fields.</li>
      </ul></dd>
-</dl>
-
-<dl>
     <dt><code>def load(self, data: Dict[str, Any]) -> T:</code></dt>
     <dd>Creates an instance of <code>T</code> from a dictionary with string keys.</dd>
-</dl>
-
-<dl>
     <dt><code>def dump(self, o: Any) -> Dict[str, Any]</code></dt>
     <dd>Dumps an instance of dataclass to a Python dictionary.</dd>
-</dl>
-
-<dl>
     <dt><code>def load_many(self, items: Iterable[Dict[str, Any]]) -> List[T]:</code></dt>
     <dd>Loads multiple <code>T</code> dataclass objects a list of dictionaries.</dd>
-</dl>
-
-<dl>
     <dt><code>def dump_many(self, items: Collection[T]) -> List[Dict[str, Any]]:</code></dt>
     <dd>Dumps a list/set/collection of objects to an list of primitive dictionaries.</dd>
 </dl>
