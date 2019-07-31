@@ -1,4 +1,5 @@
-# The Zen of Python, by Tim Peters
+# PEP-20 — The Zen of Python, by Tim Peters
+[Source](https://www.python.org/dev/peps/pep-0020/)
 ```plain
 Beautiful is better than ugly.
 Explicit is better than implicit.
