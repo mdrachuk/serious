@@ -25,12 +25,12 @@ class JsonSchema(Generic[T]):
             indent: Optional[int] = None,
     ):
         """
-        @param cls the descriptor of the dataclass to load/dump.
+        @param cls the dataclass type to load/dump.
         @param serializers field serializer classes in an order they will be tested for fitness for each field.
-        @param allow_any False to raise if the model contains fields annotated with Any
-                (this includes generics like List[Any], or simply list).
-        @param allow_missing False to raise during load if data is missing the optional fields.
-        @param allow_unexpected False to raise during load if data is missing the contains some unknown fields.
+        @param allow_any `False` to raise if the model contains fields annotated with `Any`
+                (this includes generics like `List[Any]`, or simply `list`).
+        @param allow_missing `False` to raise during load if data is missing the optional fields.
+        @param allow_unexpected `False` to raise during load if data contains some unknown fields.
         @param indent number of spaces JSON output will be indented by; `None` for most compact representation.
         """
         self.descriptor = self._describe(cls)
