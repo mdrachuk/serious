@@ -4,10 +4,13 @@ repo_name: GitHub
 site_author: mdrachuk
 site_description: Python dataclasses serialization and validation.
 nav:
-  - Quickstart: index.md
+  - Quickstart: quickstart.md
+  - Schemas: schemas.md
   - Serialization: serialization.md
   - Validation: validation.md
   - Supported types: types.md
+  - Examples: examples.md
+  - Implementation: implementation.md
   - Zen: zen.md
 
 theme: readthedocs

@@ -106,6 +106,8 @@ are encoded to the [ISO 8601][iso8601] formatted string.
 |date    |`YYYY-MM-DD`         |2019-07-29               |
 |time    |`hh:mm:ss.sss`       |07:00:00                 |
 
+----
+
 ## Serious types
 ### Timestamp
 `serious.types.Timestamp` is a an immutable(frozen) UTC timestamp.
@@ -119,11 +121,11 @@ It can be constructed from a single:
 - or another Timestamp object.
 
 ### Email
-`serious.types.Email` is a string that conforms to email format. It will serialized to string. Email object
-has additional properties (username, label, domain). 
+`serious.types.Email` is a string that conforms to email format, so it can have additional properties: 
+username, label, domain. 
 
-Having a separate class instead of using regular string allows adding additional methods and properties to it, 
-as well as ensuring by type checkers, that our code is valid. 
+Having a separate class instead of using regular string not only allows for additional methods and computed properties, 
+but also lets static type checkers more data to validate, and makes code more readable adding semantics to data. 
 It is a great example of implementing a [Tiny Types pattern][tiny-types].
 
 ```python
