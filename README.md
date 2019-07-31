@@ -5,15 +5,16 @@
 
 Python dataclasses serialization and validation.
 
-**Compatible with Python 3.7+.**
-
 On top of coupling of data with its behaviour, using proper objects adds semantic meaning to your code.
 Good classes manifest the intentions of the system and restrictions imposed on it.
 They make APIs cleaner, changes become simpler to implement, and maintenance becomes cheaper.
 
 ## Basics
 ### Installation
-`pip install serious`
+Available from [PyPI][pypi]:
+```shell
+pip install serious
+```
 
 ### Quick Example
 
@@ -66,7 +67,7 @@ class Person:
 
 ### Features
 - Model definitions in pure Python.
-- Validation showing up in code coverage.  
+- Validation showing up in code coverage.
 - Type annotations for all public-facing APIs.
 - (Optionally) ensures immutability.
 - Easily extensible.
@@ -154,6 +155,7 @@ assert schema.load(boss_json) == boss
 ## Acknowledgements
 Initially, a fork of [@lidatong/dataclasses-json](https://github.com/lidatong/dataclasses-json).
 
+[pypi]: https://pypi.org/project/serious/
 [dataclass]: https://docs.python.org/3/library/dataclasses.html
 [iso8601]: https://en.wikipedia.org/wiki/ISO_8601
 [epoch]: https://en.wikipedia.org/wiki/Unix_time
