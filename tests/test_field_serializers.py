@@ -7,7 +7,7 @@ from uuid import UUID
 
 import pytest
 
-from serious import DictSchema, FieldSerializer, ValidationError
+from serious import DictModel, FieldSerializer, ValidationError
 from serious.descriptors import FieldDescriptor, describe
 from serious.serialization import BooleanSerializer, StringSerializer, FloatSerializer, \
     IntegerSerializer, EnumSerializer, DictSerializer, AnySerializer, CollectionSerializer, TupleSerializer, \
@@ -125,8 +125,8 @@ class TestEnumLoadValidation:
         assert serializer.load(3.14, ctx) is Constant.PI
 
     def test_non_primitive(self):
-        schema = DictSchema(EventComment)
-        serializer = schema._serializer._field_serializers[0]
+        model = DictModel(EventComment)
+        serializer = model._serializer._field_serializers[0]
         assert type(serializer) is EnumSerializer
         ctx = SerializationContext()
         with pytest.raises(ValidationError):
@@ -181,8 +181,8 @@ class MockDataclass:
 
 
 def test_dataclass_load_validation():
-    schema = DictSchema(MockDataclass)
-    serializer = schema._serializer._field_serializers[0]
+    model = DictModel(MockDataclass)
+    serializer = model._serializer._field_serializers[0]
     assert type(serializer) is OptionalSerializer
     assert type(serializer._serializer) is DataclassSerializer
     ctx = SerializationContext()

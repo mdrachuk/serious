@@ -10,7 +10,7 @@ from serious.utils import class_path
 T = TypeVar('T')
 
 
-class DictSchema(Generic[T]):
+class DictModel(Generic[T]):
 
     def __init__(
             self,
@@ -24,12 +24,12 @@ class DictSchema(Generic[T]):
         """
         @param cls the dataclass type to load/dump.
         @param serializers field serializer classes in an order they will be tested for fitness for each field.
-        @param allow_any `False` to raise if the schema contains fields annotated with `Any`
+        @param allow_any `False` to raise if the model contains fields annotated with `Any`
                 (this includes generics like `List[Any]`, or simply `list`).
         @param allow_missing `False` to raise during load if data is missing the optional fields.
         @param allow_unexpected `False` to raise during load if data contains some unknown fields.
         """
-        self.descriptor = self._describe(cls)
+        self.descriptor = describe(cls)
         self._serializer: SeriousModel = SeriousModel(
             self.descriptor,
             serializers,
@@ -37,12 +37,6 @@ class DictSchema(Generic[T]):
             allow_missing=allow_missing,
             allow_unexpected=allow_unexpected
         )
-
-    @staticmethod
-    def _describe(cls: Type) -> TypeDescriptor:
-        descriptor = describe(cls)
-        _check_is_dataclass(descriptor.cls, 'Serious can only operate on dataclasses.')
-        return descriptor
 
     @property
     def cls(self):
@@ -69,6 +63,6 @@ class DictSchema(Generic[T]):
 
     def __repr__(self):
         path = class_path(type(self))
-        if path == 'serious.dict.api.DictSchema':
-            path = 'serious.DictSchema'
+        if path == 'serious.dict.api.DictModel':
+            path = 'serious.DictModel'
         return f'<{path}[{class_path(self.cls)}] at {hex(id(self))}>'

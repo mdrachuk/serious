@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 
 import pytest
 
-from serious import JsonSchema
+from serious import JsonModel
 from serious.errors import InvalidFieldMetadata
 
 
@@ -35,28 +35,28 @@ class TestDumpAndLoadCheck:
 
     def test_load(self):
         with pytest.raises(InvalidFieldMetadata):
-            JsonSchema(MissingLoad)
+            JsonModel(MissingLoad)
 
     def test_dump(self):
         with pytest.raises(InvalidFieldMetadata):
-            JsonSchema(MissingDump)
+            JsonModel(MissingDump)
 
     def test_valid(self):
-        assert JsonSchema(DefaultSerializer)
-        assert JsonSchema(CustomDateTime)
+        assert JsonModel(DefaultSerializer)
+        assert JsonModel(CustomDateTime)
 
 
 class TestCustomDatetime:
 
     def setup_class(self):
-        self.schema = JsonSchema(CustomDateTime)
+        self.model = JsonModel(CustomDateTime)
         dt = datetime(2018, 11, 17, 16, 55, 28, 456753, tzinfo=timezone.utc)
         ts = dt.timestamp()
         self.json = f'{{"timestamp": {ts}}}'
         self.dataclass = CustomDateTime(timestamp=datetime.fromtimestamp(ts, tz=timezone.utc))
 
     def test_load(self):
-        assert self.schema.load(self.json) == self.dataclass
+        assert self.model.load(self.json) == self.dataclass
 
     def test_dump(self):
-        assert self.schema.dump(self.dataclass) == self.json
+        assert self.model.dump(self.dataclass) == self.json

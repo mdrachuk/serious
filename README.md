@@ -18,7 +18,7 @@ pip install serious
 
 ### Quick Example
 
-Central part of Serious API are different **Schemas**.
+Central part of Serious API are different **Models**.
 
 Given a regular dataclass:
 ```python
@@ -29,18 +29,18 @@ class Person:
     name: str
 ```
 
-Let’s create a `JsonSchema`:  
+Let’s create a `JsonModel`:  
 ```python
-from serious.json import JsonSchema
+from serious.json import JsonModel
     
-schema = JsonSchema(Person)
+model = JsonModel(Person)
 ```
 
 And use its [dump/load methods][doc-serialization]:
 ```python
 person = Person('Albert Einstein')
 
-schema.dump(person) # {"name": "Albert Einstein"}
+model.dump(person) # {"name": "Albert Einstein"}
 ```
 
 #### Validation
@@ -75,8 +75,8 @@ class Person:
 
 
 ### Supported formats:
-- [x] [JSON][doc-json-schema]
-- [x] [Python Dictionaries][doc-dict-schema]
+- [x] [JSON][doc-json-model]
+- [x] [Python Dictionaries][doc-dict-model]
 - [ ] YAML
 - [ ] Form data
 
@@ -105,7 +105,7 @@ class Person:
 
 ```python
 from dataclasses import dataclass
-from serious import JsonSchema, ValidationError
+from serious import JsonModel, ValidationError
 from typing import List
 from enum import Enum
 
@@ -145,10 +145,10 @@ boss_json = """{
     ]
 }"""
 
-schema = JsonSchema(Boss, indent=4)
+model = JsonModel(Boss, indent=4)
 
-assert schema.dump(boss) == boss_json
-assert schema.load(boss_json) == boss
+assert model.dump(boss) == boss_json
+assert model.load(boss_json) == boss
 ```
 
 
@@ -170,7 +170,7 @@ Initially, a fork of [@lidatong/dataclasses-json](https://github.com/lidatong/da
 [time]: https://docs.python.org/3.7/library/datetime.html?highlight=datetime#datetime.time
 [uuid]: https://docs.python.org/3.7/library/uuid.html?highlight=uuid#uuid.UUID
 [doc-types]: TBD
-[doc-json-schema]: TBD
-[doc-dict-schema]: TBD
+[doc-json-model]: TBD
+[doc-dict-model]: TBD
 [doc-serialization]: TBD
 [doc-validation]: TBD

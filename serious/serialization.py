@@ -13,7 +13,7 @@ from uuid import UUID
 from .descriptors import FieldDescriptor, TypeDescriptor, _scan_types
 from .errors import ModelContainsAny, ModelContainsUnion, MissingField, UnexpectedItem, LoadError, DumpError, \
     InvalidFieldMetadata, ValidationError
-from .preconditions import _check_is_instance, _check_present
+from .preconditions import _check_is_instance, _check_present, _check_is_dataclass
 from .types import FrozenList, Timestamp
 from .utils import DataclassType, Primitive
 from .validation import validate
@@ -50,14 +50,14 @@ class FieldSerializer(SerializationStep, ABC):
     A abstract field serializer defining a constructor invoked by serious, [dump](#dump)/[load](#load)
     and class [fits](#fits) methods.
 
-    Field serializers are provided to a serious schema ([JsonSchema][1], [DictSchema][2], [YamlSchema][3]) serializers
+    Field serializers are provided to a serious model ([JsonModel][1], [DictModel][2], [YamlModel][3]) serializers
     parameter in an order in which they will be tested for fitness in.
 
     A clean way to add custom serializers to the defaults is to use the [field_serializers] function.
 
-    [1]: serious.json.api.JsonSchema
-    [2]: serious.dict.api.DictSchema
-    [3]: serious.yaml.api.YamlSchema
+    [1]: serious.json.api.JsonModel
+    [2]: serious.dict.api.DictModel
+    [3]: serious.yaml.api.YamlModel
     """
 
     def __init__(self, field: FieldDescriptor, root_model: SeriousModel):
@@ -70,7 +70,7 @@ class FieldSerializer(SerializationStep, ABC):
         """
         A predicate returning `True` if this serializer fits to load/dump data for the provided field.
 
-        The first fitting `FieldSerializer` from the list provided to the schema will be used.
+        The first fitting `FieldSerializer` from the list provided to the model will be used.
 
         Beware, the `field.type.cls` property can be an instance of a generic alias which will error,
         if using `issubclass` which expects a `type`.
@@ -230,10 +230,10 @@ class EnumSerializer(FieldSerializer):
         name: str
         date: Date
 
-    schema = DictSchema(HistoricEvent)
+    model = DictModel(HistoricEvent)
     dict = {'name': name, 'date': '1961-04-11'}
     dataclass = HistoricEvent(name, Date.GAGARIN)
-    assert schema.load(dict) == dataclass  # True
+    assert model.load(dict) == dataclass  # True
     ```"""
 
     def __init__(self, field: FieldDescriptor, root_model: SeriousModel):
@@ -508,7 +508,7 @@ class DataclassSerializer(FieldSerializer):
 
     def _validate_data(self, value: Primitive, ctx: Context) -> None:
         if not isinstance(value, dict):
-            raise ValidationError(f'Invalid data type. Expecting a mapping matching {self._dc_name} schema')
+            raise ValidationError(f'Invalid data type. Expecting a mapping matching {self._dc_name} model')
 
 
 class UtcTimestampSerializer(FieldSerializer):
@@ -724,6 +724,7 @@ class SeriousModel(Generic[T]):
         @param _registry a mapping of dataclass type descriptors to corresponding serious serializer;
                 used internally to create child serializers.
         """
+        _check_is_dataclass(descriptor.cls, 'Serious can only operate on dataclasses.')
         all_types = _scan_types(descriptor)
         if not allow_any and Any in all_types:
             raise ModelContainsAny(descriptor.cls)

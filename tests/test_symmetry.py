@@ -1,7 +1,7 @@
 from hypothesis import given
 from hypothesis.strategies import frozensets, integers, lists, one_of, sets, tuples
 
-from serious import JsonSchema
+from serious import JsonModel
 from serious.test_utils import assert_symmetric
 from tests.entities import (DataclassWithFrozenSet, DataclassWithList, DataclassWithOptional,
                             DataclassWithSet, DataclassWithTuple)
@@ -20,4 +20,4 @@ dcconss_strategies_conss = [
 @given(one_of(*[strategy_fn(integers()).map(dccons) for dccons, strategy_fn, *_ in dcconss_strategies_conss]))
 @examples(*[dccons(cons(input)) for dccons, _, cons, input in dcconss_strategies_conss])
 def test_generic_encode_and_decode_are_inverses(dc):
-    assert_symmetric(JsonSchema(type(dc)), dc)
+    assert_symmetric(JsonModel(type(dc)), dc)

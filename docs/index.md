@@ -2,7 +2,7 @@
 [![Build Status](https://img.shields.io/azure-devops/build/misha-drachuk/serious/2)](https://dev.azure.com/misha-drachuk/serious/_build/latest?definitionId=1&branchName=master)
 [![Supported Python](https://img.shields.io/pypi/pyversions/serious)](https://pypi.org/project/serious/)
 
-One-- [preferable][zen] --obvious way of doing serialization and validation.
+One-- [preferable][zen] --way of doing serialization and validation.
 
 
 # Get It Now
@@ -12,7 +12,7 @@ Available from [PyPI][pypi]:
 pip install serious
 ```
 
-# Why go serious
+# Why So Serious
 ### Stop pushing dicts around!
 On top of coupling of data with its behaviour, using proper objects adds semantic meaning to your code.
 Good classes manifest the intentions of the system and restrictions imposed on it.
@@ -33,14 +33,14 @@ Stay certain that no alien type will break production. Test correctness with [my
 TBD
 
 ### Easily extensible
-Plug in [custom field types][custom-serializers] and [output formats][custom-schema]. 
+Plug in [custom field types][custom-serializers] and [output formats][custom-model]. 
 Serious is designed for versatility.
 
 ### Made for Humans
 In software libraries the API is all that matters. 
 
 If you find yourself struggling through some aspect of the library — it‘s a failure on our part. 
-Please spend 30 seconds creating a [GitHub issue][issues]. We don’t have any bureaucracy! 
+Please spend 30 seconds creating a [GitHub issue][issues]. No bureaucracy there! 
 
 # Big Example
 
@@ -50,7 +50,7 @@ from dataclasses import dataclass
 from typing import Set, Optional, List
 from datetime import datetime
 
-from serious import JsonSchema, ValidationError
+from serious import JsonModel, ValidationError
 
 @dataclass(frozen=True)
 class User:
@@ -89,9 +89,9 @@ class Chat:
 
 
 
-schema = JsonSchema(Chat)
+model = JsonModel(Chat)
 
-chat = schema.load('''
+chat = model.load('''
 {
   "id": "e0b256d3-d515-4691-9057-649a93dee487",
   "name": "Great Quest",
@@ -141,7 +141,7 @@ print(chat.top_member())  # User(full_name='King Arthur', username='king', phone
 
 # Guide
 1. [Quickstart][quickstart]
-2. [Schemas][schemas]
+2. [Models][models]
 3. [Serialization][serialization]
 4. [Validation][validation]
 5. [Supported Field Types][types]
@@ -152,9 +152,9 @@ print(chat.top_member())  # User(full_name='King Arthur', username='king', phone
 [mypy]: http://www.mypy-lang.org
 [issues]: https://github.com/mdrachuk/serious/issues
 [custom-serializers]: /serialization#custom
-[custom-schema]: /schemas#custom
+[custom-model]: /models#custom-model
 [quickstart]: /quickstart
-[schemas]: /schemas
+[models]: /models
 [serialization]: /serialization
 [validation]: /validation
 [types]: /types

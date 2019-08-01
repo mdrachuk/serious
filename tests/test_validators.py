@@ -3,7 +3,7 @@ from typing import TypeVar, List
 
 import pytest
 
-from serious import ValidationError, DictSchema
+from serious import ValidationError, DictModel
 
 ID = TypeVar('ID')
 M = TypeVar('M')
@@ -28,32 +28,32 @@ class Order:
 class TestSimpleValidation:
 
     def setup_class(self):
-        self.schema = DictSchema(OrderLine)
+        self.model = DictModel(OrderLine)
         self.valid = OrderLine('Nimbus 2000', 1)
         self.valid_d = {'product': 'Nimbus 2000', 'count': 1}
         self.invalid_d = {'product': 'Advanced Potion-Making', 'count': -1}
 
     def test_valid(self):
-        actual = self.schema.load(self.valid_d)
+        actual = self.model.load(self.valid_d)
         assert actual == self.valid
 
     def test_invalid(self):
         with pytest.raises(ValidationError):
-            self.schema.load(self.invalid_d)
+            self.model.load(self.invalid_d)
 
 
 class TestNestedValidation:
 
     def setup_class(self):
-        self.schema = DictSchema(Order)
+        self.model = DictModel(Order)
         self.valid = Order([OrderLine('Nimbus 2000', 1)])
         self.valid_d = {'lines': [{'product': 'Nimbus 2000', 'count': 1}]}
         self.invalid_d = {'lines': [{'product': 'Advanced Potion-Making', 'count': -1}]}
 
     def test_valid(self):
-        actual = self.schema.load(self.valid_d)
+        actual = self.model.load(self.valid_d)
         assert actual == self.valid
 
     def test_invalid(self):
         with pytest.raises(ValidationError):
-            self.schema.load(self.invalid_d)
+            self.model.load(self.invalid_d)

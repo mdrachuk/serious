@@ -1,3 +1,3 @@
-__all__ = ['DictSchema']
+__all__ = ['DictModel']
 
-from .api import DictSchema
+from .api import DictModel

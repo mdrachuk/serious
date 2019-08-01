@@ -5,7 +5,7 @@ site_author: mdrachuk
 site_description: Python dataclasses serialization and validation.
 nav:
   - Quickstart: quickstart.md
-  - Schemas: schemas.md
+  - Models: models.md
   - Serialization: serialization.md
   - Validation: validation.md
   - Supported types: types.md

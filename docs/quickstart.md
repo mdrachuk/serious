@@ -6,29 +6,30 @@ Available from [PyPI][pypi]:
 pip install serious
 ```
 
-# Schemas
-Schemas are the central part of the serious API:
+# Models In Short
+Models are the central part of the serious API:
 
 ```python
-from serious import JsonSchema
+from serious import JsonModel
 
-schema = JsonSchema(Stock)
+model = JsonModel(Stock)
 
-schema.load('{"name": "AAPL", "price": "139.38"}')
+model.load('{"name": "AAPL", "price": "139.38"}')
 ```
 
-You encode, decode and validate the dataclasses via schema methods.
+You encode, decode and validate the dataclasses via model methods.
 
-Schema constructor allows to change the specifics of working with particular dataclass,
-e.g. `JsonSchema(Job, allow_missing=True)` will set `None` to fields marked `Optional` in `Job` dataclass 
+Model constructor allows to change the specifics of working with particular dataclass,
+e.g. `JsonModel(Job, allow_missing=True)` will set `None` to fields marked `Optional` in `Job` dataclass 
 when they are missing from loaded JSON.
 
-There are two types of Schema as of now:
-1. `JsonSchema`: loads/dumps JSON formatted strings
-2. `DictSchema`: loads/dumps `dict` objects 
+There are two types of Model as of now:
 
-For more refer to [schemas docs](/schemas).
-# Basic Serialization
+1. [`JsonModel`](/models#jsonmodel): loads/dumps JSON formatted strings
+2. [`DictModel`](/models#dictmodel): loads/dumps `dict` objects 
+
+For more refer to [models docs](/models).
+# Simple Serialization
 
 Having a dataclass:
 ```python
@@ -39,18 +40,18 @@ class Person:
     name: str
 ```
 
-Create an instance of `JsonSchema`:  
+Create an instance of `JsonModel`:  
 ```python
-from serious.json import JsonSchema
+from serious.json import JsonModel
     
-schema = JsonSchema(Person)
+model = JsonModel(Person)
 ```
 
 And use its [dump/load methods](/serialization#encodedecode):
 ```python
 person = Person('Albert Einstein')
 
-schema.dump(person) # {"name": "Albert Einstein"}
+model.dump(person) # {"name": "Albert Einstein"}
 ```
 
 [More on serialization.](/serialization)
@@ -61,7 +62,7 @@ To validate instance of a dataclass upon load — add a `__validate__` method to
 ```python
 from dataclasses import dataclass
 from typing import List
-from serious import DictSchema, ValidationError
+from serious import DictModel, ValidationError
 
 @dataclass
 class Order:
@@ -71,13 +72,13 @@ class Order:
         if len(self.lines) == 0:
             raise ValidationError('Order cannot be empty')
 
-schema = DictSchema(Order)
+model = DictModel(Order)
 ```
 
-Now passing an invalid object for decoding to this schema will result in `ValidationError`:
+Now passing an invalid object for decoding to this model will result in `ValidationError`:
 ```python
 try:
-    schema.load({'lines': []})
+    model.load({'lines': []})
 except ValidationError as e:
     print(str(e)) # Order cannot be empty
 ```

@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from typing import Dict, Set, List
 
 from config import Config
-from serious.json import JsonSchema
+from serious.json import JsonModel
 
 
 @dataclass
@@ -48,9 +48,9 @@ class VersionExists(Exception):
 
 
 def fetch_package(package_name: str):
-    schema = JsonSchema(PypiPackage, allow_unexpected=True, allow_any=True)
+    model = JsonModel(PypiPackage, allow_unexpected=True, allow_any=True)
     package_json = requests.get(f'https://pypi.org/pypi/{package_name}/json').text
-    return schema.load(package_json)
+    return model.load(package_json)
 
 
 def check_unique(pkg: Config):

@@ -1,3 +1,3 @@
-__all__ = ['JsonSchema']
+__all__ = ['JsonModel']
 
-from .api import JsonSchema
+from .api import JsonModel

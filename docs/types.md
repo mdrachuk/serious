@@ -14,7 +14,7 @@ Any dataclass can be used and it will be serialized to a dict/JSON object.
 Dictionary fields are supported as long as they have string keys: `Dict[str, Any]`. 
 
 Most probably you should not use this dictionary as field type. 
-If the schema for the field is defined use a dataclass instead.
+If the model for the field is defined use a dataclass instead.
 
 ####`FrozenDict`
 `serious.types.FrozenDict` acts like a dictionary that cannot be changed. 
@@ -64,11 +64,11 @@ class Envelope(Generic[M]):
     message: M
 ``` 
 
-A schema can be created directly with Envelope of str:
+A model can be created directly with Envelope of str:
 ```python
-from serious import DictSchema
+from serious import DictModel
 
-schema = DictSchema(Envelope[str])
+model = DictModel(Envelope[str])
 ``` 
 
 Or alternatively, with a subclass:
@@ -79,7 +79,7 @@ class OrderEnvelope(Envelope[Order]):
     description: str
     
 
-order_schema = DictSchema(OrderEnvelope)
+order_model = DictModel(OrderEnvelope)
 ```
 
 ### Decimal

@@ -9,29 +9,29 @@ class Person:
     name: str
 ```
 
-Create an instance of `JsonSchema`:  
+Create an instance of `JsonModel`:  
 ```python
-from serious.json import JsonSchema
+from serious.json import JsonModel
     
-schema = JsonSchema(Person)
+model = JsonModel(Person)
 ```
 
 And use its [dump/load methods](#Encode/Decode):
 ```python
 person = Person('Albert Einstein')
 
-schema.dump(person) # {"name": "Albert Einstein"}
+model.dump(person) # {"name": "Albert Einstein"}
 ```
 
 
 ## Encode/Decode
 
-Both of these operations are performed by schema. Just like when using Python native `json` or `pickle`
+Both of these operations are performed by a model. Just like when using Python native `json` or `pickle`
 to decode the value use `#load(value)` and to encode call `#dump(dataclass)`.
 
 ```python
 from dataclasses import dataclass
-from serious import JsonSchema
+from serious import JsonModel
 
 @dataclass
 class Person:
@@ -40,18 +40,18 @@ class Person:
 lidatong = Person('lidatong')
 mdrachuk = Person('mdrachuk')
 
-schema = JsonSchema(Person)
+model = JsonModel(Person)
 
 # Encoding to JSON
-schema.dump(lidatong)  # '{"name": "lidatong"}'
-schema.dump_many([mdrachuk, lidatong])  # '[{"name": "mdrachuk"}, {"name": "lidatong"}]'
+model.dump(lidatong)  # '{"name": "lidatong"}'
+model.dump_many([mdrachuk, lidatong])  # '[{"name": "mdrachuk"}, {"name": "lidatong"}]'
 
 # Decoding from JSON
-schema.load('{"name": "lidatong"}')  # Person(name='lidatong')
-schema.load_many('[{"name": "mdrachuk"}, {"name": "lidatong"}]')  # [Person(name='mdrachuk'), Person(name='lidatong')]
+model.load('{"name": "lidatong"}')  # Person(name='lidatong')
+model.load_many('[{"name": "mdrachuk"}, {"name": "lidatong"}]')  # [Person(name='mdrachuk'), Person(name='lidatong')]
 ```
 
-Multiple values can be manipulated by corresponding `#load_many(values)` and `#dump_many(dataclasses)` schema methods.
+Multiple values can be manipulated by corresponding `#load_many(values)` and `#dump_many(dataclasses)` model methods.
 
 ### Optionals
 
@@ -63,14 +63,14 @@ corresponding field is missing from the JSON you're decoding.
 
 ```python
 from dataclasses import dataclass
-from serious import JsonSchema
+from serious import JsonModel
  
 @dataclass
 class Student:
     id: int
     name: str = 'student'
 
-JsonSchema(Student, allow_missing=True).load('{"id": 1}')  # Student(id=1, name='student')
+JsonModel(Student, allow_missing=True).load('{"id": 1}')  # Student(id=1, name='student')
 ```
 
 Notice that `name` got default value `student` when it was missing from the JSON.
@@ -82,7 +82,7 @@ If the default is missing
 ```python
 from dataclasses import dataclass
 from typing import Optional
-from serious import JsonSchema
+from serious import JsonModel
 
 
 @dataclass
@@ -90,7 +90,7 @@ class Tutor:
     id: int
     student: Optional[Student]
 
-JsonSchema(Tutor).load('{"id": 1}')  # Tutor(id=1, student=None)
+JsonModel(Tutor).load('{"id": 1}')  # Tutor(id=1, student=None)
 ```
 
 ### Override field load/dump?
