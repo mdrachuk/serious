@@ -60,9 +60,9 @@ class FieldSerializer(SerializationStep, ABC):
     [3]: serious.yaml.api.YamlSchema
     """
 
-    def __init__(self, field: FieldDescriptor, root_serializer: SeriousSerializer):
+    def __init__(self, field: FieldDescriptor, root_model: SeriousModel):
         self._field = field
-        self._root = root_serializer
+        self._root = root_model
 
     @classmethod
     @abstractmethod
@@ -158,8 +158,8 @@ class MetadataSerializer(FieldSerializer):
     ```
     """
 
-    def __init__(self, field: FieldDescriptor, root_serializer: SeriousSerializer):
-        super().__init__(field, root_serializer)
+    def __init__(self, field: FieldDescriptor, root_model: SeriousModel):
+        super().__init__(field, root_model)
         metadata = field.metadata['serious']
         self._load_method = metadata['load']
         self._dump_method = metadata['dump']
@@ -198,8 +198,8 @@ class OptionalSerializer(FieldSerializer):
     ```
     """
 
-    def __init__(self, field: FieldDescriptor, root_serializer: SeriousSerializer):
-        super().__init__(field, root_serializer)
+    def __init__(self, field: FieldDescriptor, root_model: SeriousModel):
+        super().__init__(field, root_model)
         item_descriptor = replace(field, type=replace(field.type, is_optional=False))
         self._serializer = self._root.field_serializer(item_descriptor)
 
@@ -236,8 +236,8 @@ class EnumSerializer(FieldSerializer):
     assert schema.load(dict) == dataclass  # True
     ```"""
 
-    def __init__(self, field: FieldDescriptor, root_serializer: SeriousSerializer):
-        super().__init__(field, root_serializer)
+    def __init__(self, field: FieldDescriptor, root_model: SeriousModel):
+        super().__init__(field, root_model)
         self._serializer = self._value_serializer()
         self._enum_values = {e.value for e in list(self.field.type.cls)}
 
@@ -294,8 +294,8 @@ class AnySerializer(FieldSerializer):
 class DictSerializer(FieldSerializer):
     """Serializer for `dict` fields with `str` keys (Dict[str, Any])."""
 
-    def __init__(self, field: FieldDescriptor, root_serializer: SeriousSerializer):
-        super().__init__(field, root_serializer)
+    def __init__(self, field: FieldDescriptor, root_model: SeriousModel):
+        super().__init__(field, root_model)
         key = field.type.parameters[0]
         assert key.cls is str and not key.is_optional, 'Dict keys must have explicit "str" type (Dict[str, Any]).'
         self._val_sr = self._generic_item_serializer(param_index=1)
@@ -330,8 +330,8 @@ class DictSerializer(FieldSerializer):
 class CollectionSerializer(FieldSerializer):
     """Serializer for lists, sets, and frozensets."""
 
-    def __init__(self, field: FieldDescriptor, root_serializer: SeriousSerializer):
-        super().__init__(field, root_serializer)
+    def __init__(self, field: FieldDescriptor, root_model: SeriousModel):
+        super().__init__(field, root_model)
         item = self._generic_item_serializer(param_index=0)
         self._item_type = item.field.type
         self._load_item = item.load
@@ -368,8 +368,8 @@ class CollectionSerializer(FieldSerializer):
 class TupleSerializer(FieldSerializer):
     """Serializer for Python tuples."""
 
-    def __init__(self, field: FieldDescriptor, root_serializer: SeriousSerializer):
-        super().__init__(field, root_serializer)
+    def __init__(self, field: FieldDescriptor, root_model: SeriousModel):
+        super().__init__(field, root_model)
         self._serializers = [self._generic_item_serializer(param_index=i) for i in self.field.type.parameters]
         self._size = len(self._serializers)
 
@@ -491,9 +491,9 @@ class FloatSerializer(FieldSerializer):
 class DataclassSerializer(FieldSerializer):
     """A serializer for field values that are dataclasses instances."""
 
-    def __init__(self, field: FieldDescriptor, root_serializer: SeriousSerializer):
-        super().__init__(field, root_serializer)
-        self._serializer = self._root.child_serializer(field)
+    def __init__(self, field: FieldDescriptor, root_model: SeriousModel):
+        super().__init__(field, root_model)
+        self._serializer = self._root.child_model(field)
         self._dc_name = self.field.type.cls.__name__
 
     @classmethod
@@ -701,7 +701,7 @@ class DecimalSerializer(FieldSerializer):
 T = TypeVar('T')
 
 
-class SeriousSerializer(Generic[T]):
+class SeriousModel(Generic[T]):
     """A serializer for dataclasses from and to a dict."""
 
     def __init__(
@@ -712,7 +712,7 @@ class SeriousSerializer(Generic[T]):
             allow_any: bool,
             allow_missing: bool,
             allow_unexpected: bool,
-            _registry: Dict[TypeDescriptor, SeriousSerializer] = None
+            _registry: Dict[TypeDescriptor, SeriousModel] = None
     ):
         """
         @param descriptor the descriptor of the dataclass to load/dump.
@@ -742,16 +742,16 @@ class SeriousSerializer(Generic[T]):
         # A shortcut to root dataclass type.
         return self._descriptor.cls
 
-    def child_serializer(self, field: FieldDescriptor) -> SeriousSerializer:
+    def child_model(self, field: FieldDescriptor) -> SeriousModel:
         """
-        Creates a [SeriousSerializer] for dataclass fields nested in the current serializers.
+        Creates a [SeriousModel] for dataclass fields nested in the current serializers.
         The preferences of the nested dataclasses match those of the root one.
         """
 
         descriptor = field.type
         if descriptor in self._serializer_registry:
             return self._serializer_registry[descriptor]
-        new_serializer: SeriousSerializer = SeriousSerializer(
+        new_model: SeriousModel = SeriousModel(
             descriptor=descriptor,
             serializers=self._serializers,
             allow_missing=self._allow_missing,
@@ -759,8 +759,8 @@ class SeriousSerializer(Generic[T]):
             allow_any=self._allow_any,
             _registry=self._serializer_registry
         )
-        self._serializer_registry[descriptor] = new_serializer
-        return new_serializer
+        self._serializer_registry[descriptor] = new_model
+        return new_model
 
     def load(self, data: Mapping, _ctx: Optional[Context] = None) -> T:
         """Loads dataclass from a dictionary or other mapping. """

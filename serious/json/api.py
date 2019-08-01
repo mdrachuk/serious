@@ -5,7 +5,7 @@ from typing import Optional, TypeVar, Type, Generic, List, MutableMapping, Colle
 
 from serious.descriptors import describe, TypeDescriptor
 from serious.preconditions import _check_is_instance, _check_is_dataclass
-from serious.serialization import FieldSerializer, field_serializers, SeriousSerializer
+from serious.serialization import FieldSerializer, field_serializers, SeriousModel
 from serious.utils import class_path
 from .preconditions import _check_that_loading_an_object, _check_that_loading_a_list
 
@@ -27,14 +27,14 @@ class JsonSchema(Generic[T]):
         """
         @param cls the dataclass type to load/dump.
         @param serializers field serializer classes in an order they will be tested for fitness for each field.
-        @param allow_any `False` to raise if the model contains fields annotated with `Any`
+        @param allow_any `False` to raise if the schema contains fields annotated with `Any`
                 (this includes generics like `List[Any]`, or simply `list`).
         @param allow_missing `False` to raise during load if data is missing the optional fields.
         @param allow_unexpected `False` to raise during load if data contains some unknown fields.
         @param indent number of spaces JSON output will be indented by; `None` for most compact representation.
         """
         self.descriptor = self._describe(cls)
-        self._serializer: SeriousSerializer = SeriousSerializer(
+        self._serializer: SeriousModel = SeriousModel(
             self.descriptor,
             serializers,
             allow_any=allow_any,

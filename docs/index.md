@@ -2,7 +2,7 @@
 [![Build Status](https://img.shields.io/azure-devops/build/misha-drachuk/serious/2)](https://dev.azure.com/misha-drachuk/serious/_build/latest?definitionId=1&branchName=master)
 [![Supported Python](https://img.shields.io/pypi/pyversions/serious)](https://pypi.org/project/serious/)
 
-One-- [preferable][zen] --way of doing serialization and validation.
+One-- [preferable][zen] --obvious way of doing serialization and validation.
 
 
 # Get It Now
@@ -42,7 +42,7 @@ In software libraries the API is all that matters.
 If you find yourself struggling through some aspect of the library — it‘s a failure on our part. 
 Please spend 30 seconds creating a [GitHub issue][issues]. We don’t have any bureaucracy! 
 
-# Quick Example
+# Big Example
 
 ```python
 from uuid import UUID
@@ -160,4 +160,4 @@ print(chat.top_member())  # User(full_name='King Arthur', username='king', phone
 [types]: /types
 [examples]: /examples
 [implementation]: /implementation
-[zen]: /zen
+[zen]: /zen (PEP20)
