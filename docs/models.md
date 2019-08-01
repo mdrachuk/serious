@@ -194,8 +194,8 @@ class JsonModel(Generic[T]):
             allow_unexpected: bool = False,
             indent: Optional[int] = None,
     ):
-        self.descriptor = describe(cls)
-        self._serializer: SeriousModel = SeriousModel(
+        self._descriptor = describe(cls)
+        self._serializer = SeriousModel(
             self.descriptor,
             serializers,
             allow_any=allow_any,
@@ -206,7 +206,7 @@ class JsonModel(Generic[T]):
 
     @property
     def cls(self):
-        return self.descriptor.cls
+        return self._descriptor.cls
 
     def load(self, json_: str) -> T:
         data: MutableMapping = self._load_from_str(json_)

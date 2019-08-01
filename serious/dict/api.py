@@ -29,9 +29,9 @@ class DictModel(Generic[T]):
         @param allow_missing `False` to raise during load if data is missing the optional fields.
         @param allow_unexpected `False` to raise during load if data contains some unknown fields.
         """
-        self.descriptor = describe(cls)
+        self._descriptor = describe(cls)
         self._serializer: SeriousModel = SeriousModel(
-            self.descriptor,
+            self._descriptor,
             serializers,
             allow_any=allow_any,
             allow_missing=allow_missing,
@@ -40,7 +40,7 @@ class DictModel(Generic[T]):
 
     @property
     def cls(self):
-        return self.descriptor.cls
+        return self._descriptor.cls
 
     def load(self, data: Dict[str, Any]) -> T:
         return self._from_dict(data)

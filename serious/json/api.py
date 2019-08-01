@@ -33,9 +33,9 @@ class JsonModel(Generic[T]):
         @param allow_unexpected `False` to raise during load if data contains some unknown fields.
         @param indent number of spaces JSON output will be indented by; `None` for most compact representation.
         """
-        self.descriptor = describe(cls)
+        self._descriptor = describe(cls)
         self._serializer: SeriousModel = SeriousModel(
-            self.descriptor,
+            self._descriptor,
             serializers,
             allow_any=allow_any,
             allow_missing=allow_missing,
@@ -45,7 +45,7 @@ class JsonModel(Generic[T]):
 
     @property
     def cls(self):
-        return self.descriptor.cls
+        return self._descriptor.cls
 
     def load(self, json_: str) -> T:
         data: MutableMapping = self._load_from_str(json_)
