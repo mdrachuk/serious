@@ -115,14 +115,15 @@ class TestEmail:
             address.label = 'resistance'
 
     def test_validation(self):
-        assert validate(Email(vader)) is None
-        assert validate(Email(luke)) is None
-        assert validate(Email('admin@example.international')) is None
-        assert validate(Email('голова@2024.укр')) is None
-        assert validate(Email('голова+пора@2024.укр')) is None
         with pytest.raises(ValidationError):
             validate(Email('голова++пора@2024.укр'))
         with pytest.raises(ValidationError):
             validate(Email('admin+example+example@example.org'))
         with pytest.raises(ValidationError):
             validate(Email('+admin@example.org'))
+        # Do not raise errors
+        validate(Email(vader))
+        validate(Email(luke))
+        validate(Email('admin@example.international'))
+        validate(Email('голова@2024.укр'))
+        validate(Email('голова+пора@2024.укр'))

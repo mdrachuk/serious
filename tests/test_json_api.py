@@ -5,8 +5,8 @@ from uuid import UUID
 import pytest
 
 from serious import FieldSerializer, field_serializers, JsonModel, LoadError
-from serious.serialization import Context
 from serious.descriptors import FieldDescriptor
+from serious.serialization import Loading, Dumping
 from serious.utils import Primitive
 from tests.entities import (DataclassWithDataclass, DataclassWithOptional,
                             DataclassWithOptionalNested, DataclassWithUuid)
@@ -62,10 +62,10 @@ class TestDefaults:
 
 class UserIdSerializer(FieldSerializer):
 
-    def _dump(self, value: Any, ctx: Context) -> Primitive:
+    def dump(self, value: Any, ctx: Dumping) -> Primitive:
         return value.value
 
-    def _load(self, value: Primitive, ctx: Context) -> Any:
+    def load(self, value: Primitive, ctx: Loading) -> Any:
         return UserId(value)
 
     @classmethod

@@ -7,7 +7,8 @@ from dataclasses import replace, fields, MISSING, Field
 from datetime import datetime, date, time
 from decimal import Decimal
 from enum import Enum
-from typing import Any, Type, Iterable, Optional, Pattern, List, TypeVar, Generic, Dict, Union, Mapping, Iterator
+from typing import Any, Type, Iterable, Optional, Pattern, List, TypeVar, Generic, Dict, Union, Mapping, Iterator, \
+    Generator, Tuple
 from uuid import UUID
 
 from .descriptors import FieldDescriptor, TypeDescriptor, _scan_types
@@ -19,13 +20,13 @@ from .utils import DataclassType, Primitive
 from .validation import validate
 
 
-class SerializationContext:
+class Serialization(ABC):
 
     def __init__(self):
         self._steps: List[SerializationStep] = list()
 
     @contextmanager
-    def enter(self, step: SerializationStep):
+    def _entering(self, step: SerializationStep):
         self._steps.append(step)
         yield
         self._steps.pop()
@@ -35,7 +36,17 @@ class SerializationContext:
         return FrozenList(self._steps)
 
 
-Context = SerializationContext
+class Loading(Serialization):
+    def run(self, serializer: Serializer, value: Any):
+        with self._entering(serializer):
+            result = serializer.load(value, self)
+            return validate(result)
+
+
+class Dumping(Serialization):
+    def run(self, serializer: Serializer, o: Any):
+        with self._entering(serializer):
+            return serializer.dump(o, self)
 
 
 class SerializationStep(ABC):
@@ -45,7 +56,18 @@ class SerializationStep(ABC):
         raise NotImplementedError
 
 
-class FieldSerializer(SerializationStep, ABC):
+class Serializer(SerializationStep, ABC):
+
+    @abstractmethod
+    def load(self, value: Primitive, ctx: Loading) -> Any:
+        raise NotImplementedError
+
+    @abstractmethod
+    def dump(self, value: Any, ctx: Dumping) -> Primitive:
+        raise NotImplementedError
+
+
+class FieldSerializer(Serializer, ABC):
     """
     A abstract field serializer defining a constructor invoked by serious, [dump](#dump)/[load](#load)
     and class [fits](#fits) methods.
@@ -63,6 +85,7 @@ class FieldSerializer(SerializationStep, ABC):
     def __init__(self, field: FieldDescriptor, root_model: SeriousModel):
         self._field = field
         self._root = root_model
+        self._step_name = f'.{field.name}'
 
     @classmethod
     @abstractmethod
@@ -75,36 +98,15 @@ class FieldSerializer(SerializationStep, ABC):
         Beware, the `field.type.cls` property can be an instance of a generic alias which will error,
         if using `issubclass` which expects a `type`.
         """
-        raise NotImplementedError(f"Serializer {cls} must implement the `#fits(FieldDescriptor)` method.")
+        raise NotImplementedError(f"FieldSerializer {cls} must implement the `#fits(FieldDescriptor)` method.")
 
     def step_name(self):
-        return f'.{self.field.name}'
+        return self._step_name
 
     @property
     def field(self) -> FieldDescriptor:
         """Read access to the field processed by the serializer."""
         return self._field
-
-    def load(self, value: Primitive, ctx: Context) -> Any:
-        self._validate_data(value, ctx)
-        result = self._load(value, ctx)
-        validate(result)
-        return result
-
-    def dump(self, value: Any, ctx: Context) -> Primitive:
-        return self._dump(value, ctx)
-
-    @abstractmethod
-    def _load(self, value: Primitive, ctx: Context) -> Any:
-        raise NotImplementedError
-
-    @abstractmethod
-    def _dump(self, value: Any, ctx: Context) -> Primitive:
-        raise NotImplementedError
-
-    def _validate_data(self, value: Primitive, ctx: Context) -> None:
-        """Override to validate data on load."""
-        pass
 
     def _generic_item_serializer(self, *, param_index: int) -> FieldSerializer:
         new_type = self.field.type.parameters[param_index]
@@ -158,16 +160,16 @@ class MetadataSerializer(FieldSerializer):
     ```
     """
 
-    def __init__(self, field: FieldDescriptor, root_model: SeriousModel):
-        super().__init__(field, root_model)
-        metadata = field.metadata['serious']
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        metadata = self.field.metadata['serious']
         self._load_method = metadata['load']
         self._dump_method = metadata['dump']
 
-    def _load(self, value: Primitive, ctx: Context) -> Any:
+    def load(self, value: Primitive, ctx: Loading) -> Any:
         return self._load_method(value, ctx)
 
-    def _dump(self, value: Any, ctx: Context) -> Primitive:
+    def dump(self, value: Any, ctx: Dumping) -> Primitive:
         return self._dump_method(value, ctx)
 
     @classmethod
@@ -198,15 +200,15 @@ class OptionalSerializer(FieldSerializer):
     ```
     """
 
-    def __init__(self, field: FieldDescriptor, root_model: SeriousModel):
-        super().__init__(field, root_model)
-        item_descriptor = replace(field, type=replace(field.type, is_optional=False))
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        item_descriptor = replace(self.field, type=replace(self.field.type, is_optional=False))
         self._serializer = self._root.field_serializer(item_descriptor)
 
-    def _load(self, value: Primitive, ctx: Context) -> Any:
+    def load(self, value: Primitive, ctx: Loading) -> Any:
         return None if value is None else self._serializer.load(value, ctx)
 
-    def _dump(self, value: Any, ctx: Context) -> Primitive:
+    def dump(self, value: Any, ctx: Dumping) -> Primitive:
         return None if value is None else self._serializer.dump(value, ctx)
 
     @classmethod
@@ -236,8 +238,8 @@ class EnumSerializer(FieldSerializer):
     assert model.load(dict) == dataclass  # True
     ```"""
 
-    def __init__(self, field: FieldDescriptor, root_model: SeriousModel):
-        super().__init__(field, root_model)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self._serializer = self._value_serializer()
         self._enum_values = {e.value for e in list(self.field.type.cls)}
 
@@ -252,7 +254,9 @@ class EnumSerializer(FieldSerializer):
         item_descriptor = replace(self.field, type=self.field.type.describe(bases[0]))
         return self._root.field_serializer(item_descriptor)
 
-    def _load(self, value: Primitive, ctx: Context) -> Any:
+    def load(self, value: Primitive, ctx: Loading) -> Any:
+        if self._serializer is None and value not in self._enum_values:
+            raise ValidationError(f'"{value}" is not part of the {self.field.type.cls} enum')
         enum_cls = self.field.type.cls
         if self._serializer is not None:
             loaded_value = self._serializer.load(value, ctx)
@@ -262,11 +266,7 @@ class EnumSerializer(FieldSerializer):
                 raise ValidationError(f'"{value}" is not part of the {enum_cls} enum') from e
         return enum_cls(value)
 
-    def _validate_data(self, data: Primitive, ctx: Context) -> None:
-        if self._serializer is None and data not in self._enum_values:
-            raise ValidationError(f'"{data}" is not part of the {self.field.type.cls} enum')
-
-    def _dump(self, value: Any, ctx: Context) -> Primitive:
+    def dump(self, value: Any, ctx: Dumping) -> Primitive:
         enum_value = value.value
         if self._serializer is not None:
             return self._serializer.dump(enum_value, ctx)
@@ -280,10 +280,10 @@ class EnumSerializer(FieldSerializer):
 class AnySerializer(FieldSerializer):
     """Serializer for [Any] fields."""
 
-    def _load(self, value: Primitive, ctx: Context) -> Any:
+    def load(self, value: Primitive, ctx: Loading) -> Any:
         return value
 
-    def _dump(self, value: Any, ctx: Context) -> Primitive:
+    def dump(self, value: Any, ctx: Dumping) -> Primitive:
         return value
 
     @classmethod
@@ -294,48 +294,41 @@ class AnySerializer(FieldSerializer):
 class DictSerializer(FieldSerializer):
     """Serializer for `dict` fields with `str` keys (Dict[str, Any])."""
 
-    def __init__(self, field: FieldDescriptor, root_model: SeriousModel):
-        super().__init__(field, root_model)
-        key = field.type.parameters[0]
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        key = self.field.type.parameters[0]
         assert key.cls is str and not key.is_optional, 'Dict keys must have explicit "str" type (Dict[str, Any]).'
-        self._val_sr = self._generic_item_serializer(param_index=1)
+        self._serializer = self._generic_item_serializer(param_index=1)
 
     @classmethod
     def fits(cls, field: FieldDescriptor) -> bool:
         return issubclass(field.type.cls, dict)
 
-    def _load(self, data: Primitive, ctx: Context) -> Any:
+    def load(self, data: Primitive, ctx: Loading) -> Any:
+        if not isinstance(data, dict):
+            raise ValidationError('Expecting a dictionary')
+        serializer = Item(self._serializer)
         items = {
-            key: self.load_value(key, value, ctx)
+            key: ctx.run(serializer(key), value)
             for key, value in data.items()  # type: ignore # data is always a dict
         }
         return self.field.type.cls(items)
 
-    def _dump(self, d: Any, ctx: Context) -> Primitive:
-        return {key: self.dump_value(key, value, ctx) for key, value in d.items()}
-
-    def load_value(self, key, value: Primitive, ctx: Context) -> Any:
-        with ctx.enter(CollectionStep(key)):
-            return self._val_sr.load(value, ctx)
-
-    def dump_value(self, key, value: Any, ctx: Context) -> Primitive:
-        with ctx.enter(CollectionStep(key)):
-            return self._val_sr.dump(value, ctx)
-
-    def _validate_data(self, value: Primitive, ctx: Context) -> None:
-        if not isinstance(value, dict):
-            raise ValidationError('Expecting a dictionary')
+    def dump(self, data: Any, ctx: Dumping) -> Primitive:
+        serializer = Item(self._serializer)
+        return {
+            key: ctx.run(serializer(key), value)
+            for key, value in data.items()  # type: ignore # data is always a dict
+        }
 
 
 class CollectionSerializer(FieldSerializer):
     """Serializer for lists, sets, and frozensets."""
 
-    def __init__(self, field: FieldDescriptor, root_model: SeriousModel):
-        super().__init__(field, root_model)
-        item = self._generic_item_serializer(param_index=0)
-        self._item_type = item.field.type
-        self._load_item = item.load
-        self._dump_item = item.dump
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._serializer = self._generic_item_serializer(param_index=0)
+        self._item_type = self._serializer.field.type
 
     @classmethod
     def fits(cls, field: FieldDescriptor) -> bool:
@@ -345,31 +338,23 @@ class CollectionSerializer(FieldSerializer):
                     and len(type_.parameters) == 2
                     and type_.parameters[1] is Ellipsis))
 
-    def _load(self, value: Primitive, ctx: Context) -> Any:
-        items = [self.load_item(i, item, ctx) for i, item in enumerate(value)]  # type: ignore # value is a collection
-        return self.field.type.cls(items)
-
-    def _dump(self, value: Any, ctx: Context) -> Primitive:
-        return [self.dump_item(i, item, ctx) for i, item in enumerate(value)]
-
-    def load_item(self, i: int, value: Primitive, ctx: Context):
-        with ctx.enter(CollectionStep(i)):
-            return self._load_item(value, ctx)
-
-    def dump_item(self, i: int, value: Any, ctx: Context):
-        with ctx.enter(CollectionStep(i)):
-            return self._dump_item(value, ctx)
-
-    def _validate_data(self, value: Primitive, ctx: Context) -> None:
+    def load(self, value: Primitive, ctx: Loading) -> Any:
         if not isinstance(value, list):
             raise ValidationError(f'Expecting a list of {self._item_type.cls} values')
+        serializer = Item(self._serializer)
+        items = [ctx.run(serializer(i), item) for i, item in enumerate(value)]  # type: ignore # value is a collection
+        return self.field.type.cls(items)
+
+    def dump(self, value: Any, ctx: Dumping) -> Primitive:
+        serializer = Item(self._serializer)
+        return [ctx.run(serializer(i), item) for i, item in enumerate(value)]  # type: ignore # value is a collection
 
 
 class TupleSerializer(FieldSerializer):
     """Serializer for Python tuples."""
 
-    def __init__(self, field: FieldDescriptor, root_model: SeriousModel):
-        super().__init__(field, root_model)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self._serializers = [self._generic_item_serializer(param_index=i) for i in self.field.type.parameters]
         self._size = len(self._serializers)
 
@@ -377,36 +362,56 @@ class TupleSerializer(FieldSerializer):
     def fits(cls, field: FieldDescriptor) -> bool:
         return issubclass(field.type.cls, tuple)
 
-    def _load(self, value: Primitive, ctx: Context) -> Any:
-        items = [self.load_item(i, item, ctx) for i, item in enumerate(value)]  # type: ignore # value is a collection
-        return self.field.type.cls(items)
-
-    def _dump(self, value: Any, ctx: Context) -> Primitive:
-        return [self.dump_item(i, item, ctx) for i, item in enumerate(value)]
-
-    def load_item(self, i: int, value: Primitive, ctx: Context):
-        with ctx.enter(CollectionStep(i)):
-            return self._serializers[i].load(value, ctx)
-
-    def dump_item(self, i: int, value: Any, ctx: Context):
-        with ctx.enter(CollectionStep(i)):
-            return self._serializers[i].dump(value, ctx)
-
-    def _validate_data(self, value: Primitive, ctx: Context) -> None:
+    def load(self, value: Primitive, ctx: Loading) -> Any:
         if not isinstance(value, list):
             raise ValidationError(f'Expecting a list of {self._size} tuple values')
         if len(value) != self._size:
             raise ValidationError(f'Expecting a list of {self._size} tuple values')  # type: ignore
+        serializer = TupleItem(self._serializers)
+        items = [ctx.run(serializer(i), item) for i, item in enumerate(value)]  # type: ignore # value is a collection
+        return self.field.type.cls(items)
+
+    def dump(self, value: Any, ctx: Dumping) -> Primitive:
+        serializer = TupleItem(self._serializers)
+        return [ctx.run(serializer(i), item) for i, item in enumerate(value)]  # type: ignore # value is a collection
 
 
-class CollectionStep(SerializationStep):
-    # TODO:mdrachuk:2019-07-24: do not create new instance for each item
+class Item(Serializer):
 
-    def __init__(self, index: int):
-        self.index = index
+    def __init__(self, serializer):
+        self._serializer = serializer
+
+    def __call__(self, key: Union[str, int]) -> Item:
+        self._key = key
+        return self
 
     def step_name(self) -> str:
-        return f'[{self.index}]'
+        return f'[{self._key}]'
+
+    def load(self, value: Primitive, ctx: Loading) -> Any:
+        return self._serializer.load(value, ctx)
+
+    def dump(self, value: Any, ctx: Dumping) -> Primitive:
+        return self._serializer.dump(value, ctx)
+
+
+class TupleItem(Serializer):
+
+    def __init__(self, serializers: List[Serializer]):
+        self._serializers = serializers
+
+    def __call__(self, index: int) -> Item:
+        self._index = index
+        return self
+
+    def step_name(self) -> str:
+        return f'[{self._index}]'
+
+    def load(self, value: Primitive, ctx: Loading) -> Any:
+        return self._serializers[self._index].load(value, ctx)
+
+    def dump(self, value: Any, ctx: Dumping) -> Primitive:
+        return self._serializers[self._index].dump(value, ctx)
 
 
 class BooleanSerializer(FieldSerializer):
@@ -416,15 +421,13 @@ class BooleanSerializer(FieldSerializer):
     def fits(cls, field: FieldDescriptor) -> bool:
         return issubclass(field.type.cls, bool)
 
-    def _load(self, value: Primitive, ctx: Context) -> Any:
-        return self.field.type.cls(value)
-
-    def _dump(self, value: Any, ctx: Context) -> Primitive:
-        return bool(value)
-
-    def _validate_data(self, value: Primitive, ctx: Context) -> None:
+    def load(self, value: Primitive, ctx: Loading) -> Any:
         if not isinstance(value, bool):
             raise ValidationError(f"Invalid data type. Expecting boolean")
+        return self.field.type.cls(value)
+
+    def dump(self, value: Any, ctx: Dumping) -> Primitive:
+        return bool(value)
 
 
 class StringSerializer(FieldSerializer):
@@ -434,15 +437,13 @@ class StringSerializer(FieldSerializer):
     def fits(cls, field: FieldDescriptor) -> bool:
         return issubclass(field.type.cls, str)
 
-    def _load(self, value: Primitive, ctx: Context) -> Any:
-        return self.field.type.cls(value)
-
-    def _dump(self, value: Any, ctx: Context) -> Primitive:
-        return str(value)
-
-    def _validate_data(self, value: Primitive, ctx: Context) -> None:
+    def load(self, value: Primitive, ctx: Loading) -> Any:
         if not isinstance(value, str):
             raise ValidationError('Invalid data type. Expecting a string')
+        return self.field.type.cls(value)
+
+    def dump(self, value: Any, ctx: Dumping) -> Primitive:
+        return str(value)
 
 
 class IntegerSerializer(FieldSerializer):
@@ -455,15 +456,13 @@ class IntegerSerializer(FieldSerializer):
         type_ = field.type.cls
         return issubclass(type_, int) and not issubclass(type_, bool)
 
-    def _load(self, value: Primitive, ctx: Context) -> Any:
-        return self.field.type.cls(value)
-
-    def _dump(self, value: Any, ctx: Context) -> Primitive:
-        return int(value)
-
-    def _validate_data(self, value: Primitive, ctx: Context) -> None:
+    def load(self, value: Primitive, ctx: Loading) -> Any:
         if not isinstance(value, int) or isinstance(value, bool):
             raise ValidationError('Invalid data type. Expecting an integer')
+        return self.field.type.cls(value)
+
+    def dump(self, value: Any, ctx: Dumping) -> Primitive:
+        return int(value)
 
 
 class FloatSerializer(FieldSerializer):
@@ -476,39 +475,35 @@ class FloatSerializer(FieldSerializer):
         type_ = field.type.cls
         return issubclass(type_, float)
 
-    def _load(self, value: Primitive, ctx: Context) -> Any:
-        return self.field.type.cls(value)
-
-    def _dump(self, value: Any, ctx: Context) -> Primitive:
-        return float(value)
-
-    def _validate_data(self, value: Primitive, ctx: Context) -> None:
+    def load(self, value: Primitive, ctx: Loading) -> Any:
         is_numeric = isinstance(value, (int, float)) and not isinstance(value, bool)
         if not is_numeric:
             raise ValidationError('Invalid data type. Expecting a numeric value')
+        return self.field.type.cls(value)
+
+    def dump(self, value: Any, ctx: Dumping) -> Primitive:
+        return float(value)
 
 
 class DataclassSerializer(FieldSerializer):
     """A serializer for field values that are dataclasses instances."""
 
-    def __init__(self, field: FieldDescriptor, root_model: SeriousModel):
-        super().__init__(field, root_model)
-        self._serializer = self._root.child_model(field)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._serializer = self._root.child_model(self.field)
         self._dc_name = self.field.type.cls.__name__
 
     @classmethod
     def fits(cls, field: FieldDescriptor) -> bool:
         return field.type.is_dataclass
 
-    def _load(self, value: Primitive, ctx: Context) -> Any:
-        return self._serializer.load(value, ctx)  # type: ignore # type: ignore # value always a mapping
-
-    def _dump(self, value: Any, ctx: Context) -> Primitive:
-        return self._serializer.dump(value, ctx)
-
-    def _validate_data(self, value: Primitive, ctx: Context) -> None:
+    def load(self, value: Primitive, ctx: Loading) -> Any:
         if not isinstance(value, dict):
             raise ValidationError(f'Invalid data type. Expecting a mapping matching {self._dc_name} model')
+        return self._serializer.load(value, ctx)  # type: ignore # type: ignore # value always a mapping
+
+    def dump(self, value: Any, ctx: Dumping) -> Primitive:
+        return self._serializer.dump(value, ctx)
 
 
 class UtcTimestampSerializer(FieldSerializer):
@@ -531,15 +526,13 @@ class UtcTimestampSerializer(FieldSerializer):
     def fits(cls, field: FieldDescriptor) -> bool:
         return issubclass(field.type.cls, Timestamp)
 
-    def _load(self, value: Primitive, ctx: Context) -> Any:
-        return Timestamp(value)  # type: ignore # expecting float
-
-    def _dump(self, value: Any, ctx: Context) -> Primitive:
-        return value.value
-
-    def _validate_data(self, value: Primitive, ctx: Context) -> None:
+    def load(self, value: Primitive, ctx: Loading) -> Any:
         if not isinstance(value, (int, float)):
             raise ValidationError('Invalid data type. Expecting int or float')
+        return Timestamp(value)  # type: ignore # expecting float
+
+    def dump(self, value: Any, ctx: Dumping) -> Primitive:
+        return value.value
 
 
 _iso_date_time_re = re.compile(  # https://stackoverflow.com/a/43931246/8677389
@@ -567,21 +560,19 @@ class DateTimeIsoSerializer(FieldSerializer):
     [1]: https://en.wikipedia.org/wiki/ISO_8601
     """
 
-    def _load(self, value: Primitive, ctx: Context) -> Any:
+    def load(self, value: Primitive, ctx: Loading) -> Any:
+        if not isinstance(value, str):
+            raise ValidationError('Invalid data type. Expecting a string')
+        if not _matches(_iso_date_time_re, value):
+            raise ValidationError('Invalid date/time format. Check the ISO 8601 specification')
         return datetime.fromisoformat(value)  # type: ignore # expecting datetime
 
-    def _dump(self, value: Any, ctx: Context) -> Primitive:
+    def dump(self, value: Any, ctx: Dumping) -> Primitive:
         return datetime.isoformat(value)
 
     @classmethod
     def fits(cls, field: FieldDescriptor) -> bool:
         return issubclass(field.type.cls, datetime)
-
-    def _validate_data(self, value: Primitive, ctx: Context) -> None:
-        if not isinstance(value, str):
-            raise ValidationError('Invalid data type. Expecting a string')
-        if not _matches(_iso_date_time_re, value):
-            raise ValidationError('Invalid date/time format. Check the ISO 8601 specification')
 
 
 class DateIsoSerializer(FieldSerializer):
@@ -601,21 +592,19 @@ class DateIsoSerializer(FieldSerializer):
     [1]: https://en.wikipedia.org/wiki/ISO_8601
     """
 
-    def _load(self, value: Primitive, ctx: Context) -> Any:
+    def load(self, value: Primitive, ctx: Loading) -> Any:
+        if not isinstance(value, str):
+            raise ValidationError('Invalid data type. Expecting a string')
+        if not _matches(_iso_date_re, value):
+            raise ValidationError('Invalid date format. Check the ISO 8601 specification')
         return date.fromisoformat(value)  # type: ignore # expecting datetime
 
-    def _dump(self, value: Any, ctx: Context) -> Primitive:
+    def dump(self, value: Any, ctx: Dumping) -> Primitive:
         return date.isoformat(value)
 
     @classmethod
     def fits(cls, field: FieldDescriptor) -> bool:
         return issubclass(field.type.cls, date)
-
-    def _validate_data(self, value: Primitive, ctx: Context) -> None:
-        if not isinstance(value, str):
-            raise ValidationError('Invalid data type. Expecting a string')
-        if not _matches(_iso_date_re, value):
-            raise ValidationError('Invalid date format. Check the ISO 8601 specification')
 
 
 class TimeIsoSerializer(FieldSerializer):
@@ -635,21 +624,19 @@ class TimeIsoSerializer(FieldSerializer):
     [1]: https://en.wikipedia.org/wiki/ISO_8601
     """
 
-    def _load(self, value: Primitive, ctx: Context) -> Any:
+    def load(self, value: Primitive, ctx: Loading) -> Any:
+        if not isinstance(value, str):
+            raise ValidationError('Invalid data type. Expecting a string')
+        if not _matches(_iso_time_re, value):
+            raise ValidationError('Invalid time format. Check the ISO 8601 specification')
         return time.fromisoformat(value)  # type: ignore # expecting datetime
 
-    def _dump(self, value: Any, ctx: Context) -> Primitive:
+    def dump(self, value: Any, ctx: Dumping) -> Primitive:
         return time.isoformat(value)
 
     @classmethod
     def fits(cls, field: FieldDescriptor) -> bool:
         return issubclass(field.type.cls, time)
-
-    def _validate_data(self, value: Primitive, ctx: Context) -> None:
-        if not isinstance(value, str):
-            raise ValidationError('Invalid data type. Expecting a string')
-        if not _matches(_iso_time_re, value):
-            raise ValidationError('Invalid time format. Check the ISO 8601 specification')
 
 
 _uuid4_hex_re = re.compile(r'\A([a-f0-9]{8}-?[a-f0-9]{4}-?4[a-f0-9]{3}-?[89ab][a-f0-9]{3}-?[a-f0-9]{12})\Z', re.I)
@@ -658,21 +645,19 @@ _uuid4_hex_re = re.compile(r'\A([a-f0-9]{8}-?[a-f0-9]{4}-?4[a-f0-9]{3}-?[89ab][a
 class UuidSerializer(FieldSerializer):
     """A [UUID] value serializer to `str`."""
 
-    def _load(self, value: Primitive, ctx: Context) -> Any:
+    def load(self, value: Primitive, ctx: Loading) -> Any:
+        if not isinstance(value, str):
+            raise ValidationError('Invalid data type. Expecting a string')
+        if not _matches(_uuid4_hex_re, value):
+            raise ValidationError('Invalid UUID4 hex format')
         return UUID(value)  # type: ignore # expecting str
 
-    def _dump(self, value: Any, ctx: Context) -> Primitive:
+    def dump(self, value: Any, ctx: Dumping) -> Primitive:
         return str(value)
 
     @classmethod
     def fits(cls, field: FieldDescriptor) -> bool:
         return issubclass(field.type.cls, UUID)
-
-    def _validate_data(self, value: Primitive, ctx: Context) -> None:
-        if not isinstance(value, str):
-            raise ValidationError('Invalid data type. Expecting a string')
-        if not _matches(_uuid4_hex_re, value):
-            raise ValidationError('Invalid UUID4 hex format')
 
 
 _decimal_re = re.compile(r'\A\d+?\.\d+?\Z')
@@ -681,21 +666,19 @@ _decimal_re = re.compile(r'\A\d+?\.\d+?\Z')
 class DecimalSerializer(FieldSerializer):
     """[Decimal] value serializer to `str`."""
 
-    def _load(self, value: Primitive, ctx: Context) -> Any:
+    def load(self, value: Primitive, ctx: Loading) -> Any:
+        if not isinstance(value, str):
+            raise ValidationError('Invalid data type. Expecting a string')
+        if not _matches(_decimal_re, value):
+            raise ValidationError('Invalid decimal format. A number with a "." as a decimal separator is expected')
         return Decimal(value)  # type: ignore # expecting str
 
-    def _dump(self, value: Any, ctx: Context) -> Primitive:
+    def dump(self, value: Any, ctx: Dumping) -> Primitive:
         return str(value)
 
     @classmethod
     def fits(cls, field: FieldDescriptor) -> bool:
         return issubclass(field.type.cls, Decimal)
-
-    def _validate_data(self, value: Primitive, ctx: Context) -> None:
-        if not isinstance(value, str):
-            raise ValidationError('Invalid data type. Expecting a string')
-        if not _matches(_decimal_re, value):
-            raise ValidationError('Invalid decimal format. A number with a "." as a decimal separator is expected')
 
 
 T = TypeVar('T')
@@ -763,12 +746,12 @@ class SeriousModel(Generic[T]):
         self._serializer_registry[descriptor] = new_model
         return new_model
 
-    def load(self, data: Mapping, _ctx: Optional[Context] = None) -> T:
+    def load(self, data: Mapping, _ctx: Optional[Loading] = None) -> T:
         """Loads dataclass from a dictionary or other mapping. """
 
         _check_is_instance(data, Mapping, f'Invalid data for {self._cls}')  # type: ignore
         root = _ctx is None
-        ctx: Context = Context() if root else _ctx  # type: ignore # checked above
+        loading: Loading = Loading() if root else _ctx  # type: ignore # checked above
         mut_data = dict(data)
         if self._allow_missing:
             for field in _fields_missing_from(mut_data, self._cls):
@@ -779,9 +762,9 @@ class SeriousModel(Generic[T]):
             _check_for_unexpected(self._cls, mut_data)
         try:
             init_kwargs = {
-                serializer.field.name: self._load_field(mut_data, serializer, ctx)
-                for serializer in self._field_serializers
-                if serializer.field.name in mut_data
+                field: loading.run(serializer, mut_data[field])
+                for field, serializer in _named(self._field_serializers)
+                if field in mut_data
             }
             result = self._cls(**init_kwargs)  # type: ignore # not an object
             validate(result)
@@ -791,36 +774,24 @@ class SeriousModel(Generic[T]):
                 if isinstance(e, ValidationError):
                     raise
                 else:
-                    raise LoadError(self._cls, ctx.stack, data) from e
+                    raise LoadError(self._cls, loading.stack, data) from e
             raise
 
-    @staticmethod
-    def _load_field(data: Mapping[str, Any], serializer: FieldSerializer, ctx: Context) -> Any:
-        field = serializer.field
-        with ctx.enter(serializer):
-            return serializer.load(data[field.name], ctx)
-
-    def dump(self, o: T, _ctx: Optional[Context] = None) -> Dict[str, Any]:
+    def dump(self, o: T, _ctx: Optional[Dumping] = None) -> Dict[str, Any]:
         """Dumps a dataclass object to a dictionary."""
 
         _check_is_instance(o, self._cls)
         root = _ctx is None
-        ctx: Context = Context() if root else _ctx  # type: ignore # checked above
+        dumping: Dumping = Dumping() if root else _ctx  # type: ignore # checked above
         try:
             return {
-                serializer.field.name: self._dump_field(o, serializer, ctx)
-                for serializer in self._field_serializers
+                field: dumping.run(serializer, getattr(o, field))
+                for field, serializer in _named(self._field_serializers)
             }
         except Exception as e:
             if root:
-                raise DumpError(o, ctx.stack) from e
+                raise DumpError(o, dumping.stack) from e
             raise
-
-    @staticmethod
-    def _dump_field(o: Any, serializer: FieldSerializer, ctx: Context) -> Any:
-        field = serializer.field
-        with ctx.enter(serializer):
-            return serializer.dump(getattr(o, field.name), ctx)
 
     def field_serializer(self, field: FieldDescriptor) -> FieldSerializer:
         """
@@ -836,6 +807,10 @@ class SeriousModel(Generic[T]):
         sr_generator = (serializer(field, self) for serializer in self._serializers if serializer.fits(field))
         optional_sr = next(sr_generator, None)
         return optional_sr
+
+
+def _named(serializers: List[FieldSerializer]) -> Generator[Tuple[str, FieldSerializer]]:
+    return ((s.field.name, s) for s in serializers)
 
 
 def _check_for_missing(cls: DataclassType, data: Mapping) -> None:
