@@ -159,7 +159,7 @@ Dinosaur(name='Yoshi', height=None)
     <dt><code>def dump(self, o: Any) -> Dict[str, Any]</code></dt>
     <dd>Dumps an instance of dataclass to a Python dictionary.</dd>
     <dt><code>def load_many(self, items: Iterable[Dict[str, Any]]) -> List[T]:</code></dt>
-    <dd>Loads multiple <code>T</code> dataclass objects a list of dictionaries.</dd>
+    <dd>Loads multiple <code>T</code> dataclass objects from a list of dictionaries.</dd>
     <dt><code>def dump_many(self, items: Collection[T]) -> List[Dict[str, Any]]:</code></dt>
     <dd>Dumps a list/set/collection of objects to an list of primitive dictionaries.</dd>
 </dl>
