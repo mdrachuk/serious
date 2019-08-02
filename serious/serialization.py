@@ -8,7 +8,7 @@ from datetime import datetime, date, time
 from decimal import Decimal
 from enum import Enum
 from typing import Any, Type, Iterable, Optional, Pattern, List, TypeVar, Generic, Dict, Union, Mapping, Iterator, \
-    Generator, Tuple
+    Tuple
 from uuid import UUID
 
 from .descriptors import FieldDescriptor, TypeDescriptor, _scan_types
@@ -35,16 +35,20 @@ class Serialization(ABC):
     def stack(self) -> FrozenList[SerializationStep]:
         return FrozenList(self._steps)
 
+    @abstractmethod
+    def run(self, serializer: Serializer, value: Any) -> Any:
+        raise NotImplementedError
+
 
 class Loading(Serialization):
-    def run(self, serializer: Serializer, value: Any):
+    def run(self, serializer: Serializer, value: Any) -> Any:
         with self._entering(serializer):
             result = serializer.load(value, self)
             return validate(result)
 
 
 class Dumping(Serialization):
-    def run(self, serializer: Serializer, o: Any):
+    def run(self, serializer: Serializer, o: Any) -> Any:
         with self._entering(serializer):
             return serializer.dump(o, self)
 
@@ -307,18 +311,17 @@ class DictSerializer(FieldSerializer):
     def load(self, data: Primitive, ctx: Loading) -> Any:
         if not isinstance(data, dict):
             raise ValidationError('Expecting a dictionary')
-        serializer = Item(self._serializer)
-        items = {
-            key: ctx.run(serializer(key), value)
-            for key, value in data.items()  # type: ignore # data is always a dict
-        }
+        items = self._serialize_dict(data, ctx)
         return self.field.type.cls(items)
 
     def dump(self, data: Any, ctx: Dumping) -> Primitive:
-        serializer = Item(self._serializer)
+        return self._serialize_dict(data, ctx)
+
+    def _serialize_dict(self, data: Any, ctx: Serialization) -> Dict[str, Any]:
+        serializer = Alias(self._serializer)
         return {
             key: ctx.run(serializer(key), value)
-            for key, value in data.items()  # type: ignore # data is always a dict
+            for key, value in data.items()
         }
 
 
@@ -341,13 +344,15 @@ class CollectionSerializer(FieldSerializer):
     def load(self, value: Primitive, ctx: Loading) -> Any:
         if not isinstance(value, list):
             raise ValidationError(f'Expecting a list of {self._item_type.cls} values')
-        serializer = Item(self._serializer)
-        items = [ctx.run(serializer(i), item) for i, item in enumerate(value)]  # type: ignore # value is a collection
+        items = self._serialize_collection(value, ctx)
         return self.field.type.cls(items)
 
     def dump(self, value: Any, ctx: Dumping) -> Primitive:
-        serializer = Item(self._serializer)
-        return [ctx.run(serializer(i), item) for i, item in enumerate(value)]  # type: ignore # value is a collection
+        return self._serialize_collection(value, ctx)
+
+    def _serialize_collection(self, data: Any, ctx: Serialization) -> List[Any]:
+        serializer = Alias(self._serializer)
+        return [ctx.run(serializer(i), item) for i, item in enumerate(data)]
 
 
 class TupleSerializer(FieldSerializer):
@@ -367,21 +372,24 @@ class TupleSerializer(FieldSerializer):
             raise ValidationError(f'Expecting a list of {self._size} tuple values')
         if len(value) != self._size:
             raise ValidationError(f'Expecting a list of {self._size} tuple values')  # type: ignore
-        serializer = TupleItem(self._serializers)
-        items = [ctx.run(serializer(i), item) for i, item in enumerate(value)]  # type: ignore # value is a collection
+        items = self._serialize_tuple(value, ctx)
         return self.field.type.cls(items)
 
     def dump(self, value: Any, ctx: Dumping) -> Primitive:
-        serializer = TupleItem(self._serializers)
-        return [ctx.run(serializer(i), item) for i, item in enumerate(value)]  # type: ignore # value is a collection
+        return self._serialize_tuple(value, ctx)
+
+    def _serialize_tuple(self, data: Any, ctx: Serialization) -> List[Any]:
+        serializer = OrdinalAlias(self._serializers)
+        return [ctx.run(serializer(i), item) for i, item in enumerate(data)]
 
 
-class Item(Serializer):
+class Alias(Serializer):
+    """Serializes values using the constructor parameter, but step name via calling instance as a function."""
 
     def __init__(self, serializer):
         self._serializer = serializer
 
-    def __call__(self, key: Union[str, int]) -> Item:
+    def __call__(self, key: Union[str, int]) -> Alias:
         self._key = key
         return self
 
@@ -395,12 +403,15 @@ class Item(Serializer):
         return self._serializer.dump(value, ctx)
 
 
-class TupleItem(Serializer):
+class OrdinalAlias(Serializer):
+    """Serializes values using the provided serializer at the currently set index.
+    The index is set via calling instance as a function.
+    Step name is changed to match the index."""
 
     def __init__(self, serializers: List[Serializer]):
         self._serializers = serializers
 
-    def __call__(self, index: int) -> Item:
+    def __call__(self, index: int) -> OrdinalAlias:
         self._index = index
         return self
 
@@ -809,7 +820,7 @@ class SeriousModel(Generic[T]):
         return optional_sr
 
 
-def _named(serializers: List[FieldSerializer]) -> Generator[Tuple[str, FieldSerializer]]:
+def _named(serializers: List[FieldSerializer]) -> Iterator[Tuple[str, FieldSerializer]]:
     return ((s.field.name, s) for s in serializers)
 
 
