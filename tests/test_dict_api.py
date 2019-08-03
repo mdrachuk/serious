@@ -4,9 +4,9 @@ from uuid import UUID
 
 import pytest
 
-from serious import DictModel, LoadError, FieldSerializer, field_serializers
+from serious import DictModel, LoadError
 from serious.descriptors import FieldDescriptor
-from serious.serialization import Loading, Dumping
+from serious.serialization import Loading, Dumping, FieldSerializer, field_serializers
 from serious.utils import Primitive
 from tests.entities import (DataclassWithDataclass, DataclassWithOptional,
                             DataclassWithOptionalNested, DataclassWithUuid)

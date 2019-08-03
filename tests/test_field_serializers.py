@@ -7,9 +7,9 @@ from uuid import UUID
 
 import pytest
 
-from serious import DictModel, FieldSerializer, ValidationError
+from serious import DictModel, ValidationError
 from serious.descriptors import FieldDescriptor, describe
-from serious.serialization import BooleanSerializer, StringSerializer, FloatSerializer, \
+from serious.serialization import FieldSerializer, BooleanSerializer, StringSerializer, FloatSerializer, \
     IntegerSerializer, EnumSerializer, DictSerializer, AnySerializer, CollectionSerializer, TupleSerializer, \
     DataclassSerializer, UtcTimestampSerializer, OptionalSerializer, DateTimeIsoSerializer, DateIsoSerializer, \
     TimeIsoSerializer, UuidSerializer, DecimalSerializer, Loading, Dumping
