@@ -18,7 +18,7 @@ pip install serious
 
 ### Quick Example
 
-Central part of Serious API are different **Models**.
+Central part of Serious API are different [**Models**][doc-models].
 
 Given a regular dataclass:
 ```python
@@ -170,6 +170,7 @@ Initially, a fork of [@lidatong/dataclasses-json](https://github.com/lidatong/da
 [time]: https://docs.python.org/3.7/library/datetime.html?highlight=datetime#datetime.time
 [uuid]: https://docs.python.org/3.7/library/uuid.html?highlight=uuid#uuid.UUID
 [doc-types]: TBD
+[doc-models]: TBD
 [doc-json-model]: TBD
 [doc-dict-model]: TBD
 [doc-serialization]: TBD
