@@ -119,13 +119,13 @@ class FieldSerializer(Serializer, ABC):
         return item_serializer
 
 
-def field_serializers(custom: Iterable[Type[FieldSerializer]] = tuple()) -> FrozenList[Type[FieldSerializer]]:
+def field_serializers(custom: Iterable[Type[FieldSerializer]] = tuple()) -> Tuple[Type[FieldSerializer], ...]:
     """
-    A tuple of field serializers in a default order.
-    Provide a custom list of field serializers to include them after metadata and optional serializers.
+    Returns a tuple of field serializers in a default order.
+    Provide a list of custom field serializers to include them after metadata and optional serializers.
     The order in the collection defines the order in which the serializers will be tested for fitness for each field.
     """
-    return FrozenList([
+    return tuple([
         MetadataSerializer,
         OptionalSerializer,
         AnySerializer,
