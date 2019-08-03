@@ -319,10 +319,7 @@ class DictSerializer(FieldSerializer):
 
     def _serialize_dict(self, data: Any, ctx: Serialization) -> Dict[str, Any]:
         serializer = Alias(self._serializer)
-        return {
-            key: ctx.run(serializer(key), value)
-            for key, value in data.items()
-        }
+        return {key: ctx.run(serializer(key), value) for key, value in data.items()}
 
 
 class CollectionSerializer(FieldSerializer):
@@ -547,11 +544,19 @@ class UtcTimestampSerializer(FieldSerializer):
 
 
 _iso_date_time_re = re.compile(  # https://stackoverflow.com/a/43931246/8677389
-    r'\A(?:\d{4}-(?:(?:0[1-9]|1[0-2])-(?:0[1-9]|1\d|2[0-8])|(?:0[13-9]|1[0-2])-(?:29|30)|(?:0[13578]|1[02])-31)|(?:[1-9]\d(?:0[48]|[2468][048]|[13579][26])|(?:[2468][048]|[13579][26])00)-02-29)T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d{1,9})?(?:Z|[+-][01]\d:[0-5]\d)?\Z')
+    r'\A(?:\d{4}-(?:(?:0[1-9]|1[0-2])-(?:0[1-9]|1\d|2[0-8])|(?:0[13-9]|1[0-2])-(?:29|30)|(?:0[13578]|1[02])-31)'
+    r'|(?:[1-9]\d(?:0[48]|[2468][048]|[13579][26])|(?:[2468][048]|[13579][26])00)-02-29)'
+    r'T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d{1,9})?(?:Z|[+-][01]\d:[0-5]\d)?\Z'
+)
 _iso_date_re = re.compile(
-    r'\A(?P<year>[0-9]{4})(?P<hyphen>-?)(?P<month>1[0-2]|0[1-9])(?P=hyphen)(?P<day>3[01]|0[1-9]|[12][0-9])\Z')
+    r'\A(?P<year>[0-9]{4})(?P<hyphen>-?)(?P<month>1[0-2]|0[1-9])(?P=hyphen)(?P<day>3[01]|0[1-9]|[12][0-9])\Z'
+)
 _iso_time_re = re.compile(
-    r'\A(?P<hour>2[0-3]|[01][0-9]):?(?P<minute>[0-5][0-9]):?(?P<second>[0-5][0-9])(?P<timezone>Z|[+-](?:2[0-3]|[01][0-9])(?::?(?:[0-5][0-9]))?)?\Z')
+    r'\A(?P<hour>2[0-3]|[01][0-9])'
+    r':?(?P<minute>[0-5][0-9])'
+    r':?(?P<second>[0-5][0-9])'
+    r'(?P<timezone>Z|[+-](?:2[0-3]|[01][0-9])(?::?(?:[0-5][0-9]))?)?\Z'
+)
 
 
 class DateTimeIsoSerializer(FieldSerializer):
