@@ -38,7 +38,7 @@ _Type:_ `Iterable[Type[FieldSerializer]]`
 _Default:_ `serious.serialization.field_serializers()` 
 
 An ordered collection of field serializer classes. Pass a non-default collection to override how particular fields are
-serialized by the model. For more refer to [custom serialization guide](/serialization#custom)
+serialized by the model. For more refer to [custom serialization guide][custom-serialization].
 
 ### `allow_any`
 _Type:_ `bool`
@@ -176,10 +176,10 @@ A root dataclass `TypeDescriptor` is created by `serious.descriptors.describe` f
 
 Having a descriptor in place, `serious.serialization.SeriousModel` may be helpful. 
 `SeriousModel` forms a tree of field serializers executed upon load and dump operations.
-It does so from the provided descriptor and a list of all possible [field serializers](/serialization#custom-serializers).
+It does so from the provided descriptor and a list of all possible [field serializers][field-serializers].
 
-Check [implementation](/implementation) for more details on how existing code base works 
-and [check sources for JsonSchema][json-schema-src] for a comprehensive example:
+Check [implementation][implementation] for more details on how existing code base works 
+and [check sources for JsonModel][json-model-src] for a comprehensive example:
 
 ```python
 class JsonModel(Generic[T]):
@@ -247,7 +247,11 @@ class JsonModel(Generic[T]):
                           separators=None,
                           default=None,
                           sort_keys=False)
+
 ```
 
-[json-schema-src]: https://github.com/mdrachuk/serious/blob/master/serious/json/api.py 
+[json-model-src]: https://github.com/mdrachuk/serious/blob/master/serious/json/api.py 
+[field-serializers]: /serialization#field-serializers 
+[implementation]: /implementation 
+[custom-serialization]: /serialization#custom-field-serializers 
    
