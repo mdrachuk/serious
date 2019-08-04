@@ -161,48 +161,6 @@ Loaded: Area(points=[<Point x:1.00 y:1.00>, <Point x:2.00 y:3.00>, <Point x:4.00
 Dumped: {'points': [['1.11', '2.54'], ['3.10', '2.54'], ['2.10', '0.00']]}
 ```
 
-
-
-## Optionals
-
-By default, any fields in your dataclass that use `default` or 
-`default_factory` will have the values filled with the provided default, if the
-corresponding field is missing from the JSON you're decoding.
-
-**Decode JSON with missing field**
-
-```python
-from dataclasses import dataclass
-from serious import JsonModel
- 
-@dataclass
-class Student:
-    id: int
-    name: str = 'student'
-
-JsonModel(Student, allow_missing=True).load('{"id": 1}')  # Student(id=1, name='student')
-```
-
-Notice that `name` got default value `student` when it was missing from the JSON.
-
-If the default is missing 
-
-**Decode optional field without default**
-
-```python
-from dataclasses import dataclass
-from typing import Optional
-from serious import JsonModel
-
-
-@dataclass
-class Tutor:
-    id: int
-    student: Optional[Student]
-
-JsonModel(Tutor).load('{"id": 1}')  # Tutor(id=1, student=None)
-```
-
 ## Overriding Specific Field
 Using dataclass field metadata field serializer can be overrided.  
 
