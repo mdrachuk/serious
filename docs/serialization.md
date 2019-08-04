@@ -82,7 +82,6 @@ You can provide a list of custom field serializers to include them after metadat
 ```python
 def field_serializers(custom: Iterable[Type[FieldSerializer]] = tuple()) -> Tuple[Type[FieldSerializer], ...]:
     return tuple([
-        MetadataSerializer,
         OptionalSerializer,
         AnySerializer,
         EnumSerializer,
@@ -160,26 +159,6 @@ Loaded: Area(points=[<Point x:1.00 y:1.00>, <Point x:2.00 y:3.00>, <Point x:4.00
 >>> print('Dumped:', model.dump(Area([Point(1.11, 2.54), Point(3.1, 2.54), Point(2.1, 0)])))
 Dumped: {'points': [['1.11', '2.54'], ['3.10', '2.54'], ['2.10', '0.00']]}
 ```
-
-## Overriding Specific Field
-Using dataclass field metadata field serializer can be overrided.  
-
-For example, you might want to load/dump `datetime` objects using timestamp format rather than [ISO strings][iso8601].
-
-```python
-from dataclasses import dataclass, field
-from datetime import datetime
-from datetime import timezone
-
-@dataclass
-class Post:
-    created_at: datetime = field(
-        metadata={'serious': {
-            'dump': lambda x, ctx: int(x.timestamp()),
-            'load': lambda x, ctx: datetime.fromtimestamp(x, timezone.utc),
-        }})
-```
-
 
 
 [py-json]: https://docs.python.org/3.7/library/json.html#json.load

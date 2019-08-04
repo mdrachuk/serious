@@ -5,7 +5,7 @@ from uuid import UUID
 import pytest
 
 from serious import JsonModel, LoadError
-from serious.descriptors import FieldDescriptor
+from serious.descriptors import TypeDescriptor
 from serious.serialization import Loading, Dumping, FieldSerializer, field_serializers
 from serious.utils import Primitive
 from tests.entities import (DataclassWithDataclass, DataclassWithOptional,
@@ -69,8 +69,8 @@ class UserIdSerializer(FieldSerializer):
         return UserId(value)
 
     @classmethod
-    def fits(cls, field: FieldDescriptor) -> bool:
-        return field.type.cls is UserId
+    def fits(cls, desc: TypeDescriptor) -> bool:
+        return desc.cls is UserId
 
 
 class TestSerializer:

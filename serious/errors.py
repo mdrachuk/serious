@@ -5,8 +5,7 @@ from typing import Type, Mapping, Collection
 from .utils import DataclassType, class_path, TYPING
 
 if TYPING:  # To reference in typings
-    from .serialization import SerializationStep
-    from .descriptors import FieldDescriptor
+    from serious.serialization import SerializationStep
 
 
 class SerializationError(Exception):
@@ -19,7 +18,7 @@ class SerializationError(Exception):
     def __parse_stack(serializer_stack: Collection[SerializationStep]) -> str:
         if len(serializer_stack) == 0:
             return ''
-        return ''.join(step.step_name() for step in serializer_stack)[1:]
+        return ''.join(step.name for step in serializer_stack)[1:]
 
     @property
     def message(self):
@@ -103,17 +102,6 @@ class ModelContainsUnion(ModelError):
     def message(self):
         return (f'{class_path(self.cls)} contains fields annotated as Union. '
                 f'Union types are not supported by serious.')
-
-
-class InvalidFieldMetadata(ModelError):
-    def __init__(self, field: FieldDescriptor, metadata_error: str):
-        super().__init__(field.type.cls)
-        self.field = field
-        self.metadata_error = metadata_error
-
-    @property
-    def message(self):
-        return f'{class_path(self.cls)}.{self.field.name} contains invalid serious metadata. {self.metadata_error}.'
 
 
 class ValidationError(Exception):

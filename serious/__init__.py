@@ -1,3 +1,4 @@
+from .descriptors import TypeDescriptor, describe
 from .dict import DictModel
 from .errors import ModelError, ValidationError, LoadError, DumpError
 from .json import JsonModel
