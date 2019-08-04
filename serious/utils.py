@@ -1,8 +1,7 @@
-from typing import Mapping, Any, Union, List, Type
+from typing import Any, Type
 
 TYPING = False
 DataclassType = Any
-Primitive = Union[Mapping, List, str, int, float, bool, None]
 
 
 def class_path(cls: Type) -> str:

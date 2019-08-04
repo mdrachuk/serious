@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional, Any
+from typing import Optional
 from uuid import UUID
 
 import pytest
@@ -7,9 +7,7 @@ import pytest
 from serious import DictModel, LoadError
 from serious.descriptors import TypeDescriptor
 from serious.serialization import Loading, Dumping, FieldSerializer, field_serializers
-from serious.utils import Primitive
-from tests.entities import (DataclassWithDataclass, DataclassWithOptional,
-                            DataclassWithOptionalNested, DataclassWithUuid)
+from tests.entities import DataclassWithDataclass, DataclassWithOptional, DataclassWithOptionalNested, DataclassWithUuid
 
 
 @dataclass
@@ -25,13 +23,13 @@ class User:
     age: Optional[int]
 
 
-class UserIdSerializer(FieldSerializer):
+class UserIdSerializer(FieldSerializer[UserId, int]):
 
-    def dump(self, value: Any, ctx: Dumping) -> Primitive:
-        return value.value
-
-    def load(self, value: Primitive, ctx: Loading) -> Any:
+    def load(self, value: int, ctx: Loading) -> UserId:
         return UserId(value)
+
+    def dump(self, value: UserId, ctx: Dumping) -> int:
+        return value.value
 
     @classmethod
     def fits(cls, desc: TypeDescriptor) -> bool:

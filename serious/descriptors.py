@@ -133,7 +133,7 @@ class DescriptorTypes:
 _empty_descriptor_types = DescriptorTypes([])
 
 
-def _scan_types(desc: TypeDescriptor) -> DescriptorTypes:
+def scan_types(desc: TypeDescriptor) -> DescriptorTypes:
     return DescriptorTypes.scan(desc)
 
 

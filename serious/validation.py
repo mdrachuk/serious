@@ -1,10 +1,10 @@
-from typing import TypeVar, Any
+from typing import TypeVar
 
-A = TypeVar('A')
+T = TypeVar('T')
 
 
-def validate(obj: Any) -> None:
+def validate(obj: T) -> T:
     if hasattr(obj, '__validate__'):
-        result = obj.__validate__()
+        result = obj.__validate__()  # type: ignore # method presence checked above
         assert result is None, 'Validators should not return anything. Raise ValidationError instead'
     return obj
