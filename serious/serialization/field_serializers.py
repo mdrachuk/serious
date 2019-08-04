@@ -11,8 +11,9 @@ from uuid import UUID
 from serious.descriptors import TypeDescriptor
 from serious.errors import ValidationError
 from serious.types import Timestamp
-from .core import Serialization, Serializer, Loading, Dumping
-from .model import FieldSerializer
+from .process import Serialization, Loading, Dumping
+from serious.serialization.serializer import Serializer
+from .serializer import FieldSerializer
 
 
 class OptionalSerializer(FieldSerializer[Optional[Any], Optional[Any]]):

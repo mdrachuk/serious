@@ -2,7 +2,6 @@ from __future__ import annotations
 
 __all__ = [
     'SeriousModel',
-    'FieldSerializer',
     'Loading',
     'Dumping',
     'OptionalSerializer',
@@ -25,12 +24,13 @@ __all__ = [
 ]
 from typing import Iterable, Type, Tuple
 
-from .core import Loading, Dumping, SerializationStep
+from .process import Loading, Dumping, SerializationStep
 from .field_serializers import OptionalSerializer, AnySerializer, EnumSerializer, DictSerializer, CollectionSerializer, \
     TupleSerializer, StringSerializer, BooleanSerializer, IntegerSerializer, FloatSerializer, DataclassSerializer, \
     UtcTimestampSerializer, DateTimeIsoSerializer, DateIsoSerializer, TimeIsoSerializer, UuidSerializer, \
     DecimalSerializer
-from .model import SeriousModel, FieldSerializer
+from .model import SeriousModel
+from serious.serialization.serializer import FieldSerializer
 
 
 def field_serializers(custom: Iterable[Type[FieldSerializer]] = tuple()) -> Tuple[Type[FieldSerializer], ...]:

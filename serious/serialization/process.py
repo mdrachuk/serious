@@ -2,24 +2,14 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
-from typing import List, Any, NamedTuple, TypeVar, Generic
+from typing import List, Any, NamedTuple, TypeVar
 
+from serious.serialization.serializer import Serializer
 from serious.types import FrozenList
 from serious.validation import validate
 
 M = TypeVar('M')  # Python model value
 S = TypeVar('S')  # Serialized value
-
-
-class Serializer(Generic[M, S], ABC):
-
-    @abstractmethod
-    def load(self, value: S, ctx: Loading) -> M:
-        raise NotImplementedError
-
-    @abstractmethod
-    def dump(self, value: M, ctx: Dumping) -> S:
-        raise NotImplementedError
 
 
 class Serialization(ABC):
