@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from typing import Type, Mapping, Collection
+from typing import Type, Mapping, Collection, TYPE_CHECKING
 
-from .utils import DataclassType, class_path, TYPING
+from .utils import DataclassType, class_path
 
-if TYPING:  # To reference in typings
+if TYPE_CHECKING:  # To reference in typings
     from serious.serialization import SerializationStep
 
 

@@ -1,13 +1,12 @@
 from abc import ABC, abstractmethod
-from typing import TypeVar, Generic
+from typing import TypeVar, Generic, TYPE_CHECKING
 
 from serious.descriptors import TypeDescriptor
-from serious.utils import TYPING
 
 M = TypeVar('M')  # Python model value
 S = TypeVar('S')  # Serialized value
 
-if TYPING:
+if TYPE_CHECKING:
     from .model import SeriousModel
     from .process import Loading, Dumping
 
@@ -53,4 +52,4 @@ class FieldSerializer(Serializer[S, M], ABC):
         Beware, the `field.type.cls` property can be an instance of a generic alias which will error,
         if using `issubclass` which expects a `type`.
         """
-        raise NotImplementedError(f"FieldSerializer {cls} must implement the `#fits(FieldDescriptor)` method.")
+        raise NotImplementedError

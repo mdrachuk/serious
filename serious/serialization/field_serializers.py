@@ -5,15 +5,42 @@ from dataclasses import replace
 from datetime import datetime, date, time
 from decimal import Decimal
 from enum import Enum
-from typing import Any, Optional, Dict, List, Union, Pattern
+from typing import Any, Optional, Dict, List, Union, Pattern, Iterable, Type, Tuple
 from uuid import UUID
 
 from serious.descriptors import TypeDescriptor
 from serious.errors import ValidationError
 from serious.types import Timestamp
 from .process import Serialization, Loading, Dumping
-from serious.serialization.serializer import Serializer
-from .serializer import FieldSerializer
+from .serializer import FieldSerializer, Serializer
+
+
+def field_serializers(custom: Iterable[Type[FieldSerializer]] = tuple()) -> Tuple[Type[FieldSerializer], ...]:
+    """
+    Returns a frozen collection of field serializers in the default order.
+    You can provide a list of custom field serializers to include them along with default serializers.
+    The order in the collection defines the order in which the serializers will be tested for fitness for each field.
+    """
+    return tuple([
+        OptionalSerializer,
+        AnySerializer,
+        EnumSerializer,
+        *custom,
+        DictSerializer,
+        CollectionSerializer,
+        TupleSerializer,
+        StringSerializer,
+        BooleanSerializer,
+        IntegerSerializer,
+        FloatSerializer,
+        DataclassSerializer,
+        UtcTimestampSerializer,
+        DateTimeIsoSerializer,
+        DateIsoSerializer,
+        TimeIsoSerializer,
+        UuidSerializer,
+        DecimalSerializer,
+    ])
 
 
 class OptionalSerializer(FieldSerializer[Optional[Any], Optional[Any]]):

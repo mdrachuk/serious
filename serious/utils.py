@@ -1,6 +1,5 @@
 from typing import Any, Type
 
-TYPING = False
 DataclassType = Any
 
 

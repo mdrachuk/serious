@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from typing import TypeVar, Type, Generic, List, Collection, Dict, Iterable, Any, Mapping
 
-from serious.descriptors import describe, TypeDescriptor
-from serious.preconditions import _check_is_instance, _check_is_dataclass
-from serious.serialization import FieldSerializer, field_serializers, SeriousModel
+from serious.descriptors import describe
+from serious.preconditions import _check_is_instance
+from serious.serialization import FieldSerializer, SeriousModel, field_serializers
 from serious.utils import class_path
 
 T = TypeVar('T')

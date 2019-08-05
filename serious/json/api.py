@@ -5,7 +5,7 @@ from typing import Optional, TypeVar, Type, Generic, List, MutableMapping, Colle
 
 from serious.descriptors import describe
 from serious.preconditions import _check_is_instance
-from serious.serialization import FieldSerializer, field_serializers, SeriousModel
+from serious.serialization import FieldSerializer, SeriousModel, field_serializers
 from serious.utils import class_path
 from .preconditions import _check_that_loading_an_object, _check_that_loading_a_list
 
