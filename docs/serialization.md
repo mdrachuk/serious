@@ -108,10 +108,10 @@ def field_serializers(custom: Iterable[Type[FieldSerializer]] = tuple()) -> Tupl
 ```python
 from dataclasses import dataclass
 from decimal import Decimal
-from typing import Union, List, Any
+from typing import Union, List
 
-from serious import DictModel, ValidationError
-from serious.serialization import FieldSerializer, FieldDescriptor, Loading, Dumping, Primitive, field_serializers
+from serious import DictModel, ValidationError, TypeDescriptor
+from serious.serialization import FieldSerializer, field_serializers
 
 Number = Union[int, float, Decimal]
 
@@ -131,16 +131,20 @@ class Point:
 class PointSerializer(FieldSerializer):
 
     @classmethod
-    def fits(cls, field: FieldDescriptor) -> bool:
-        return issubclass(field.type.cls, Point)
+    def fits(cls, desc: TypeDescriptor) -> bool:
+        return issubclass(desc.cls, Point)
 
-    def load(self, value: Primitive, ctx: Loading) -> Any:
-        if not isinstance(value, list) or len(value) != 2:
-            raise ValidationError('Point should be an array with x and y coordinates')
+    def load(self, value, ctx):
+        self._validate_raw(value)
         return Point(Decimal(value[0]), Decimal(value[1]))
 
-    def dump(self, value: Any, ctx: Dumping) -> Primitive:
+    def dump(self, value, ctx):
         return [str(value.x), str(value.y)]
+    
+    @staticmethod
+    def _validate_raw(value):
+        if not isinstance(value, list) or len(value) != 2:
+            raise ValidationError('Point should be an array with x and y coordinates')
 
 
 @dataclass
