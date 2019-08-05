@@ -2,11 +2,11 @@
 [![Build Status](https://img.shields.io/azure-devops/build/misha-drachuk/serious/2)](https://dev.azure.com/misha-drachuk/serious/_build/latest?definitionId=1&branchName=master)
 [![Supported Python](https://img.shields.io/pypi/pyversions/serious)](https://pypi.org/project/serious/)
 
-One-- [preferable][zen] --way of doing serialization and validation.
+One-- [preferable][zen] --way for object serialization and validation.
 
 
 # Get It Now
-Available from [PyPI][pypi]:
+Available on [PyPI][pypi]:
 
 ```shell
 pip install serious
@@ -19,11 +19,11 @@ Good classes manifest the intentions of the system and restrictions imposed on i
 APIs get cleaner, changes become simpler to implement, and maintenance turns out cheaper.
 
 ### No declarative validation
-All of validation for an object happens in objects `__validate__` method by raising `ValidationError`.
+All of object validation happens in its `__validate__` method by raising `ValidationError`.
 This introduces multiple benefits:
 
 - [Explicit raising][zen] of validation errors allows to see which cases are not covered by tests.
-- No need to remember library-specific validator names. Set of simple `if` statements.
+- No need to remember library-specific validator names. A set of simple `if` statements instead.
 - The information is [less dense][zen] in field definitions, making them easier to read.
 
 ### Type annotations everywhere
