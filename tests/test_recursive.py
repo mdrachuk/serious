@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional
 
-from serious.json import JsonSchema
+from serious import JsonModel
 
 
 @dataclass(frozen=True)
@@ -70,7 +70,7 @@ class TestRecursive:
         self.json = family_tree_json()
 
     def test_tree_decode(self):
-        assert JsonSchema(Tree).load(self.json) == self.o
+        assert JsonModel(Tree).load(self.json) == self.o
 
     def test_tree_encode(self):
-        assert JsonSchema(Tree, indent=4).dump(self.o) == self.json
+        assert JsonModel(Tree, indent=4).dump(self.o) == self.json

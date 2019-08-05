@@ -1,5 +1,15 @@
+__all__ = ['Timestamp', 'Email', 'FrozenList', 'FrozenDict']
+__doc__ = """
+`serious.types` module lists a number of types useful for as part of serious modules:
+- Timestamp — an alternative to datetime, that is serialized to a float ms value
+- Email — a Tiny Type made out of string, which is checked to match the format
+- FrozenList and FrozenDict — immutable alternatives for standard collections
+"""
+import re
 from datetime import datetime, timezone
-from typing import TypeVar, Generic, overload
+from typing import TypeVar, Generic, overload, Optional
+
+from .errors import ValidationError
 
 KT = TypeVar('KT')  # Key type.
 VT = TypeVar('VT')  # Value type.
@@ -144,3 +154,36 @@ class Timestamp:
         """An unambiguous representation of an object."""
         iso_str = self.as_iso()
         return f'<{self.__class__.__name__} {iso_str} ({self.value})>'
+
+
+_email_regex = re.compile(r'^\w(\.|\w|-)*\+?(\.|\w|-)*@\w(\.|\w|-)*(\.\w+)$',
+                          re.IGNORECASE | re.UNICODE)
+
+
+class Email(str):
+    """A regular email address. Email parts can be accessed via properties: `<username>+<label>@<domain>`."""
+
+    def __new__(cls, content: str):
+        return super().__new__(cls, content.lower())  # type: ignore # __new__ is a staticmethod
+
+    @property
+    def username(self) -> str:
+        return self.split('@')[0].split('+')[0]
+
+    @property
+    def label(self) -> Optional[str]:
+        user_and_label = self.split('@')[0].split('+')
+        if len(user_and_label) == 1:
+            return None
+        return user_and_label[1]
+
+    @property
+    def domain(self) -> str:
+        return self.split('@')[1]
+
+    def __validate__(self):
+        if _email_regex.match(self) is None:
+            raise ValidationError('Invalid email format')
+
+    def __repr__(self):
+        return f'<{self.__class__.__name__} {str(self)}>'

@@ -1,155 +1,177 @@
 # serious
-[![Build Status](https://dev.azure.com/misha-drachuk/serious/_apis/build/status/serious-release?branchName=master)](https://dev.azure.com/misha-drachuk/serious/_build/latest?definitionId=1&branchName=master)
+[![PyPI](https://img.shields.io/pypi/v/serious)](https://pypi.org/project/serious/)
+[![Build Status](https://img.shields.io/azure-devops/build/misha-drachuk/serious/2)](https://dev.azure.com/misha-drachuk/serious/_build/latest?definitionId=1&branchName=master)
+[![Supported Python](https://img.shields.io/pypi/pyversions/serious)](https://pypi.org/project/serious/)
 
-This library is for JSON encoding/decoding and validation of [dataclasses](https://docs.python.org/3/library/dataclasses.html) without magic.
+Python dataclasses serialization and validation.
 
-In addition to the supported types in the 
-[py to JSON table](https://docs.python.org/3/library/json.html#py-to-json-table), this library supports the following:
-- any arbitrary [Collection](https://docs.python.org/3/library/collections.abc.html#collections.abc.Collection) type is supported.
-[Mapping](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping) types are encoded as JSON objects and `str` types as JSON strings. 
-Any other Collection types are encoded into JSON arrays, but decoded into the original collection types.
-- [datetime](https://docs.python.org/3/library/datetime.html#available-types) 
-objects. `datetime` objects are encoded to `float` (JSON number) using 
-[timestamp](https://docs.python.org/3/library/datetime.html#datetime.datetime.timestamp).
-As specified in the `datetime` docs, if your `datetime` object is naive, it will 
-assume your system local timezone when calling `.timestamp()`. JSON nunbers 
-corresponding to a `datetime` field in your dataclass are decoded 
-into a datetime-aware object, with `tzinfo` set to your system local timezone.
-Thus, if you encode a datetime-naive object, you will decode into a 
-datetime-aware object. This is important, because encoding and decoding won't 
-strictly be inverses. See this section if you want to override this default
-behavior (for example, if you want to use ISO).
-- [Decimal](https://docs.python.org/3/library/decimal.html) objects as strings.
-- [UUID](https://docs.python.org/3/library/uuid.html#uuid.UUID) objects as strings.
-- [Enums](https://docs.python.org/3/library/enum.html) objects by values.
+On top of coupling of data with its behaviour, using proper objects adds semantic meaning to your code.
+Good classes manifest the intentions of the system and restrictions imposed on it.
+They make APIs cleaner, changes become simpler to implement, and maintenance becomes cheaper.
 
+## Basics
+### Installation
+Available from [PyPI][pypi]:
+```shell
+pip install serious
+```
 
-**Compatible with Python 3.7.**
+### Quick Example
 
-## Quickstart
-`pip install serious`
+Central part of Serious API are different [**Models**][doc-models].
 
-#### schema.load() and schema.dump()
-
+Given a regular dataclass:
 ```python
 from dataclasses import dataclass
-from serious.json import JsonSerializer
 
 @dataclass
 class Person:
     name: str
-
-lidatong = Person('lidatong')
-mdrachuk = Person('mdrachuk')
-
-schema = JsonSchema(Person)
-
-# Encoding to JSON
-schema.dump(lidatong)  # '{"name": "lidatong"}'
-schema.dump_many([mdrachuk, lidatong])  # '[{"name": "mdrachuk"}, {"name": "lidatong"}]'
-
-# Decoding from JSON
-schema.load('{"name": "lidatong"}')  # Person(name='lidatong')
-schema.load_many('[{"name": "mdrachuk"}, {"name": "lidatong"}]')  # [Person(name='mdrachuk'), Person(name='lidatong')]
 ```
 
-## How do I...
+Let’s create a `JsonModel`:  
+```python
+from serious.json import JsonModel
+    
+model = JsonModel(Person)
+```
+
+And use its [dump/load methods][doc-serialization]:
+```python
+person = Person('Albert Einstein')
+
+model.dump(person) # {"name": "Albert Einstein"}
+```
+
+#### Validation
+To add validation to the example above all we need is to add `__validate__` method to person:
+```python
+from dataclasses import dataclass
+from typing import Optional
+from serious import ValidationError, Email
+
+@dataclass
+class Person:
+    name: str
+    email: Optional[Email]
+    phone: Optional[str]
+
+    def __validate__(self):
+        if len(self.name) == 0:
+            raise ValidationError('Every person needs a name')
+        if self.phone is None and self.email is None:
+            raise ValidationError('At least some contact should be present')
+```
+
+[More on validation.][doc-validation]
+
+### Features
+- Model definitions in pure Python.
+- Validation showing up in code coverage.
+- Type annotations for all public-facing APIs.
+- (Optionally) ensures immutability.
+- Easily extensible.
+- Documented for Humans.
 
 
-### Handle missing or optional field values when decoding?
+### Supported formats:
+- [x] [JSON][doc-json-model]
+- [x] [Python Dictionaries][doc-dict-model]
+- [ ] YAML
+- [ ] Form data
 
-By default, any fields in your dataclass that use `default` or 
-`default_factory` will have the values filled with the provided default, if the
-corresponding field is missing from the JSON you're decoding.
 
-**Decode JSON with missing field**
+### Supported field types
+[More in docs.][doc-types]
+
+- Other dataclasses
+- Primitives: `str`, `int`, `float`, `bool`
+- Dictionaries: only with string keys: `Dict[str, Any]`  
+- Lists, [sets][set], [deques][deque]: python collections of any serializable type
+- [Tuples][tuple] both with and without ellipsis:
+    - tuples as set of independent elements (e.g. `Tuple[str, int, date]`) 
+    - with ellipses, acting as a frozen list (`Tuple[str, ...]`)
+- [Enumerations][enum] by value:
+    - of primitives (e.g. `OperatingSystem(Enum)`) 
+    - typed enums (`Color(str, Enum)` and `FilePermission(IntFlag)`)
+- [Decimal][decimal]: encoded to JSON as string 
+- [Datetime][datetime], [date][date] and [time][time]: encoded to the [ISO 8601][iso8601] formatted string
+- [UUID][uuid]
+- `serious.types.Timestamp`: a UTC timestamp since [UNIX epoch][epoch] as float ms value 
+- `serious.types.Email`: a string Tiny Type that supports validation and contains additional properties 
+- custom immutable alternatives to native python types in `serious.types`: `FrozenList`, `FrozenDict`
+
+## A bigger example
 
 ```python
 from dataclasses import dataclass
-from serious.json import JsonSchema
- 
-@dataclass
-class Student:
-    id: int
-    name: str = 'student'
-
-JsonSchema(Student, allow_missing=True).load('{"id": 1}')  # Student(id=1, name='student')
-```
-
-Notice that `name` got default value `student` when it was missing from the JSON.
-
-If the default is missing 
-
-**Decode optional field without default**
-
-```python
-@dataclass
-class Tutor:
-    id: int
-    student: Optional[Student]
-
-serious.json.JsonSchema(Tutor).load('{"id": 1}')  # Tutor(id=1, student=None)
-```
-
-Personally I recommend you leverage dataclass defaults rather than using 
-`infer_missing`, but if for some reason you need to decouple the behavior of 
-JSON decoding from the field's default value, this will allow you to do so.
-
-
-### Override field load/dump?
-
-For example, you might want to encode/decode `datetime` objects using ISO format
-rather than the default `timestamp`.
-
-```python
-from dataclasses import dataclass, field
-from datetime import datetime
-
-@dataclass
-class Creatable:
-    created_at: datetime = field(
-        metadata={'serious': {
-            'dump': datetime.isoformat,
-            'load': datetime.fromisoformat,
-        }})
-```
-
-## A larger example
-
-```python
-from dataclasses import dataclass
-from serious.json import JsonSchema
+from serious import JsonModel, ValidationError
 from typing import List
+from enum import Enum
+
+class Specialty(Enum):
+    Worker = 1
+    Fool = 2
+
 
 @dataclass(frozen=True)
 class Minion:
     name: str
+    type: Specialty
 
 
 @dataclass(frozen=True)
 class Boss:
+    name: str
     minions: List[Minion]
+    
+    def __validate__(self):
+        if len(self.minions) < 2:
+            raise ValidationError('What kind of boss are you?')
 
-boss = Boss([Minion('evil minion'), Minion('very evil minion')])
-boss_json = """
-{
+
+boss = Boss("me", [Minion('evil minion', Specialty.Fool), Minion('very evil minion', Specialty.Worker)])
+boss_json = """{
+    "name": "me",
     "minions": [
         {
-            "name": "evil minion"
+            "name": "evil minion",
+            "type": 2
         },
         {
-            "name": "very evil minion"
+            "name": "very evil minion",
+            "type": 1
         }
     ]
-}
-""".strip()
+}"""
 
-schema = JsonSchema(Boss, indent=4)
+model = JsonModel(Boss, indent=4)
 
-assert schema.dump(boss) == boss_json
-assert schema.load(boss_json) == boss
+assert model.dump(boss) == boss_json
+assert model.load(boss_json) == boss
 ```
 
 
 ## Acknowledgements
-This is a fork of [@lidatong/dataclasses-json](https://github.com/lidatong/dataclasses-json).
+Initially, a fork of [@lidatong/dataclasses-json](https://github.com/lidatong/dataclasses-json).
+
+[pypi]: https://pypi.org/project/serious/
+[dataclass]: https://docs.python.org/3/library/dataclasses.html
+[iso8601]: https://en.wikipedia.org/wiki/ISO_8601
+[epoch]: https://en.wikipedia.org/wiki/Unix_time
+[enum]: https://docs.python.org/3/library/enum.html
+[decimal]: https://docs.python.org/3/library/decimal.html
+[tuple]: https://docs.python.org/3/library/stdtypes.html#tuple
+[list]: https://docs.python.org/3/library/stdtypes.html#list
+[set]: https://docs.python.org/3/library/stdtypes.html#set
+[deque]: https://docs.python.org/3.7/library/collections.html#collections.deque
+[datetime]: https://docs.python.org/3.7/library/datetime.html?highlight=datetime#datetime.datetime
+[date]: https://docs.python.org/3.7/library/datetime.html?highlight=datetime#datetime.date
+[time]: https://docs.python.org/3.7/library/datetime.html?highlight=datetime#datetime.time
+[uuid]: https://docs.python.org/3.7/library/uuid.html?highlight=uuid#uuid.UUID
+[doc-types]: TBD
+[doc-models]: TBD
+[doc-json-model]: TBD
+[doc-dict-model]: TBD
+[doc-serialization]: TBD
+[doc-validation]: TBD

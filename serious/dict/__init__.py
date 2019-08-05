@@ -1,1 +1,3 @@
-from .api import DictSchema
+__all__ = ['DictModel']
+
+from .api import DictModel

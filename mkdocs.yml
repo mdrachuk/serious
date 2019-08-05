@@ -1,0 +1,20 @@
+site_name: serious
+repo_url: https://github.com/mdrachuk/serious/
+repo_name: GitHub
+site_author: mdrachuk
+site_description: Python dataclasses serialization and validation.
+nav:
+  - Quickstart: quickstart.md
+  - Models: models.md
+  - Serialization: serialization.md
+  - Validation: validation.md
+  - Supported types: types.md
+  - Examples: examples.md
+  - Implementation: implementation.md
+  - Zen: zen.md
+
+theme: readthedocs
+
+markdown_extensions:
+  - toc:
+      permalink: "#"

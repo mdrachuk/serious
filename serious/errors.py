@@ -1,8 +1,11 @@
-from typing import Type, Mapping, Collection
+from __future__ import annotations
 
-from serious.context import SerializationStep
-from serious.descriptors import FieldDescriptor
-from serious.utils import DataclassType, class_path
+from typing import Type, Mapping, Collection, TYPE_CHECKING
+
+from .utils import DataclassType, class_path
+
+if TYPE_CHECKING:  # To reference in typings
+    from serious.serialization import SerializationStep
 
 
 class SerializationError(Exception):
@@ -15,7 +18,7 @@ class SerializationError(Exception):
     def __parse_stack(serializer_stack: Collection[SerializationStep]) -> str:
         if len(serializer_stack) == 0:
             return ''
-        return ''.join(step.step_name() for step in serializer_stack)[1:]
+        return ''.join(step.name for step in serializer_stack)[1:]
 
     @property
     def message(self):
@@ -101,16 +104,6 @@ class ModelContainsUnion(ModelError):
                 f'Union types are not supported by serious.')
 
 
-class InvalidFieldMetadata(ModelError):
-    def __init__(self, field: FieldDescriptor, metadata_error: str):
-        super().__init__(field.type.cls)
-        self.field = field
-        self.metadata_error = metadata_error
-
-    @property
-    def message(self):
-        return f'{class_path(self.cls)}.{self.field.name} contains invalid serious metadata. {self.metadata_error}.'
-
-
 class ValidationError(Exception):
-    pass
+    def __init__(self, message='Failed validation'):
+        super().__init__(message)

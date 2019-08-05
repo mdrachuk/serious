@@ -1,13 +1,13 @@
 import json
 
-from serious.json import JsonSchema
+from serious import JsonModel
 from tests.entities import DataclassWithDataclass, DataclassWithList, DataclassX, DataclassXs
 
 
 class TestDecoder:
     def setup_class(self):
-        self.dcwdc = JsonSchema(DataclassWithDataclass)
-        self.dcxs = JsonSchema(DataclassXs)
+        self.dcwdc = JsonModel(DataclassWithDataclass)
+        self.dcxs = JsonModel(DataclassXs)
 
     def test_nested_dataclass(self):
         actual = self.dcwdc.load(json.dumps({"dc_with_list": {"xs": [1]}}))
@@ -22,8 +22,8 @@ class TestDecoder:
 
 class TestEncoder:
     def setup_class(self):
-        self.dcwdc = JsonSchema(DataclassWithDataclass)
-        self.dcxs = JsonSchema(DataclassXs)
+        self.dcwdc = JsonModel(DataclassWithDataclass)
+        self.dcxs = JsonModel(DataclassXs)
 
     def test_nested_dataclass(self):
         actual = self.dcwdc.dump(DataclassWithDataclass(DataclassWithList([1])))

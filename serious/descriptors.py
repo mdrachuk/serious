@@ -1,8 +1,8 @@
 from collections import ChainMap
 from dataclasses import dataclass, fields, is_dataclass
-from typing import Type, Any, TypeVar, get_type_hints, Dict, Mapping, Collection, List, Union, Iterable
+from typing import Type, Any, TypeVar, get_type_hints, Dict, Mapping, List, Union, Iterable
 
-from serious.types import FrozenDict, FrozenDict, FrozenList, FrozenList
+from .types import FrozenDict, FrozenList
 
 T = TypeVar('T')
 
@@ -22,15 +22,12 @@ class TypeDescriptor:
         return self._cls
 
     @property
-    def fields(self) -> Collection['FieldDescriptor']:
+    def fields(self) -> Mapping[str, 'TypeDescriptor']:
         if not is_dataclass(self.cls):
-            return []
+            return {}
         types = get_type_hints(self.cls)  # type: Dict[str, Type]
         descriptors = {name: self.describe(type_) for name, type_ in types.items()}
-        return [
-            FieldDescriptor(name=f.name, type=descriptors[f.name], metadata=f.metadata)
-            for f in fields(self.cls)
-        ]
+        return {f.name: descriptors[f.name] for f in fields(self.cls)}
 
     def describe(self, type_: Type) -> 'TypeDescriptor':
         return describe(type_, self.parameters)
@@ -103,14 +100,6 @@ def _collect_type_vars(alias: Any, generic_params: GenericParams) -> GenericPara
                     (describe(arg, generic_params) for arg in alias.__args__)))
 
 
-@dataclass(frozen=True)
-class FieldDescriptor:
-    """A descriptor of a dataclass field."""
-    name: str
-    type: TypeDescriptor
-    metadata: Any
-
-
 class DescriptorTypes:
     types: FrozenList[Type]
 
@@ -128,8 +117,8 @@ class DescriptorTypes:
         dts = []  # type: List[DescriptorTypes]
         for param in desc.parameters.values():
             dts.append(cls.scan(param, _known_descriptors))
-        for field in desc.fields:
-            dts.append(cls.scan(field.type, _known_descriptors))
+        for field_desc in desc.fields.values():
+            dts.append(cls.scan(field_desc, _known_descriptors))
         types = [type_ for dt in dts for type_ in dt.types]
         types.append(desc.cls)
         return cls(types)
@@ -144,7 +133,7 @@ class DescriptorTypes:
 _empty_descriptor_types = DescriptorTypes([])
 
 
-def _scan_types(desc: TypeDescriptor) -> DescriptorTypes:
+def scan_types(desc: TypeDescriptor) -> DescriptorTypes:
     return DescriptorTypes.scan(desc)
 
 

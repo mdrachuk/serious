@@ -1,16 +1,10 @@
-from typing import TypeVar, Any
+from typing import TypeVar
 
-from serious.errors import ValidationError
-
-A = TypeVar('A')
+T = TypeVar('T')
 
 
-def validate(rule: bool, message='Failed validation') -> None:
-    """Validate the """
-    if not rule:
-        raise ValidationError(message)
-
-
-def validate_object(obj: Any) -> None:
+def validate(obj: T) -> T:
     if hasattr(obj, '__validate__'):
-        obj.__validate__()
+        result = obj.__validate__()  # type: ignore # method presence checked above
+        assert result is None, 'Validators should not return anything. Raise ValidationError instead'
+    return obj

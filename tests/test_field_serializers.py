@@ -2,23 +2,21 @@ from dataclasses import dataclass
 from datetime import date, datetime, timezone, time
 from decimal import Decimal
 from enum import Enum
-from typing import Type, Dict, Any, List, Tuple, Optional
+from typing import Dict, Any, List, Tuple, Optional
 from uuid import UUID
 
 import pytest
 
-from serious import DictSchema
-from serious.context import SerializationContext
-from serious.descriptors import FieldDescriptor, describe
-from serious.errors import ValidationError
-from serious.field_serializers import FieldSerializer, BooleanSerializer, StringSerializer, FloatSerializer, \
+from serious import DictModel, ValidationError
+from serious.descriptors import describe, TypeDescriptor
+from serious.serialization import FieldSerializer, BooleanSerializer, StringSerializer, FloatSerializer, \
     IntegerSerializer, EnumSerializer, DictSerializer, AnySerializer, CollectionSerializer, TupleSerializer, \
     DataclassSerializer, UtcTimestampSerializer, OptionalSerializer, DateTimeIsoSerializer, DateIsoSerializer, \
-    TimeIsoSerializer, UuidSerializer, DecimalSerializer
-from serious.types import FrozenList, FrozenList, Timestamp, Timestamp
+    TimeIsoSerializer, UuidSerializer, DecimalSerializer, Loading
+from serious.types import FrozenList, Timestamp
 
 
-class AbstractFieldSerializer(FieldSerializer):
+class AbstractSerializer(FieldSerializer):
     def __init__(self):
         super().__init__(None, None)
 
@@ -27,20 +25,16 @@ class TestFieldSerializer:
 
     def test_not_implemented(self):
         with pytest.raises(TypeError) as error:
-            AbstractFieldSerializer()
+            AbstractSerializer()
         error_message = str(error)
-        assert '_dump' in error_message
-        assert '_load' in error_message
+        assert 'dump' in error_message
+        assert 'load' in error_message
         assert 'fits' in error_message
 
 
-def field_descriptor(type_: Type) -> FieldDescriptor:
-    return FieldDescriptor('test', describe(type_), {})
-
-
 def test_str_load_validation():
-    serializer = StringSerializer(field_descriptor(str), None)
-    ctx = SerializationContext()
+    serializer = StringSerializer(describe(str), None)
+    ctx = Loading()
     with pytest.raises(ValidationError):
         serializer.load(1, ctx)
     with pytest.raises(ValidationError):
@@ -51,8 +45,8 @@ def test_str_load_validation():
 
 
 def test_bool_load_validation():
-    serializer = BooleanSerializer(field_descriptor(bool), None)
-    ctx = SerializationContext()
+    serializer = BooleanSerializer(describe(bool), None)
+    ctx = Loading()
     with pytest.raises(ValidationError):
         serializer.load(1, ctx)
     with pytest.raises(ValidationError):
@@ -64,8 +58,8 @@ def test_bool_load_validation():
 
 
 def test_int_load_validation():
-    serializer = IntegerSerializer(field_descriptor(int), None)
-    ctx = SerializationContext()
+    serializer = IntegerSerializer(describe(int), None)
+    ctx = Loading()
     with pytest.raises(ValidationError):
         serializer.load(True, ctx)
     with pytest.raises(ValidationError):
@@ -76,8 +70,8 @@ def test_int_load_validation():
 
 
 def test_float_load_validation():
-    serializer = FloatSerializer(field_descriptor(float), None)
-    ctx = SerializationContext()
+    serializer = FloatSerializer(describe(float), None)
+    ctx = Loading()
     with pytest.raises(ValidationError):
         serializer.load(True, ctx)
     with pytest.raises(ValidationError):
@@ -113,61 +107,61 @@ class EventComment:
 class TestEnumLoadValidation:
 
     def test_str(self):
-        serializer = EnumSerializer(field_descriptor(Color), None)
-        ctx = SerializationContext()
+        serializer = EnumSerializer(describe(Color), None)
+        ctx = Loading()
         with pytest.raises(ValidationError):
             serializer.load('#f00', ctx)
         assert serializer.load('#ff0000', ctx) is Color.RED
 
     def test_number(self):
-        serializer = EnumSerializer(field_descriptor(Constant), None)
-        ctx = SerializationContext()
+        serializer = EnumSerializer(describe(Constant), None)
+        ctx = Loading()
         with pytest.raises(ValidationError):
             serializer.load(9.18, ctx)
         assert serializer.load(3.14, ctx) is Constant.PI
 
     def test_non_primitive(self):
-        schema = DictSchema(EventComment)
-        serializer = schema._serializer._field_serializers[0]
+        model = DictModel(EventComment)
+        serializer = model._serializer._field_serializers['event']
         assert type(serializer) is EnumSerializer
-        ctx = SerializationContext()
+        ctx = Loading()
         with pytest.raises(ValidationError):
             serializer.load('1932-11-05', ctx)
         assert serializer.load('1957-10-04', ctx) is HistoricEvent.SPUTNIK
 
 
-class MockSchema:
-    def field_serializer(self, desc: FieldDescriptor) -> FieldSerializer:
+class MockModel:
+    def find_serializer(self, desc: TypeDescriptor) -> FieldSerializer:
         return AnySerializer(desc, self)
 
 
 def test_dict_load_validation():
-    serializer = DictSerializer(field_descriptor(Dict[str, Any]), MockSchema())
-    ctx = SerializationContext()
+    serializer = DictSerializer(describe(Dict[str, Any]), MockModel())
+    ctx = Loading()
     with pytest.raises(ValidationError):
         serializer.load('string', ctx)
     assert serializer.load({'one': 'two'}, ctx) == {'one': 'two'}
 
 
 def test_list_load_validation():
-    serializer = CollectionSerializer(field_descriptor(List[Any]), MockSchema())
-    ctx = SerializationContext()
+    serializer = CollectionSerializer(describe(List[Any]), MockModel())
+    ctx = Loading()
     with pytest.raises(ValidationError):
         serializer.load('string', ctx)
     assert serializer.load([1, 2, 3], ctx) == [1, 2, 3]
 
 
 def test_frozen_list_load_validation():
-    serializer = CollectionSerializer(field_descriptor(FrozenList[Any]), MockSchema())
-    ctx = SerializationContext()
+    serializer = CollectionSerializer(describe(FrozenList[Any]), MockModel())
+    ctx = Loading()
     with pytest.raises(ValidationError):
         serializer.load('string', ctx)
     assert serializer.load([1, 2, 3], ctx) == FrozenList([1, 2, 3])
 
 
 def test_tuple_load_validation():
-    serializer = TupleSerializer(field_descriptor(Tuple[Any, Any, Any]), MockSchema())
-    ctx = SerializationContext()
+    serializer = TupleSerializer(describe(Tuple[Any, Any, Any]), MockModel())
+    ctx = Loading()
     with pytest.raises(ValidationError):
         serializer.load([1, 2], ctx)
     with pytest.raises(ValidationError):
@@ -183,11 +177,11 @@ class MockDataclass:
 
 
 def test_dataclass_load_validation():
-    schema = DictSchema(MockDataclass)
-    serializer = schema._serializer._field_serializers[0]
+    model = DictModel(MockDataclass)
+    serializer = model._serializer._field_serializers['child']
     assert type(serializer) is OptionalSerializer
     assert type(serializer._serializer) is DataclassSerializer
-    ctx = SerializationContext()
+    ctx = Loading()
     with pytest.raises(ValidationError):
         serializer.load([1, 2], ctx)
     with pytest.raises(ValidationError):
@@ -197,8 +191,8 @@ def test_dataclass_load_validation():
 
 
 def test_timestamp_load_validation():
-    serializer = UtcTimestampSerializer(field_descriptor(Timestamp), None)
-    ctx = SerializationContext()
+    serializer = UtcTimestampSerializer(describe(Timestamp), None)
+    ctx = Loading()
     with pytest.raises(ValidationError):
         serializer.load('123421', ctx)
     assert serializer.load(123421, ctx) == Timestamp(123421.0)
@@ -206,8 +200,8 @@ def test_timestamp_load_validation():
 
 
 def test_date_time_load_validation():
-    serializer = DateTimeIsoSerializer(field_descriptor(datetime), None)
-    ctx = SerializationContext()
+    serializer = DateTimeIsoSerializer(describe(datetime), None)
+    ctx = Loading()
     with pytest.raises(ValidationError):
         serializer.load(123421, ctx)
     with pytest.raises(ValidationError):
@@ -221,8 +215,8 @@ def test_date_time_load_validation():
 
 
 def test_date_load_validation():
-    serializer = DateIsoSerializer(field_descriptor(date), None)
-    ctx = SerializationContext()
+    serializer = DateIsoSerializer(describe(date), None)
+    ctx = Loading()
     with pytest.raises(ValidationError):
         serializer.load(123, ctx)
     with pytest.raises(ValidationError):
@@ -235,8 +229,8 @@ def test_date_load_validation():
 
 
 def test_time_load_validation():
-    serializer = TimeIsoSerializer(field_descriptor(time), None)
-    ctx = SerializationContext()
+    serializer = TimeIsoSerializer(describe(time), None)
+    ctx = Loading()
     with pytest.raises(ValidationError):
         serializer.load(123, ctx)
     with pytest.raises(ValidationError):
@@ -249,8 +243,8 @@ def test_time_load_validation():
 
 
 def test_uuid_load_validation():
-    serializer = UuidSerializer(field_descriptor(UUID), None)
-    ctx = SerializationContext()
+    serializer = UuidSerializer(describe(UUID), None)
+    ctx = Loading()
     with pytest.raises(ValidationError):
         serializer.load(123421, ctx)
     with pytest.raises(ValidationError):
@@ -265,8 +259,8 @@ def test_uuid_load_validation():
 
 
 def test_decimal_load_validation():
-    serializer = DecimalSerializer(field_descriptor(Decimal), None)
-    ctx = SerializationContext()
+    serializer = DecimalSerializer(describe(Decimal), None)
+    ctx = Loading()
     with pytest.raises(ValidationError):
         serializer.load(10, ctx)
     with pytest.raises(ValidationError):

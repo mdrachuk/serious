@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from decimal import Decimal
 
-from serious.dict import DictSchema
+from serious import DictModel
 
 
 @dataclass(frozen=True)
@@ -16,12 +16,12 @@ keith_dict = dict(name='Keith', height='1.76')
 
 class TestDecimal:
     def setup_class(self):
-        self.schema = DictSchema(Person)
+        self.model = DictModel(Person)
 
     def test_load(self):
-        actual = self.schema.load(keith_dict)
+        actual = self.model.load(keith_dict)
         assert actual == keith
 
     def test_dump(self):
-        actual = self.schema.dump(keith)
+        actual = self.model.dump(keith)
         assert actual == keith_dict

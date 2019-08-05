@@ -5,9 +5,7 @@ from typing import Dict, List
 
 import pytest
 
-from serious.dict import DictSchema
-from serious.errors import ValidationError
-from serious.json import JsonSchema
+from serious import DictModel, JsonModel, ValidationError
 
 
 class Symbol(Enum):
@@ -26,42 +24,42 @@ class DataWithEnum:
 
 class TestEnum:
     def setup(self):
-        self.schema = JsonSchema(DataWithEnum)
+        self.model = JsonModel(DataWithEnum)
 
     def test_load(self):
         enum = DataWithEnum('name1', Symbol.ALPHA)
         enum_json = '{"name": "name1", "enum": "alpha"}'
-        assert self.schema.load(enum_json) == enum
+        assert self.model.load(enum_json) == enum
 
         int_enum = DataWithEnum('name1', Symbol.ONE)
         int_enum_json = '{"name": "name1", "enum": 1}'
-        assert self.schema.load(int_enum_json) == int_enum
+        assert self.model.load(int_enum_json) == int_enum
 
         float_enum = DataWithEnum('name1', Symbol.PI)
         float_enum_json = '{"name": "name1", "enum": 3.14}'
-        assert self.schema.load(float_enum_json) == float_enum
+        assert self.model.load(float_enum_json) == float_enum
 
     def test_dump(self):
         enum = DataWithEnum('name1', Symbol.ALPHA)
         enum_json = '{"name": "name1", "enum": "alpha"}'
-        assert self.schema.dump(enum) == enum_json
+        assert self.model.dump(enum) == enum_json
 
         int_enum = DataWithEnum('name1', Symbol.ONE)
         int_enum_json = '{"name": "name1", "enum": 1}'
-        assert self.schema.dump(int_enum) == int_enum_json
+        assert self.model.dump(int_enum) == int_enum_json
 
         float_enum = DataWithEnum('name1', Symbol.PI)
         float_enum_json = '{"name": "name1", "enum": 3.14}'
-        assert self.schema.dump(float_enum) == float_enum_json
+        assert self.model.dump(float_enum) == float_enum_json
 
     def test_default(self):
-        schema = JsonSchema(DataWithEnum)
+        model = JsonModel(DataWithEnum)
 
         json = '{"name": "name2", "enum": "gamma"}'
-        assert schema.dump(DataWithEnum('name2')) == json
+        assert model.dump(DataWithEnum('name2')) == json
 
-        enum_from_json = schema.load(json)
-        json_from_enum = schema.dump(enum_from_json)
+        enum_from_json = model.load(json)
+        json_from_enum = model.dump(enum_from_json)
         assert json_from_enum == json
 
 
@@ -79,22 +77,22 @@ class Profile:
 
 class TestStrEnum:
     def setup(self):
-        self.schema = JsonSchema(Profile)
+        self.model = JsonModel(Profile)
         self.json = '{"gender": "male"}'
         self.dataclass = Profile(Gender.MALE)
 
     def test_load(self):
-        actual = self.schema.load(self.json)
+        actual = self.model.load(self.json)
         assert actual == self.dataclass
 
     def test_dump(self):
-        actual = self.schema.dump(self.dataclass)
+        actual = self.model.dump(self.dataclass)
         assert actual == self.json
 
     def test_load_with_invalid_enum_value(self):
-        schema = JsonSchema(Profile)
+        model = JsonModel(Profile)
         with pytest.raises(ValidationError):
-            schema.load('{"gender": "python"}')
+            model.load('{"gender": "python"}')
 
 
 @dataclass(frozen=True)
@@ -105,7 +103,7 @@ class EnumContainer:
 
 class TestEnumCollection:
     def setup(self):
-        self.schema = JsonSchema(EnumContainer)
+        self.model = JsonModel(EnumContainer)
         self.json = '{"enum_list": ["gamma", 1], "enum_mapping": {"first": "alpha", "second": 3.14}}'
         self.dataclass = EnumContainer(
             enum_list=[Symbol.GAMMA, Symbol.ONE],
@@ -113,11 +111,11 @@ class TestEnumCollection:
         )
 
     def test_load(self):
-        actual = self.schema.load(self.json)
+        actual = self.model.load(self.json)
         assert actual == self.dataclass
 
     def test_dump(self):
-        actual = self.schema.dump(self.dataclass)
+        actual = self.model.dump(self.dataclass)
         assert actual == self.json
 
 
@@ -135,17 +133,17 @@ class File:
 
 class TestIntFlag:
     def setup(self):
-        self.schema = DictSchema(File)
+        self.model = DictModel(File)
         f_name = 'readme.txt'
         self.dict = {'name': f_name, 'permission': 7}
         self.dataclass = File(f_name, Permission.READ | Permission.WRITE | Permission.EXECUTE)
 
     def test_load(self):
-        actual = self.schema.load(self.dict)
+        actual = self.model.load(self.dict)
         assert actual == self.dataclass
 
     def test_dump(self):
-        actual = self.schema.dump(self.dataclass)
+        actual = self.model.dump(self.dataclass)
         assert actual == self.dict
 
 
@@ -162,16 +160,16 @@ class HistoricEvent:
 
 class TestDateEnum:
     def setup(self):
-        self.schema = DictSchema(HistoricEvent)
+        self.model = DictModel(HistoricEvent)
         name = 'First Man in Space'
         self.dict = {'name': name, 'date': '1961-04-11'}
         self.dataclass = HistoricEvent(name, Date.GAGARIN)
 
     def test_load(self):
-        actual = self.schema.load(self.dict)
+        actual = self.model.load(self.dict)
         assert actual == self.dataclass
         assert isinstance(actual.date, Date)
 
     def test_dump(self):
-        actual = self.schema.dump(self.dataclass)
+        actual = self.model.dump(self.dataclass)
         assert actual == self.dict
