@@ -22,6 +22,10 @@ steps:
     displayName: 'Use Python $(python.version)'
 
   - script: |
+      git checkout $(System.PullRequest.SourceBranch)
+    displayName: 'Checkout branch'
+
+  - script: |
       python -m pip install --upgrade pip
       pip install -r requirements.txt
     displayName: 'Install dependencies'
