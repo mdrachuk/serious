@@ -25,8 +25,8 @@ when they are missing from loaded JSON.
 
 There are two types of Model as of now:
 
-1. [`JsonModel`](models.md#jsonmodel): loads/dumps JSON formatted strings
-2. [`DictModel`](models.md#dictmodel): loads/dumps `dict` objects 
+1. [`JsonModel`](models.md#jsonmodel) for JSON formatted strings.
+2. [`DictModel`](models.md#dictmodel) for Python `dict` objects.
 
 For more refer to [models docs](models.md).
 # Simple Serialization

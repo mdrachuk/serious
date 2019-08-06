@@ -1,6 +1,7 @@
 # serious
 [![PyPI](https://img.shields.io/pypi/v/serious)][pypi]
 [![Build Status](https://img.shields.io/azure-devops/build/misha-drachuk/serious/2)](https://dev.azure.com/misha-drachuk/serious/_build/latest?definitionId=1&branchName=master)
+[![Test Coverage](https://img.shields.io/coveralls/github/mdrachuk/serious/master)](https://coveralls.io/github/mdrachuk/serious)
 [![Supported Python](https://img.shields.io/pypi/pyversions/serious)][pypi]
 [![Documentation](https://img.shields.io/readthedocs/serious)][docs]
 
