@@ -1,6 +1,6 @@
 ## Encode/Decode
 
-Both of these operations are performed by a [model](/models). 
+Both of these operations are performed by a [model](models.md). 
 Just like when using Python native [json][py-json] or [pickle][py-pickle] in Serious we `#load(value)`
 and `#dump(dataclass)`. The argument and return types of this methods are defined by the model in use
  ([JsonModel][json-model], [DictModel][dict-model]).
@@ -167,7 +167,7 @@ Dumped: {'points': [['1.11', '2.54'], ['3.10', '2.54'], ['2.10', '0.00']]}
 
 [py-json]: https://docs.python.org/3.7/library/json.html#json.load
 [py-pickle]: https://docs.python.org/3.7/library/pickle.html#pickle.load
-[json-model]: /models#jsonmodel
-[dict-model]: /models#dictmodel
-[model-init-serializers]: /models#serializers
+[json-model]: models.md#jsonmodel
+[dict-model]: models.md#dictmodel
+[model-init-serializers]: models.md#serializers
 [iso8601]: https://en.wikipedia.org/wiki/ISO_8601

@@ -25,10 +25,10 @@ when they are missing from loaded JSON.
 
 There are two types of Model as of now:
 
-1. [`JsonModel`](/models#jsonmodel): loads/dumps JSON formatted strings
-2. [`DictModel`](/models#dictmodel): loads/dumps `dict` objects 
+1. [`JsonModel`](models.md#jsonmodel): loads/dumps JSON formatted strings
+2. [`DictModel`](models.md#dictmodel): loads/dumps `dict` objects 
 
-For more refer to [models docs](/models).
+For more refer to [models docs](models.md).
 # Simple Serialization
 
 Having a dataclass:
@@ -47,14 +47,14 @@ from serious.json import JsonModel
 model = JsonModel(Person)
 ```
 
-And use its [dump/load methods](/serialization#encodedecode):
+And use its [dump/load methods](serialization.md#encodedecode):
 ```python
 person = Person('Albert Einstein')
 
 model.dump(person) # {"name": "Albert Einstein"}
 ```
 
-[More on serialization.](/serialization)
+[More on serialization.](serialization.md)
 
 # Basic Validation
 
@@ -83,6 +83,6 @@ except ValidationError as e:
     print(str(e)) # Order cannot be empty
 ```
 
-[More on validation.](/validation)
+[More on validation.](validation.md)
 
 [pypi]: https://pypi.org/project/serious/

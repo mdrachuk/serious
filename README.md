@@ -1,13 +1,21 @@
 # serious
-[![PyPI](https://img.shields.io/pypi/v/serious)](https://pypi.org/project/serious/)
+[![PyPI](https://img.shields.io/pypi/v/serious)][pypi]
 [![Build Status](https://img.shields.io/azure-devops/build/misha-drachuk/serious/2)](https://dev.azure.com/misha-drachuk/serious/_build/latest?definitionId=1&branchName=master)
-[![Supported Python](https://img.shields.io/pypi/pyversions/serious)](https://pypi.org/project/serious/)
+[![Supported Python](https://img.shields.io/pypi/pyversions/serious)][pypi]
+[![Documentation](https://img.shields.io/readthedocs/serious)][docs]
 
 Python dataclasses serialization and validation.
 
-On top of coupling of data with its behaviour, using proper objects adds semantic meaning to your code.
-Good classes manifest the intentions of the system and restrictions imposed on it.
-They make APIs cleaner, changes become simpler to implement, and maintenance becomes cheaper.
+[Documentation][docs]
+
+
+## Features
+- Model definitions in pure Python.
+- Validation showing up in code coverage.
+- Type annotations for all public-facing APIs.
+- (Optionally) ensures immutability.
+- Easily extensible.
+- Documented for Humans.
 
 ## Basics
 ### Installation
@@ -18,7 +26,7 @@ pip install serious
 
 ### Quick Example
 
-Central part of Serious API are different [**Models**][doc-models].
+Central part of Serious API are different [Models][doc-models].
 
 Given a regular dataclass:
 ```python
@@ -43,7 +51,7 @@ person = Person('Albert Einstein')
 model.dump(person) # {"name": "Albert Einstein"}
 ```
 
-#### Validation
+### Validation
 To add validation to the example above all we need is to add `__validate__` method to person:
 ```python
 from dataclasses import dataclass
@@ -64,14 +72,6 @@ class Person:
 ```
 
 [More on validation.][doc-validation]
-
-### Features
-- Model definitions in pure Python.
-- Validation showing up in code coverage.
-- Type annotations for all public-facing APIs.
-- (Optionally) ensures immutability.
-- Easily extensible.
-- Documented for Humans.
 
 
 ### Supported formats:
@@ -165,13 +165,14 @@ Initially, a fork of [@lidatong/dataclasses-json](https://github.com/lidatong/da
 [list]: https://docs.python.org/3/library/stdtypes.html#list
 [set]: https://docs.python.org/3/library/stdtypes.html#set
 [deque]: https://docs.python.org/3.7/library/collections.html#collections.deque
-[datetime]: https://docs.python.org/3.7/library/datetime.html?highlight=datetime#datetime.datetime
-[date]: https://docs.python.org/3.7/library/datetime.html?highlight=datetime#datetime.date
-[time]: https://docs.python.org/3.7/library/datetime.html?highlight=datetime#datetime.time
+[datetime]: https://docs.python.org/3.7/library/datetime.html#datetime.datetime
+[date]: https://docs.python.org/3.7/library/datetime.html#datetime.date
+[time]: https://docs.python.org/3.7/library/datetime.html#datetime.time
 [uuid]: https://docs.python.org/3.7/library/uuid.html?highlight=uuid#uuid.UUID
-[doc-types]: TBD
-[doc-models]: TBD
-[doc-json-model]: TBD
-[doc-dict-model]: TBD
-[doc-serialization]: TBD
-[doc-validation]: TBD
+[doc-types]: https://serious.readthedocs.io/en/latest/types/
+[doc-models]: https://serious.readthedocs.io/en/latest/models/
+[doc-json-model]: https://serious.readthedocs.io/en/latest/models/#jsonmodel
+[doc-dict-model]: https://serious.readthedocs.io/en/latest/models/#dictmodel
+[doc-serialization]: https://serious.readthedocs.io/en/latest/serialization/ (Serialization documentation)
+[doc-validation]: https://serious.readthedocs.io/en/latest/validation/ (Validation documentation)
+[docs]: https://serious.readthedocs.io/en/latest/ 
