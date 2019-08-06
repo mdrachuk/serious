@@ -29,12 +29,18 @@ steps:
   - script: |
       pip install pytest pytest-cov
       pytest tests --cov=serious --cov-report=html
-    displayName: 'Test with pytest'
+    displayName: 'Test'
+
+  - script: |
+      pip install coveralls
+      coveralls
+    displayName: 'Save code coverage'
+    env:
+      COVERALLS_REPO_TOKEN: $(COVERALLS_REPO_TOKEN)
 
   - script: |
       mypy serious
-    displayName: 'Check typings with mypy'
-
+    displayName: 'Check typings'
 
   - script: |
       python check_version.py
