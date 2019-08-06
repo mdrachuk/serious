@@ -151,13 +151,13 @@ print(chat.top_member())  # User(full_name='King Arthur', username='king', phone
 [pypi]: https://pypi.org/project/serious/
 [mypy]: http://www.mypy-lang.org
 [issues]: https://github.com/mdrachuk/serious/issues
-[custom-serializers]: /serialization#custom-field-serializers
-[custom-model]: /models#custom-model
-[quickstart]: /quickstart
-[models]: /models
-[serialization]: /serialization
-[validation]: /validation
-[types]: /types
-[examples]: /examples
-[implementation]: /implementation
-[zen]: /zen (PEP20)
+[custom-serializers]: serialization.md#custom-field-serializers
+[custom-model]: models.md#custom-model
+[quickstart]: quickstart.md
+[models]: models.md
+[serialization]: serialization.md
+[validation]: validation.md
+[types]: types.md
+[examples]: examples.md
+[implementation]: implementation.md
+[zen]: zen.md (PEP20)

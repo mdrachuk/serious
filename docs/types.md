@@ -136,10 +136,10 @@ assert Email('leonardo+paintings@vinci.it').label == 'paintings'
 ```
 
 [uuid]: https://docs.python.org/3/library/uuid.html
-[decimal]: https://docs.python.org/3.7/library/decimal.html
+[decimal]: https://docs.python.org/3/library/decimal.html
 [iso8601]: https://en.wikipedia.org/wiki/ISO_8601
-[datetime]: https://docs.python.org/3.7/library/datetime.html?highlight=datetime#datetime.datetime
-[date]: https://docs.python.org/3.7/library/datetime.html?highlight=datetime#datetime.date
-[time]: https://docs.python.org/3.7/library/datetime.html?highlight=datetime#datetime.time
+[datetime]: https://docs.python.org/3/library/datetime.html#datetime.datetime
+[date]: https://docs.python.org/3/library/datetime.html#datetime.date
+[time]: https://docs.python.org/3/library/datetime.html#datetime.time
 [epoch]: https://en.wikipedia.org/wiki/Unix_time
 [tiny-types]: TODO 

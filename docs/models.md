@@ -251,7 +251,7 @@ class JsonModel(Generic[T]):
 ```
 
 [json-model-src]: https://github.com/mdrachuk/serious/blob/master/serious/json/api.py 
-[field-serializers]: /serialization#field-serializers 
-[implementation]: /implementation 
-[custom-serialization]: /serialization#custom-field-serializers 
+[field-serializers]: serialization.md#field-serializers 
+[custom-serialization]: serialization.md#custom-field-serializers 
+[implementation]: implementation.md 
    

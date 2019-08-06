@@ -18,7 +18,7 @@ pip install serious
 
 ### Quick Example
 
-Central part of Serious API are different [**Models**][doc-models].
+Central part of Serious API are different [Models][doc-models].
 
 Given a regular dataclass:
 ```python
@@ -165,13 +165,14 @@ Initially, a fork of [@lidatong/dataclasses-json](https://github.com/lidatong/da
 [list]: https://docs.python.org/3/library/stdtypes.html#list
 [set]: https://docs.python.org/3/library/stdtypes.html#set
 [deque]: https://docs.python.org/3.7/library/collections.html#collections.deque
-[datetime]: https://docs.python.org/3.7/library/datetime.html?highlight=datetime#datetime.datetime
-[date]: https://docs.python.org/3.7/library/datetime.html?highlight=datetime#datetime.date
-[time]: https://docs.python.org/3.7/library/datetime.html?highlight=datetime#datetime.time
+[datetime]: https://docs.python.org/3.7/library/datetime.html#datetime.datetime
+[date]: https://docs.python.org/3.7/library/datetime.html#datetime.date
+[time]: https://docs.python.org/3.7/library/datetime.html#datetime.time
 [uuid]: https://docs.python.org/3.7/library/uuid.html?highlight=uuid#uuid.UUID
-[doc-types]: TBD
-[doc-models]: TBD
-[doc-json-model]: TBD
-[doc-dict-model]: TBD
-[doc-serialization]: TBD
-[doc-validation]: TBD
+[doc-types]: https://serious.readthedocs.io/en/latest/types/
+[doc-models]: https://serious.readthedocs.io/en/latest/models/
+[doc-json-model]: https://serious.readthedocs.io/en/latest/models/#jsonmodel
+[doc-dict-model]: https://serious.readthedocs.io/en/latest/models/#dictmodel
+[doc-serialization]: https://serious.readthedocs.io/en/latest/serialization/
+[doc-validation]: https://serious.readthedocs.io/en/latest/validation/
+[docs]: https://serious.readthedocs.io/en/latest/
