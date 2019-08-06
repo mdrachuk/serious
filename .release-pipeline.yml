@@ -26,9 +26,11 @@ steps:
     displayName: 'Install dependencies'
 
   - script: |
-      pip install pytest pytest-azurepipelines pytest-cov
+      pip install pytest pytest-cov
       pytest tests --cov=serious --cov-report=html
-    displayName: 'Test with pytest'
+      pip install coveralls
+      coveralls
+    displayName: 'Test'
 
   - script: |
       mypy serious
