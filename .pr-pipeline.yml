@@ -22,7 +22,7 @@ steps:
     displayName: 'Use Python $(python.version)'
 
   - script: |
-      git checkout $(Build.SourceBranchName)
+      git checkout $(System.PullRequest.SourceBranch)
     displayName: 'Checkout branch'
 
   - script: |
