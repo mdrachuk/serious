@@ -32,6 +32,8 @@ steps:
       pip install coveralls
       coveralls
     displayName: 'Test with pytest'
+    env:
+      COVERALLS_REPO_TOKEN: $(COVERALLS_REPO_TOKEN)
 
   - script: |
       mypy serious
