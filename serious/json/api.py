@@ -13,15 +13,6 @@ from .preconditions import _check_that_loading_an_object, _check_that_loading_a_
 T = TypeVar('T')
 
 
-class JsonKeyMapper(KeyMapper):
-
-    def to_model(self, item: str) -> str:
-        return camel_to_snake(item)
-
-    def to_serialized(self, item: str) -> str:
-        return snake_to_camel(item)
-
-
 class JsonModel(Generic[T]):
 
     def __init__(
@@ -105,3 +96,12 @@ class JsonModel(Generic[T]):
         if path == 'serious.json.api.JsonModel':
             path = 'serious.JsonModel'
         return f'<{path}[{class_path(self.cls)}] at {hex(id(self))}>'
+
+
+class JsonKeyMapper(KeyMapper):
+
+    def to_model(self, item: str) -> str:
+        return camel_to_snake(item)
+
+    def to_serialized(self, item: str) -> str:
+        return snake_to_camel(item)
