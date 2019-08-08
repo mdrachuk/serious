@@ -39,6 +39,7 @@ class SeriousModel(Generic[T]):
                 (this includes generics like `List[Any]`, or simply `list`).
         @param allow_missing `False` to raise during load if data is missing the optional fields.
         @param allow_unexpected `False` to raise during load if data contains some unknown fields.
+        @param key_mapper remap field names of between dataclass and serialized objects
         @param _registry a mapping of dataclass type descriptors to corresponding serious serializer;
                 used internally to create child serializers.
         """

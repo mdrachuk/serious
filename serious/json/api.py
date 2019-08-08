@@ -42,6 +42,7 @@ class JsonModel(Generic[T]):
                 (this includes generics like `List[Any]`, or simply `list`).
         @param allow_missing `False` to raise during load if data is missing the optional fields.
         @param allow_unexpected `False` to raise during load if data contains some unknown fields.
+        @param camel_case `True` to transform dataclass "snake_case" to JSON "camelCase".
         @param indent number of spaces JSON output will be indented by; `None` for most compact representation.
         """
         self._descriptor = describe(cls)
