@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from abc import ABC, abstractmethod
 from dataclasses import fields, MISSING, Field
 from typing import Generic, Iterable, Type, Dict, Any, Union, Mapping, Optional, Iterator, TypeVar
 
@@ -28,6 +29,7 @@ class SeriousModel(Generic[T]):
             allow_any: bool,
             allow_missing: bool,
             allow_unexpected: bool,
+            key_mapper: Optional[KeyMapper] = None,
             _registry: Dict[TypeDescriptor, SeriousModel] = None
     ):
         """
@@ -52,7 +54,8 @@ class SeriousModel(Generic[T]):
         self._allow_unexpected = allow_unexpected
         self._allow_any = allow_any
         self._serializer_registry = {descriptor: self} if _registry is None else _registry
-        self._field_serializers = {name: self.find_serializer(desc) for name, desc in descriptor.fields.items()}
+        self._keys = key_mapper or NoopKeyMapper()
+        self._serializers_by_field = {name: self.find_serializer(desc) for name, desc in descriptor.fields.items()}
 
     @property
     def _cls(self) -> Type[T]:
@@ -65,7 +68,7 @@ class SeriousModel(Generic[T]):
         _check_is_instance(data, Mapping, f'Invalid data for {self._cls}')  # type: ignore
         root = _ctx is None
         loading: Loading = Loading() if root else _ctx  # type: ignore # checked above
-        mut_data = dict(data)
+        mut_data = {self._keys.to_model(key): value for key, value in data.items()}
         if self._allow_missing:
             for field in _fields_missing_from(mut_data, self._cls):
                 mut_data[field.name] = None
@@ -76,7 +79,7 @@ class SeriousModel(Generic[T]):
         try:
             init_kwargs = {
                 field: loading.run(f'.[{field}]', serializer, mut_data[field])
-                for field, serializer in self._field_serializers.items()
+                for field, serializer in self._serializers_by_field.items()
                 if field in mut_data
             }
             result = self._cls(**init_kwargs)  # type: ignore # not an object
@@ -96,10 +99,11 @@ class SeriousModel(Generic[T]):
         _check_is_instance(o, self._cls)
         root = _ctx is None
         dumping: Dumping = Dumping() if root else _ctx  # type: ignore # checked above
+        _s = self._keys.to_serialized
         try:
             return {
-                field: dumping.run(f'.[{field}]', serializer, getattr(o, field))
-                for field, serializer in self._field_serializers.items()
+                _s(field): dumping.run(f'.[{_s(field)}]', serializer, getattr(o, field))
+                for field, serializer in self._serializers_by_field.items()
             }
         except Exception as e:
             if root:
@@ -176,3 +180,23 @@ def _fields_missing_from(data: Mapping, cls: DataclassType) -> Iterator[Field]:
                and field.default_factory is MISSING  # type: ignore # default factory is an unbound function
 
     return filter(_is_missing, fields(cls))
+
+
+class KeyMapper(ABC):
+
+    @abstractmethod
+    def to_model(self, item: str) -> str:
+        raise NotImplementedError
+
+    @abstractmethod
+    def to_serialized(self, item: str) -> str:
+        raise NotImplementedError
+
+
+class NoopKeyMapper(KeyMapper):
+
+    def to_model(self, item: str) -> str:
+        return item
+
+    def to_serialized(self, item: str) -> str:
+        return item
