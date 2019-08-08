@@ -27,7 +27,7 @@ class TestEncoder:
 
     def test_nested_dataclass(self):
         actual = self.dcwdc.dump(DataclassWithDataclass(DataclassWithList([1])))
-        expected = json.dumps({"dc_with_list": {"xs": [1]}})
+        expected = json.dumps({"dcWithList": {"xs": [1]}})
         assert actual == expected
 
     def test_nested_list_of_dataclasses(self):

@@ -6,7 +6,8 @@ from typing import Optional, TypeVar, Type, Generic, List, MutableMapping, Colle
 from serious.descriptors import describe
 from serious.preconditions import _check_is_instance
 from serious.serialization import FieldSerializer, SeriousModel, field_serializers
-from serious.utils import class_path
+from serious.serialization.model import KeyMapper
+from serious.utils import class_path, snake_to_camel, camel_to_snake
 from .preconditions import _check_that_loading_an_object, _check_that_loading_a_list
 
 T = TypeVar('T')
@@ -22,6 +23,7 @@ class JsonModel(Generic[T]):
             allow_any: bool = False,
             allow_missing: bool = False,
             allow_unexpected: bool = False,
+            camel_case: bool = True,
             indent: Optional[int] = None,
     ):
         """
@@ -31,6 +33,7 @@ class JsonModel(Generic[T]):
                 (this includes generics like `List[Any]`, or simply `list`).
         @param allow_missing `False` to raise during load if data is missing the optional fields.
         @param allow_unexpected `False` to raise during load if data contains some unknown fields.
+        @param camel_case `True` to transform dataclass "snake_case" to JSON "camelCase".
         @param indent number of spaces JSON output will be indented by; `None` for most compact representation.
         """
         self._descriptor = describe(cls)
@@ -40,6 +43,7 @@ class JsonModel(Generic[T]):
             allow_any=allow_any,
             allow_missing=allow_missing,
             allow_unexpected=allow_unexpected,
+            key_mapper=JsonKeyMapper() if camel_case else None
         )
         self._dump_indentation = indent
 
@@ -92,3 +96,12 @@ class JsonModel(Generic[T]):
         if path == 'serious.json.api.JsonModel':
             path = 'serious.JsonModel'
         return f'<{path}[{class_path(self.cls)}] at {hex(id(self))}>'
+
+
+class JsonKeyMapper(KeyMapper):
+
+    def to_model(self, item: str) -> str:
+        return camel_to_snake(item)
+
+    def to_serialized(self, item: str) -> str:
+        return snake_to_camel(item)

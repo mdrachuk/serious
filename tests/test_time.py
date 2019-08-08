@@ -15,7 +15,7 @@ class TestDefaultDatetime:
         self.model = JsonModel(Post)
         dt = datetime(2018, 11, 17, 16, 55, 28, 456753, tzinfo=timezone.utc)
         iso = dt.isoformat()
-        self.json = f'{{"created_at": "{iso}"}}'
+        self.json = f'{{"createdAt": "{iso}"}}'
         self.dataclass = Post(datetime.fromisoformat(iso))
 
     def test_load(self):

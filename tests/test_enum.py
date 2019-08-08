@@ -104,7 +104,7 @@ class EnumContainer:
 class TestEnumCollection:
     def setup(self):
         self.model = JsonModel(EnumContainer)
-        self.json = '{"enum_list": ["gamma", 1], "enum_mapping": {"first": "alpha", "second": 3.14}}'
+        self.json = '{"enumList": ["gamma", 1], "enumMapping": {"first": "alpha", "second": 3.14}}'
         self.dataclass = EnumContainer(
             enum_list=[Symbol.GAMMA, Symbol.ONE],
             enum_mapping={"first": Symbol.ALPHA, "second": Symbol.PI}
