@@ -79,7 +79,7 @@ class SeriousModel(Generic[T]):
             _check_for_unexpected(self._cls, mut_data)
         try:
             init_kwargs = {
-                field: loading.run(f'.[{field}]', serializer, mut_data[field])
+                field: loading.run(f'.[{self._keys.to_serialized(field)}]', serializer, mut_data[field])
                 for field, serializer in self._serializers_by_field.items()
                 if field in mut_data
             }
