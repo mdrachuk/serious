@@ -3,7 +3,7 @@
 [![Test Coverage](https://img.shields.io/coveralls/github/mdrachuk/serious/master)](https://coveralls.io/github/mdrachuk/serious)
 [![Supported Python](https://img.shields.io/pypi/pyversions/serious)](https://pypi.org/project/serious/)
 
-One-- [preferable][zen] --way for object serialization and validation.
+Define models in dataclasses: serialization, validation, and more.
 
 
 # Get It Now
