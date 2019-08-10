@@ -5,7 +5,8 @@ from typing import Type, Mapping, Collection, TYPE_CHECKING, Iterable
 from .utils import DataclassType, class_path
 
 if TYPE_CHECKING:  # To reference in typings
-    from serious.serialization import SerializationStep
+    from .serialization.process import SerializationStep
+    from .descriptors import TypeDescriptor
 
 
 class SerializationError(Exception):
@@ -78,12 +79,25 @@ class MissingField(LoadError):
 
 
 class ModelError(Exception):
+
     def __init__(self, cls: Type):
         self.cls = cls
 
     @property
     def message(self):
         return f'Model error in class "{self.cls}ю"'
+
+
+class FieldMissingSerializer(ModelError):
+
+    def __init__(self, cls: Type, desc: TypeDescriptor):
+        super().__init__(cls)
+        self.desc = desc
+
+    @property
+    def message(self):
+        return (f'{class_path(self.cls)} is has unserializable member: {self.desc}.'
+                f'Create a serializer fitting the descriptor and pass it to the model `serializers`.')
 
 
 class ModelContainsAny(ModelError):

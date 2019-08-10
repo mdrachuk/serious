@@ -9,8 +9,8 @@ from uuid import UUID
 
 from serious.descriptors import scan_types, TypeDescriptor, DescriptorTypes
 from serious.errors import ModelContainsAny, ModelContainsUnion, MissingField, UnexpectedItem, ValidationError, \
-    LoadError, DumpError, MutableTypesInModel
-from serious.preconditions import _check_is_dataclass, _check_is_instance, _check_present
+    LoadError, DumpError, MutableTypesInModel, FieldMissingSerializer
+from serious.preconditions import _check_is_instance
 from serious.types import FrozenList, Email, Timestamp
 from serious.utils import DataclassType
 from serious.validation import validate
@@ -58,7 +58,7 @@ class SeriousModel(Generic[T]):
         @param _registry a mapping of dataclass type descriptors to corresponding serious serializer;
                 used internally to create child serializers.
         """
-        _check_is_dataclass(descriptor.cls, 'Serious can only operate on dataclasses.')
+        assert is_dataclass(descriptor.cls), 'Serious can only operate on dataclasses.'
         all_types = scan_types(descriptor)
         if not allow_any and Any in all_types:
             raise ModelContainsAny(descriptor.cls)
@@ -156,9 +156,9 @@ class SeriousModel(Generic[T]):
 
         @param descriptor descriptor of a field to serialize.
         """
-        optional = self._find_serializer(descriptor)
-        # TODO:mdrachuk:2019-08-10: raise proper error
-        serializer = _check_present(optional, f'Type "{descriptor.cls}" is not supported')
+        serializer = self._find_serializer(descriptor)
+        if serializer is None:
+            raise FieldMissingSerializer(self._descriptor.cls, descriptor)
         return serializer
 
     def _find_serializer(self, desc: TypeDescriptor) -> Optional[FieldSerializer]:
