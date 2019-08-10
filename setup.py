@@ -1,15 +1,21 @@
 from setuptools import setup, find_packages
 
-from config import config
+import version
+
+
+def readme():
+    with open('README.md', 'r', encoding='utf8') as f:
+        return f.read()
+
 
 setup(
-    name=config.name,
-    version=config.version,
+    name='serious',
+    version=version.__version__,
     packages=find_packages(exclude=("tests*",)),
-    author=config.author,
-    author_email=config.author_email,
+    author='mdrachuk',
+    author_email='misha@drach.uk',
     description="Easily serialize dataclasses to and from JSON",
-    long_description=config.readme,
+    long_description=readme(),
     long_description_content_type='text/markdown',
     url="https://github.com/mdrachuk/serious",
     license="Unlicense",
