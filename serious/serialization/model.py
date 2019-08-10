@@ -1,13 +1,17 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from dataclasses import fields, MISSING, Field
+from dataclasses import fields, MISSING, Field, is_dataclass
+from datetime import datetime, date, time
+from decimal import Decimal
 from typing import Generic, Iterable, Type, Dict, Any, Union, Mapping, Optional, Iterator, TypeVar
+from uuid import UUID
 
-from serious.descriptors import scan_types, TypeDescriptor
+from serious.descriptors import scan_types, TypeDescriptor, DescriptorTypes
 from serious.errors import ModelContainsAny, ModelContainsUnion, MissingField, UnexpectedItem, ValidationError, \
-    LoadError, DumpError
+    LoadError, DumpError, MutableTypesInModel
 from serious.preconditions import _check_is_dataclass, _check_is_instance, _check_present
+from serious.types import FrozenList, Email, Timestamp
 from serious.utils import DataclassType
 from serious.validation import validate
 from .process import Loading, Dumping
@@ -16,6 +20,14 @@ from .serializer import FieldSerializer
 T = TypeVar('T')
 M = TypeVar('M')  # Python model value
 S = TypeVar('S')  # Serialized value
+
+_IMMUTABLE_TYPES = tuple([
+    str, int, float, bool,
+    tuple, FrozenList,
+    Decimal, UUID, datetime, date, time,
+    Email, Timestamp,
+    Ellipsis,
+])
 
 
 class SeriousModel(Generic[T]):
@@ -29,6 +41,7 @@ class SeriousModel(Generic[T]):
             allow_any: bool,
             allow_missing: bool,
             allow_unexpected: bool,
+            ensure_frozen: Union[bool, Iterable[Type]] = False,
             key_mapper: Optional[KeyMapper] = None,
             _registry: Dict[TypeDescriptor, SeriousModel] = None
     ):
@@ -39,6 +52,8 @@ class SeriousModel(Generic[T]):
                 (this includes generics like `List[Any]`, or simply `list`).
         @param allow_missing `False` to raise during load if data is missing the optional fields.
         @param allow_unexpected `False` to raise during load if data contains some unknown fields.
+        @param ensure_frozen `False` to skip check of model immutability; `True` will perform the check
+                against built-in immutable types; a list of custom immutable types is added to built-ins.
         @param key_mapper remap field names of between dataclass and serialized objects
         @param _registry a mapping of dataclass type descriptors to corresponding serious serializer;
                 used internally to create child serializers.
@@ -49,6 +64,10 @@ class SeriousModel(Generic[T]):
             raise ModelContainsAny(descriptor.cls)
         if Union in all_types:
             raise ModelContainsUnion(descriptor.cls)
+        if ensure_frozen:
+            mutable_types = extract_mutable(all_types, also_immutable={} if ensure_frozen is True else ensure_frozen)
+            if len(mutable_types):
+                raise MutableTypesInModel(descriptor.cls, mutable_types)
         self._descriptor = descriptor
         self._serializers = tuple(serializers)
         self._allow_missing = allow_missing
@@ -138,6 +157,7 @@ class SeriousModel(Generic[T]):
         @param descriptor descriptor of a field to serialize.
         """
         optional = self._find_serializer(descriptor)
+        # TODO:mdrachuk:2019-08-10: raise proper error
         serializer = _check_present(optional, f'Type "{descriptor.cls}" is not supported')
         return serializer
 
@@ -202,3 +222,10 @@ class NoopKeyMapper(KeyMapper):
 
     def to_serialized(self, item: str) -> str:
         return item
+
+
+def extract_mutable(desc: DescriptorTypes, also_immutable):
+    allowed_types = set(_IMMUTABLE_TYPES) | set(also_immutable)
+    maybe_dc = set(desc.types) - allowed_types
+    restricted = [type_ for type_ in maybe_dc if not (is_dataclass(type_) and type_.__dataclass_params__.frozen)]
+    return restricted

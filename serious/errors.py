@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Type, Mapping, Collection, TYPE_CHECKING
+from typing import Type, Mapping, Collection, TYPE_CHECKING, Iterable
 
 from .utils import DataclassType, class_path
 
@@ -105,14 +105,16 @@ class ModelContainsUnion(ModelError):
 
 
 class MutableTypesInModel(ModelError):
-    def __init__(self, cls: Type, message: str):
+    def __init__(self, cls: Type, mutable_types: Iterable[Type]):
         super().__init__(cls)
-        self.mutable_message = message
+        self.mutable_types = mutable_types
 
     @property
     def message(self):
-        return (f'{class_path(self.cls)} is mutable. '
-                f'{self.mutable_message}'
+        return (f'{class_path(self.cls)} is has mutable members: {self.mutable_types}.'
+                f'If there are immutable types pass them to model as `ensure_frozen=[Type1, Type2]`.'
+                f'Replace mutable types with frozen ones. '
+                f'Set @dataclass(frozen=True). \n'
                 f'Alternatively, allow mutable fields by passing `ensure_frozen=False` to model. ')
 
 

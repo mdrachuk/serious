@@ -190,7 +190,7 @@ class CollectionSerializer(FieldSerializer[Collection, list]):
         return (issubclass(desc.cls, (list, set, frozenset))
                 or (issubclass(desc.cls, tuple)
                     and len(desc.parameters) == 2
-                    and desc.parameters[1] is Ellipsis))
+                    and desc.parameters[1].cls is Ellipsis))
 
     def load(self, value: list, ctx: Loading) -> Collection:
         if not isinstance(value, list):

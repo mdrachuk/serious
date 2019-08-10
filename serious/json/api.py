@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from typing import Optional, TypeVar, Type, Generic, List, MutableMapping, Collection, Iterable, Any, Dict
+from typing import Optional, TypeVar, Type, Generic, List, MutableMapping, Collection, Iterable, Any, Dict, Union
 
 from serious.descriptors import describe
 from serious.preconditions import _check_is_instance
@@ -18,11 +18,12 @@ class JsonModel(Generic[T]):
     def __init__(
             self,
             cls: Type[T],
-            *,
             serializers: Iterable[Type[FieldSerializer]] = field_serializers(),
+            *,
             allow_any: bool = False,
             allow_missing: bool = False,
             allow_unexpected: bool = False,
+            ensure_frozen: Union[bool, Iterable[Type]] = False,
             camel_case: bool = True,
             indent: Optional[int] = None,
     ):
@@ -33,6 +34,8 @@ class JsonModel(Generic[T]):
                 (this includes generics like `List[Any]`, or simply `list`).
         @param allow_missing `False` to raise during load if data is missing the optional fields.
         @param allow_unexpected `False` to raise during load if data contains some unknown fields.
+        @param ensure_frozen `False` to skip check of model immutability; `True` will perform the check
+                against built-in immutable types; a list of custom immutable types is added to built-ins.
         @param camel_case `True` to transform dataclass "snake_case" to JSON "camelCase".
         @param indent number of spaces JSON output will be indented by; `None` for most compact representation.
         """
@@ -43,7 +46,8 @@ class JsonModel(Generic[T]):
             allow_any=allow_any,
             allow_missing=allow_missing,
             allow_unexpected=allow_unexpected,
-            key_mapper=JsonKeyMapper() if camel_case else None
+            ensure_frozen=ensure_frozen,
+            key_mapper=JsonKeyMapper() if camel_case else None,
         )
         self._dump_indentation = indent
 

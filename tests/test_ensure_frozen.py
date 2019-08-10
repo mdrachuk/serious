@@ -11,8 +11,9 @@ from uuid import UUID
 
 import pytest
 
-from serious import FrozenList, JsonModel, DictModel, Email, Timestamp, FrozenDict
+from serious import FrozenList, JsonModel, DictModel, Email, Timestamp, FrozenDict, TypeDescriptor
 from serious.errors import MutableTypesInModel, ModelContainsAny
+from serious.serialization import FieldSerializer, field_serializers
 
 
 @dataclass(frozen=True)
@@ -107,14 +108,12 @@ mutable = [List[str], Dict[str, str], Set[str], Enum, MutableDataclass, MutNode]
 def test_ensure_default_non_frozen(new_model):
     model = new_model(BlogPost)
     assert model
-    assert model.ensure_frozen is False
 
 
 @with_(models)
 def test_ensure_frozen_false(new_model):
     model = new_model(BlogPost, ensure_frozen=False)
     assert model
-    assert model.ensure_frozen is False
 
 
 class TestEnsureFrozenTrue:
@@ -143,7 +142,6 @@ class TestEnsureFrozenTrue:
     def test_passes_valid_model(self, new_model):
         model = new_model(User, ensure_frozen=True)
         assert model
-        assert model.ensure_frozen
 
     @with_(models, immutable)
     def test_immutable_types(self, new_model, cls):
@@ -162,4 +160,16 @@ class TestEnsureFrozenTrue:
 
     @with_(models, [str, FrozenNode, FrozenList[FrozenNode]])
     def test_custom_immutable_object(self, new_model, cls):
-        assert new_model(FrozenEvent[cls], ensure_frozen=[FrozenNode])
+        assert new_model(FrozenEvent[cls], field_serializers([FrozenNodeSerializer]), ensure_frozen=[FrozenNode])
+
+
+class FrozenNodeSerializer(FieldSerializer[FrozenNode, list]):
+    @classmethod
+    def fits(cls, desc: TypeDescriptor) -> bool:
+        return desc.cls is FrozenNode
+
+    def load(self, value, ctx):
+        return FrozenNode(value)
+
+    def dump(self, value, ctx):
+        return value.nodes
