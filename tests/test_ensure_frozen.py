@@ -6,7 +6,7 @@ from datetime import date, datetime, time
 from decimal import Decimal
 from enum import Enum
 from itertools import product
-from typing import List, Sequence, Generic, TypeVar, Dict, Tuple, Set, Any
+from typing import List, Sequence, Generic, TypeVar, Dict, Tuple, Set, Any, FrozenSet
 from uuid import UUID
 
 import pytest
@@ -97,7 +97,7 @@ class ImmutableDataclass:
 
 
 immutable = [str, int, float, bool,
-             Tuple[str], Tuple[str, Ellipsis], FrozenList[str],
+             Tuple[str], Tuple[str, Ellipsis], FrozenList[str], FrozenSet[str],
              Decimal, UUID,
              datetime, date, time, Email, Timestamp,
              ImmutableDataclass]

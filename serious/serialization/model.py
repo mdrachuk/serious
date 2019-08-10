@@ -23,7 +23,7 @@ S = TypeVar('S')  # Serialized value
 
 _IMMUTABLE_TYPES = tuple([
     str, int, float, bool,
-    tuple, FrozenList,
+    bytes, tuple, frozenset, FrozenList,
     Decimal, UUID, datetime, date, time,
     Email, Timestamp,
     Ellipsis,
