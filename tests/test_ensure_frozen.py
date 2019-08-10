@@ -6,12 +6,13 @@ from datetime import date, datetime, time
 from decimal import Decimal
 from enum import Enum
 from itertools import product
-from typing import List, Sequence, Generic, TypeVar, Dict, Tuple, Set
+from typing import List, Sequence, Generic, TypeVar, Dict, Tuple, Set, Any
 from uuid import UUID
 
 import pytest
 
-from serious import FrozenList, JsonModel, DictModel, Email, Timestamp
+from serious import FrozenList, JsonModel, DictModel, Email, Timestamp, FrozenDict
+from serious.errors import MutableTypesInModel, ModelContainsAny
 
 
 @dataclass(frozen=True)
@@ -38,37 +39,68 @@ class Message:
 T = TypeVar('T')
 
 
-@dataclass
-class InternalEvent(Generic[T]):
+@dataclass(frozen=True)
+class FrozenEvent(Generic[T]):
     event: T
 
 
-class Node:
-    nodes: List[Node]
+class MutNode:
+    nodes: List[MutNode]
 
-    def __init__(self, nodes: List[Node]):
+    def __init__(self, nodes: List[MutNode]):
         self.nodes = nodes
+
+
+class FrozenNode:
+    nodes: FrozenList[FrozenNode]
+
+    def __init__(self, nodes: List[FrozenNode]):
+        super().__setattr__('nodes', nodes)
+
+    def __setattr__(self, name, value):
+        raise AttributeError('Cannot change a frozen object.')
 
 
 models = [JsonModel, DictModel]
 
 
-def with_(*collections: Sequence[Sequence], cartesian_product=True):
+def with_(*collections: Tuple[Sequence], cartesian_product=True):
     def _wrapped(f):
         signature = inspect.signature(f)
         func_params = list(signature.parameters)
         if len(func_params) and func_params[0] == 'self':
             func_params.pop(0)
         pytest_keys = ','.join(func_params)
-        if cartesian_product:
-            pytest_values = list(product(*collections))
+        if len(collections) > 1:
+            if cartesian_product:
+                pytest_values = list(product(*collections))
+            else:
+                if len(set(map(len, collections))) != 1:
+                    raise Exception('Parameters must be of equal length')
+                pytest_values = list(zip(*collections))
         else:
-            if len(set(map(len, collections))) != 1:
-                raise Exception('Parameters must be of equal length')
-            pytest_values = list(zip(*collections))
+            pytest_values = collections[0]
         return pytest.mark.parametrize(pytest_keys, pytest_values)(f)
 
     return _wrapped
+
+
+@dataclass
+class MutableDataclass:
+    pass
+
+
+@dataclass(frozen=True)
+class ImmutableDataclass:
+    pass
+
+
+immutable = [str, int, float, bool,
+             Tuple[str], Tuple[str, Ellipsis], FrozenList[str],
+             Decimal, UUID,
+             datetime, date, time, Email, Timestamp,
+             ImmutableDataclass]
+mutable = [List[str], Dict[str, str], Set[str], Enum, MutableDataclass, MutNode]
 
 
 @with_(models)
@@ -83,22 +115,6 @@ def test_ensure_frozen_false(new_model):
     model = new_model(BlogPost, ensure_frozen=False)
     assert model
     assert model.ensure_frozen is False
-
-
-@dataclass
-class MutableDataclass:
-    pass
-
-
-@dataclass(frozen=True)
-class ImmutableDataclass:
-    pass
-
-
-immutable = [
-    str, int, float, bool, Tuple[str], Decimal, UUID, datetime, date, time, Email, Timestamp, ImmutableDataclass
-]
-mutable = [List[str], Dict[str, str], Set[str], Enum, MutableDataclass]
 
 
 class TestEnsureFrozenTrue:
@@ -116,12 +132,12 @@ class TestEnsureFrozenTrue:
     @with_(models)
     def test_raises_model_error_on_generic_parameter(self, new_model):
         with pytest.raises(MutableTypesInModel):
-            new_model(InternalEvent[Dict[str, str]], ensure_frozen=True)
+            new_model(FrozenEvent[Dict[str, str]], ensure_frozen=True)
 
     @with_(models)
     def test_raises_model_error_on_generic_parameter(self, new_model):
         with pytest.raises(MutableTypesInModel):
-            new_model(InternalEvent[FrozenList[Node]], ensure_frozen=True)
+            new_model(FrozenEvent[FrozenList[MutNode]], ensure_frozen=True)
 
     @with_(models)
     def test_passes_valid_model(self, new_model):
@@ -131,9 +147,19 @@ class TestEnsureFrozenTrue:
 
     @with_(models, immutable)
     def test_immutable_types(self, new_model, cls):
-        assert new_model(InternalEvent[cls], ensure_frozen=True)
+        assert new_model(FrozenEvent[cls], ensure_frozen=True)
 
     @with_(models, mutable)
     def test_mutable_types(self, new_model, cls):
         with pytest.raises(MutableTypesInModel):
-            assert new_model(InternalEvent[cls], ensure_frozen=True)
+            assert new_model(FrozenEvent[cls], ensure_frozen=True)
+
+    @with_(models, [Any, list, FrozenDict])
+    def test_fails_any(self, new_model, cls):
+        with pytest.raises(ModelContainsAny) as e:
+            assert new_model(FrozenEvent[cls], ensure_frozen=True)
+        assert 'ensure_frozen' in str(e)
+
+    @with_(models, [str, FrozenNode, FrozenList[FrozenNode]])
+    def test_custom_immutable_object(self, new_model, cls):
+        assert new_model(FrozenEvent[cls], ensure_frozen=[FrozenNode])
