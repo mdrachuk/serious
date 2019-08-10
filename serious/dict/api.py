@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TypeVar, Type, Generic, List, Collection, Dict, Iterable, Any, Mapping
+from typing import TypeVar, Type, Generic, List, Collection, Dict, Iterable, Any, Mapping, Union
 
 from serious.descriptors import describe
 from serious.preconditions import _check_is_instance
@@ -15,11 +15,12 @@ class DictModel(Generic[T]):
     def __init__(
             self,
             cls: Type[T],
-            *,
             serializers: Iterable[Type[FieldSerializer]] = field_serializers(),
+            *,
             allow_any: bool = False,
             allow_missing: bool = False,
             allow_unexpected: bool = False,
+            ensure_frozen: Union[bool, Iterable[Type]] = False,
     ):
         """
         @param cls the dataclass type to load/dump.
@@ -28,6 +29,8 @@ class DictModel(Generic[T]):
                 (this includes generics like `List[Any]`, or simply `list`).
         @param allow_missing `False` to raise during load if data is missing the optional fields.
         @param allow_unexpected `False` to raise during load if data contains some unknown fields.
+        @param ensure_frozen `False` to skip check of model immutability; `True` will perform the check
+                against built-in immutable types; a list of custom immutable types is added to built-ins.
         """
         self._descriptor = describe(cls)
         self._serializer: SeriousModel = SeriousModel(
@@ -35,7 +38,8 @@ class DictModel(Generic[T]):
             serializers,
             allow_any=allow_any,
             allow_missing=allow_missing,
-            allow_unexpected=allow_unexpected
+            allow_unexpected=allow_unexpected,
+            ensure_frozen=ensure_frozen,
         )
 
     @property

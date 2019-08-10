@@ -5,7 +5,7 @@
 [![Supported Python](https://img.shields.io/pypi/pyversions/serious)][pypi]
 [![Documentation](https://img.shields.io/readthedocs/serious)][docs]
 
-Python dataclasses serialization and validation.
+Define models in dataclasses: serialization, validation, and more.
 
 [Documentation][docs]
 
@@ -16,7 +16,8 @@ Python dataclasses serialization and validation.
 - Type annotations for all public-facing APIs.
 - (Optionally) ensures immutability.
 - Easily extensible.
-- Documented for Humans.
+- Made for people.
+- Documented rigorously.
 
 ## Basics
 ### Installation

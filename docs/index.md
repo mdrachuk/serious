@@ -3,7 +3,7 @@
 [![Test Coverage](https://img.shields.io/coveralls/github/mdrachuk/serious/master)](https://coveralls.io/github/mdrachuk/serious)
 [![Supported Python](https://img.shields.io/pypi/pyversions/serious)](https://pypi.org/project/serious/)
 
-One-- [preferable][zen] --way for object serialization and validation.
+Define models in dataclasses: serialization, validation, and more.
 
 
 # Get It Now
@@ -30,8 +30,10 @@ This introduces multiple benefits:
 ### Type annotations everywhere
 Stay certain that no alien type will break production. Test correctness with [mypy][mypy]. 
 
-### (Optionally) immutable dataclasses
-TBD
+### (Optionally) Immutable model
+Immutable (or frozen) means that object’s state cannot be changed after it was created.
+Although the main reason for this are multi-threaded environments, frozen objects still can make life easier.
+With immutable model you can be sure that object’s state did not change unless reassigned it [explicitly][zen].
 
 ### Easily extensible
 Plug in [custom field types][custom-serializers] and [output formats][custom-model]. 

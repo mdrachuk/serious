@@ -5,6 +5,7 @@ from uuid import UUID
 import pytest
 
 from serious import DictModel, LoadError, TypeDescriptor
+from serious.errors import FieldMissingSerializer
 from serious.serialization import Loading, Dumping, FieldSerializer, field_serializers
 from tests.entities import DataclassWithDataclass, DataclassWithOptional, DataclassWithOptionalNested, DataclassWithUuid
 
@@ -147,3 +148,8 @@ class TestAllowUnexpected:
         with pytest.raises(LoadError) as exc_info:
             DictModel(DataclassWithOptional).load({"x": 1, "y": 1})
         assert '"y"' in exc_info.value.message
+
+
+def test_missing_serializer():
+    with pytest.raises(FieldMissingSerializer):
+        DictModel(User, serializers=[])

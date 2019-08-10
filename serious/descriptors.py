@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from collections import ChainMap
 from dataclasses import dataclass, fields, is_dataclass
 from typing import Type, Any, TypeVar, get_type_hints, Dict, Mapping, List, Union, Iterable
@@ -6,14 +8,13 @@ from .types import FrozenDict, FrozenList
 
 T = TypeVar('T')
 
-FrozenGenericParams = FrozenDict[Any, 'TypeDescriptor']
 GenericParams = Mapping[Any, 'TypeDescriptor']
 
 
 @dataclass(frozen=True)
 class TypeDescriptor:
     _cls: Type
-    parameters: FrozenGenericParams
+    parameters: FrozenDict[Any, TypeDescriptor]
     is_optional: bool = False
     is_dataclass: bool = False
 
@@ -22,14 +23,14 @@ class TypeDescriptor:
         return self._cls
 
     @property
-    def fields(self) -> Mapping[str, 'TypeDescriptor']:
+    def fields(self) -> Mapping[str, TypeDescriptor]:
         if not is_dataclass(self.cls):
             return {}
         types = get_type_hints(self.cls)  # type: Dict[str, Type]
         descriptors = {name: self.describe(type_) for name, type_ in types.items()}
         return {f.name: descriptors[f.name] for f in fields(self.cls)}
 
-    def describe(self, type_: Type) -> 'TypeDescriptor':
+    def describe(self, type_: Type) -> TypeDescriptor:
         return describe(type_, self.parameters)
 
 
