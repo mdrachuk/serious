@@ -47,5 +47,5 @@ steps:
     displayName: 'Check typings'
 
   - script: |
-      python check_version.py
+      python version.py
     displayName: 'Check version changed'
