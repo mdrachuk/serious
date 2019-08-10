@@ -104,6 +104,18 @@ class ModelContainsUnion(ModelError):
                 f'Union types are not supported by serious.')
 
 
+class MutableTypesInModel(ModelError):
+    def __init__(self, cls: Type, message: str):
+        super().__init__(cls)
+        self.mutable_message = message
+
+    @property
+    def message(self):
+        return (f'{class_path(self.cls)} is mutable. '
+                f'{self.mutable_message}'
+                f'Alternatively, allow mutable fields by passing `ensure_frozen=False` to model. ')
+
+
 class ValidationError(Exception):
     def __init__(self, message='Failed validation'):
         super().__init__(message)
