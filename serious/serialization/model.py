@@ -116,7 +116,8 @@ class SeriousModel(Generic[T]):
         Creates a [SeriousModel] for dataclass fields nested in the current serializers.
         The preferences of the nested dataclasses match those of the root one.
         """
-
+        if descriptor == self._descriptor:
+            return self
         if descriptor in self._serializer_registry:
             return self._serializer_registry[descriptor]
         new_model: SeriousModel = SeriousModel(
