@@ -4,10 +4,10 @@ from abc import ABC, abstractmethod
 from dataclasses import fields, MISSING, Field, is_dataclass
 from datetime import datetime, date, time
 from decimal import Decimal
-from typing import Generic, Iterable, Type, Dict, Any, Union, Mapping, Optional, Iterator, TypeVar
+from typing import Generic, Iterable, Type, Dict, Any, Union, Mapping, Optional, Iterator, TypeVar, List, Collection
 from uuid import UUID
 
-from serious.descriptors import scan_types, TypeDescriptor, DescriptorTypes
+from serious.descriptors import scan_types, TypeDescriptor, DescTypes
 from serious.errors import ModelContainsAny, ModelContainsUnion, MissingField, UnexpectedItem, ValidationError, \
     LoadError, DumpError, MutableTypesInModel, FieldMissingSerializer
 from serious.preconditions import check_is_instance
@@ -65,7 +65,8 @@ class SeriousModel(Generic[T]):
         if Union in all_types:
             raise ModelContainsUnion(descriptor.cls)
         if ensure_frozen:
-            mutable_types = extract_mutable(all_types, also_immutable={} if ensure_frozen is True else ensure_frozen)
+            user_frozen = ensure_frozen if isinstance(ensure_frozen, Iterable) else {}
+            mutable_types = extract_mutable(all_types, also_immutable=user_frozen)
             if len(mutable_types):
                 raise MutableTypesInModel(descriptor.cls, mutable_types)
         self._descriptor = descriptor
@@ -224,7 +225,7 @@ class NoopKeyMapper(KeyMapper):
         return item
 
 
-def extract_mutable(desc: DescriptorTypes, also_immutable):
+def extract_mutable(desc: DescTypes, also_immutable: Iterable[Type]) -> List[Type]:
     allowed_types = set(_IMMUTABLE_TYPES) | set(also_immutable)
     maybe_dc = set(desc.types) - allowed_types
     restricted = [type_ for type_ in maybe_dc if not is_frozen_dc(type_)]
