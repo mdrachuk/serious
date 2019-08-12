@@ -2,11 +2,13 @@ from __future__ import annotations
 
 __all__ = ['TypeDescriptor', 'describe', 'DescTypes', 'scan_types']
 __doc__ = """
-Descriptors are simplifying work with Types, enriching them with more contextual information.
-This allows to make decisions based on type easier (like picking a serializer).
+Descriptors are simplifying work with types, enriching them with more contextual information.
+This allows to make decisions, like picking a serializer, easier.
 
 They unwrap the generic aliases, get generic parameters from parent classes, simplify optional,
-dataclass checks and more.  
+dataclass checks and more.
+
+The data is carried by `TypeDescriptor`s which are created by a call to `serious.descriptors.describe(cls)`.
 """
 from collections import ChainMap
 from dataclasses import dataclass, fields, is_dataclass
