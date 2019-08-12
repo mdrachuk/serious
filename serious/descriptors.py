@@ -1,5 +1,13 @@
 from __future__ import annotations
 
+__all__ = ['TypeDescriptor', 'describe', 'DescTypes', 'scan_types']
+__doc__ = """
+Descriptors are simplifying work with Types, enriching them with more contextual information.
+This allows to make decisions based on type easier (like picking a serializer).
+
+They unwrap the generic aliases, get generic parameters from parent classes, simplify optional,
+dataclass checks and more.  
+"""
 from collections import ChainMap
 from dataclasses import dataclass, fields, is_dataclass
 from typing import Type, Any, TypeVar, get_type_hints, Dict, Mapping, List, Union, Iterable
@@ -24,6 +32,9 @@ class TypeDescriptor:
 
     @property
     def fields(self) -> Mapping[str, TypeDescriptor]:
+        """A mapping of all dataclass field names to their corresponding Type Descriptors.
+
+        Returns an empty mapping if the object is not a dataclass."""
         if not is_dataclass(self.cls):
             return {}
         types = get_type_hints(self.cls)  # type: Dict[str, Type]
@@ -35,38 +46,54 @@ class TypeDescriptor:
 
 
 def describe(type_: Type, generic_params: GenericParams = None) -> TypeDescriptor:
+    """Creates a TypeDescriptor for the provided type.
+
+    Optionally generic params can be designated as a mapping of TypeVar to parameter Type or indexes in Dict/List/etc.
+    """
     generic_params = generic_params if generic_params is not None else {}
     param = generic_params.get(type_, None)
     if param is not None:
         return param
-    return _unwrap_generic(type_, generic_params)
+    return _describe_generic(type_, generic_params)
 
 
 _any_type_desc = TypeDescriptor(Any, FrozenDict())  # type: ignore
-_ellipses_type_desc = TypeDescriptor(Ellipsis, FrozenDict())  # type: ignore
-_generic_params = {
+_generic_params: Dict[Type, Dict[int, TypeDescriptor]] = {
     list: {0: _any_type_desc},
     set: {0: _any_type_desc},
     frozenset: {0: _any_type_desc},
-    tuple: {0: _any_type_desc, 1: _ellipses_type_desc},
+    tuple: {0: _any_type_desc, 1: TypeDescriptor(Ellipsis, FrozenDict())},  # type: ignore
     dict: {0: _any_type_desc, 1: _any_type_desc},
-}  # type: Dict[Type, Dict[int, TypeDescriptor]]
+}
 
 
 def _get_default_generic_params(cls: Type, params: GenericParams) -> GenericParams:
+    """Returns mapping of default generic params for the provided cls.
+
+    Examples:
+    - `dict` -> {0: <TypeDescriptor cls=Any>, 1: <TypeDescriptor cls=Any>};
+    - `list` -> {0: <TypeDescriptor cls=Any>};
+    - `tuple` -> {0: <TypeDescriptor cls=Any>, 1: <TypeDescriptor cls=Ellipses>}.
+    """
     for generic, default_params in _generic_params.items():
         if issubclass(cls, generic):
             return default_params
     return params
 
 
-def _unwrap_generic(cls: Type, generic_params: GenericParams) -> TypeDescriptor:
+def _describe_generic(cls: Type, generic_params: GenericParams) -> TypeDescriptor:
+    """Creates a TypeDescriptor for Python _GenericAlias, unwrapping it to its origin/
+
+    Examples:
+    - Tuple[str] -> <TypeDescriptor cls=tuple params={0: <TypeDescriptor cls=str>}>
+    - Optional[int] -> <TypeDescriptor cls=int is_optional=True>
+    """
     params: GenericParams = {}
     is_optional = _is_optional(cls)
     if is_optional:
         cls = cls.__args__[0]
     if hasattr(cls, '__orig_bases__') and is_dataclass(cls):
-        params = dict(ChainMap(*(_unwrap_generic(base, generic_params).parameters for base in cls.__orig_bases__)))
+        params = dict(ChainMap(*(_describe_generic(base, generic_params).parameters for base in cls.__orig_bases__)))
         return TypeDescriptor(
             cls,
             parameters=FrozenDict(params),
@@ -132,6 +159,9 @@ _empty_desc_types = DescTypes({})
 
 
 def scan_types(desc: TypeDescriptor) -> DescTypes:
+    """Create a DescTypes object for the provided descriptor.
+
+    DescTypes allow checks of the descriptor tree."""
     return DescTypes.scan(desc, known=[])
 
 
