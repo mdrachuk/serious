@@ -3,7 +3,7 @@
 [![Test Coverage](https://img.shields.io/coveralls/github/mdrachuk/serious/master)](https://coveralls.io/github/mdrachuk/serious)
 [![Supported Python](https://img.shields.io/pypi/pyversions/serious)](https://pypi.org/project/serious/)
 
-Define models in dataclasses: serialization, validation, and more.
+A dataclass model toolkit: serialization, validation, and more.
 
 
 # Get It Now
