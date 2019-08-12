@@ -1,7 +1,5 @@
 import re
-from typing import Any, Type
-
-DataclassType = Any
+from typing import Type
 
 
 def class_path(cls: Type) -> str:

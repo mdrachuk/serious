@@ -2,15 +2,15 @@ from __future__ import annotations
 
 from typing import Type, Mapping, Collection, TYPE_CHECKING, Iterable
 
-from .utils import DataclassType, class_path
+from .utils import class_path
 
-if TYPE_CHECKING:  # To reference in typings
+if TYPE_CHECKING:
     from .serialization.process import SerializationStep
     from .descriptors import TypeDescriptor
 
 
 class SerializationError(Exception):
-    def __init__(self, cls: Type[DataclassType], serializer_stack: Collection[SerializationStep]):
+    def __init__(self, cls: Type, serializer_stack: Collection[SerializationStep]):
         super().__init__()
         self.cls = cls
         self._path = self.__parse_stack(serializer_stack)
@@ -31,7 +31,7 @@ class SerializationError(Exception):
 
 
 class LoadError(SerializationError):
-    def __init__(self, cls: DataclassType, serializer_stack: Collection[SerializationStep], data: Mapping):
+    def __init__(self, cls: Type, serializer_stack: Collection[SerializationStep], data: Mapping):
         super().__init__(cls, serializer_stack)
         self._data = data
 
@@ -41,7 +41,7 @@ class LoadError(SerializationError):
 
 
 class DumpError(SerializationError):
-    def __init__(self, obj: DataclassType, serializer_stack: Collection[SerializationStep]):
+    def __init__(self, obj: Type, serializer_stack: Collection[SerializationStep]):
         super().__init__(type(obj), serializer_stack)
         self._object = obj
 
@@ -51,7 +51,7 @@ class DumpError(SerializationError):
 
 
 class UnexpectedItem(LoadError):
-    def __init__(self, cls: Type[DataclassType], data, fields: Collection[str]):
+    def __init__(self, cls: Type[Type], data, fields: Collection[str]):
         super().__init__(cls, [], data)
         self._fields = fields
 
@@ -65,7 +65,7 @@ class UnexpectedItem(LoadError):
 
 
 class MissingField(LoadError):
-    def __init__(self, cls: Type[DataclassType], data, fields: Collection[str]):
+    def __init__(self, cls: Type[Type], data, fields: Collection[str]):
         super().__init__(cls, [], data)
         self._fields = fields
 
