@@ -8,7 +8,7 @@ from serious.preconditions import check_is_instance
 from serious.serialization import FieldSerializer, SeriousModel, field_serializers
 from serious.serialization.model import KeyMapper
 from serious.utils import class_path, snake_to_camel, camel_to_snake
-from .preconditions import _check_that_loading_an_object, _check_that_loading_a_list
+from .preconditions import check_that_loading_an_object, check_that_loading_a_list
 
 T = TypeVar('T')
 
@@ -57,12 +57,12 @@ class JsonModel(Generic[T]):
 
     def load(self, json_: str) -> T:
         data: MutableMapping = self._load_from_str(json_)
-        _check_that_loading_an_object(data, self.cls)
+        check_that_loading_an_object(data, self.cls)
         return self._from_dict(data)
 
     def load_many(self, json_: str) -> List[T]:
         data: Collection = self._load_from_str(json_)
-        _check_that_loading_a_list(data, self.cls)
+        check_that_loading_a_list(data, self.cls)
         return [self._from_dict(each) for each in data]
 
     def dump(self, o: T) -> str:
