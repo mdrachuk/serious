@@ -4,7 +4,7 @@ import json
 from typing import Optional, TypeVar, Type, Generic, List, MutableMapping, Collection, Iterable, Any, Dict, Union
 
 from serious.descriptors import describe
-from serious.preconditions import _check_is_instance
+from serious.preconditions import check_is_instance
 from serious.serialization import FieldSerializer, SeriousModel, field_serializers
 from serious.serialization.model import KeyMapper
 from serious.utils import class_path, snake_to_camel, camel_to_snake
@@ -66,7 +66,7 @@ class JsonModel(Generic[T]):
         return [self._from_dict(each) for each in data]
 
     def dump(self, o: T) -> str:
-        _check_is_instance(o, self.cls)
+        check_is_instance(o, self.cls)
         return self._dump_to_str(self._serializer.dump(o))
 
     def dump_many(self, items: Collection[T]) -> str:
@@ -74,7 +74,7 @@ class JsonModel(Generic[T]):
         return self._dump_to_str(dict_items)
 
     def _dump(self, o) -> Dict[str, Any]:
-        return self._serializer.dump(_check_is_instance(o, self.cls))
+        return self._serializer.dump(check_is_instance(o, self.cls))
 
     def _from_dict(self, data: MutableMapping) -> T:
         return self._serializer.load(data)

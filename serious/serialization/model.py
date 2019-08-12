@@ -10,7 +10,7 @@ from uuid import UUID
 from serious.descriptors import scan_types, TypeDescriptor, DescriptorTypes
 from serious.errors import ModelContainsAny, ModelContainsUnion, MissingField, UnexpectedItem, ValidationError, \
     LoadError, DumpError, MutableTypesInModel, FieldMissingSerializer
-from serious.preconditions import _check_is_instance
+from serious.preconditions import check_is_instance
 from serious.types import FrozenList, Email, Timestamp
 from serious.utils import DataclassType
 from serious.validation import validate
@@ -85,7 +85,7 @@ class SeriousModel(Generic[T]):
     def load(self, data: Mapping, _ctx: Optional[Loading] = None) -> T:
         """Loads dataclass from a dictionary or other mapping. """
 
-        _check_is_instance(data, Mapping, f'Invalid data for {self._cls}')  # type: ignore
+        check_is_instance(data, Mapping, f'Invalid data for {self._cls}')  # type: ignore
         root = _ctx is None
         loading: Loading = Loading() if root else _ctx  # type: ignore # checked above
         mut_data = {self._keys.to_model(key): value for key, value in data.items()}
@@ -116,7 +116,7 @@ class SeriousModel(Generic[T]):
     def dump(self, o: T, _ctx: Optional[Dumping] = None) -> Dict[str, Any]:
         """Dumps a dataclass object to a dictionary."""
 
-        _check_is_instance(o, self._cls)
+        check_is_instance(o, self._cls)
         root = _ctx is None
         dumping: Dumping = Dumping() if root else _ctx  # type: ignore # checked above
         _s = self._keys.to_serialized
@@ -227,5 +227,9 @@ class NoopKeyMapper(KeyMapper):
 def extract_mutable(desc: DescriptorTypes, also_immutable):
     allowed_types = set(_IMMUTABLE_TYPES) | set(also_immutable)
     maybe_dc = set(desc.types) - allowed_types
-    restricted = [type_ for type_ in maybe_dc if not (is_dataclass(type_) and type_.__dataclass_params__.frozen)]
+    restricted = [type_ for type_ in maybe_dc if not is_frozen_dc(type_)]
     return restricted
+
+
+def is_frozen_dc(type_: Any) -> bool:
+    return is_dataclass(type_) and type_.__dataclass_params__.frozen
