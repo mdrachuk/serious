@@ -31,11 +31,12 @@ steps:
 
   - script: |
       pip install pytest pytest-cov
-      pytest tests --cov=serious
+      pytest tests --cov=serious --cov-report=html
     displayName: 'Test'
 
   - script: |
-      pip install setuptools wheel
-      python setup.py sdist bdist_wheel
-      twine upload dist/* -u serious -p $(PYPI_PASSWORD)
-    displayName: 'Publish to PyPI'
+      pip install coveralls
+      coveralls
+    displayName: 'Save code coverage'
+    env:
+      COVERALLS_REPO_TOKEN: $(COVERALLS_REPO_TOKEN)
