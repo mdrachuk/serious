@@ -11,7 +11,7 @@ pr:
 stages:
   - stage: Check
     jobs:
-      - job: Test
+      - job: Tests
         pool:
           vmImage: 'Ubuntu-16.04'
         strategy:
@@ -63,7 +63,7 @@ stages:
             displayName: 'Checkout branch'
 
           - script: pytest tests --cov=serious --cov-report=html
-            displayName: 'Test'
+            displayName: 'Test with coverage'
 
           - script: coveralls
             displayName: 'Save code coverage'

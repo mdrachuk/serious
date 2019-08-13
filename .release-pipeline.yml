@@ -7,41 +7,88 @@ trigger:
   - master
 pr: none
 
-pool:
-  vmImage: 'Ubuntu-16.04'
-strategy:
-  matrix:
-    Python37:
-      python.version: '3.7'
 
-steps:
-  - task: UsePythonVersion@0
-    inputs:
-      versionSpec: '$(python.version)'
-    displayName: 'Use Python $(python.version)'
+stages:
+  - stage: Check
+    jobs:
+      - job: Tests
+        pool:
+          vmImage: 'Ubuntu-16.04'
+        strategy:
+          matrix:
+            Python37:
+              python.version: '3.7'
+        steps:
+          - template: .use-python.yml
+          - script: pytest tests
+            displayName: 'Test'
 
-  - script: |
-      git checkout master
-    displayName: 'Checkout master'
+      - job: Typings
+        pool:
+          vmImage: 'Ubuntu-16.04'
+        strategy:
+          matrix:
+            Python37:
+              python.version: '3.7'
+        steps:
+          - template: .use-python.yml
+          - script: mypy serious
+            displayName: 'Check typings'
 
-  - script: |
-      python -m pip install --upgrade pip
-      pip install -r requirements.txt
-    displayName: 'Install dependencies'
+      - job: Version
+        pool:
+          vmImage: 'Ubuntu-16.04'
+        strategy:
+          matrix:
+            Python37:
+              python.version: '3.7'
+        steps:
+          - template: .use-python.yml
+          - script: python version.py
+            displayName: 'Check version changed'
 
-  - script: |
-      pytest tests --cov=serious
-    displayName: 'Test'
+  - stage: Publish
+    jobs:
+      - job: PyPI
+        pool:
+          vmImage: 'Ubuntu-16.04'
+        strategy:
+          matrix:
+            Python37:
+              python.version: '3.7'
+        steps:
+          - template: .use-python.yml
+          - script: |
+              pip install setuptools wheel
+              python setup.py sdist bdist_wheel
+              twine upload dist/* -u serious -p $(PYPI_PASSWORD)
+            displayName: 'Publish to PyPI'
+    dependsOn:
+      - Check
+    condition: succeeded('Check')
 
-  - script: |
-      pip install coveralls
-      coveralls
-    displayName: 'Save code coverage'
-    env:
-      COVERALLS_REPO_TOKEN: $(COVERALLS_REPO_TOKEN)
+  - stage: Report
+    jobs:
+      - job: TestCoverage
+        pool:
+          vmImage: 'Ubuntu-16.04'
+        strategy:
+          matrix:
+            Python37:
+              python.version: '3.7'
+        steps:
+          - template: .use-python.yml
 
-  - script: |
-      pip install setuptools wheel
-      python setup.py sdist bdist_wheel
-      twine upload dist/* -u serious -p $(PYPI_PASSWORD)
-    displayName: 'Publish to PyPI'
+          - script: git checkout master
+            displayName: 'Checkout master'
+
+          - script: pytest tests --cov=serious --cov-report=html
+            displayName: 'Test with coverage'
+
+          - script: coveralls
+            displayName: 'Save code coverage'
+            env:
+              COVERALLS_REPO_TOKEN: $(COVERALLS_REPO_TOKEN)
+    dependsOn:
+      - Check
+    condition: succeeded('Check')
