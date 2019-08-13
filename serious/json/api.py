@@ -23,6 +23,8 @@ class JsonModel(Generic[T]):
             allow_any: bool = False,
             allow_missing: bool = False,
             allow_unexpected: bool = False,
+            validate_on_load: bool = True,
+            validate_on_dump: bool = False,
             ensure_frozen: Union[bool, Iterable[Type]] = False,
             camel_case: bool = True,
             indent: Optional[int] = None,
@@ -46,6 +48,8 @@ class JsonModel(Generic[T]):
             allow_any=allow_any,
             allow_missing=allow_missing,
             allow_unexpected=allow_unexpected,
+            validate_on_load=validate_on_load,
+            validate_on_dump=validate_on_dump,
             ensure_frozen=ensure_frozen,
             key_mapper=JsonKeyMapper() if camel_case else None,
         )

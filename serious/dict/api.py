@@ -20,6 +20,8 @@ class DictModel(Generic[T]):
             allow_any: bool = False,
             allow_missing: bool = False,
             allow_unexpected: bool = False,
+            validate_on_load: bool = True,
+            validate_on_dump: bool = False,
             ensure_frozen: Union[bool, Iterable[Type]] = False,
     ):
         """
@@ -39,6 +41,8 @@ class DictModel(Generic[T]):
             allow_any=allow_any,
             allow_missing=allow_missing,
             allow_unexpected=allow_unexpected,
+            validate_on_load=validate_on_load,
+            validate_on_dump=validate_on_dump,
             ensure_frozen=ensure_frozen,
         )
 
