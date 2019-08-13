@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 __all__ = ['TypeDescriptor', 'describe', 'DescTypes', 'scan_types']
-__doc__ = """
+__doc__ = """Descriptors of types used by serious. 
+
 Descriptors are simplifying work with types, enriching them with more contextual information.
 This allows to make decisions, like picking a serializer, easier.
 

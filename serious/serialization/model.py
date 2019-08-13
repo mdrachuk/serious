@@ -11,8 +11,8 @@ from serious.descriptors import scan_types, TypeDescriptor, DescTypes
 from serious.errors import ModelContainsAny, ModelContainsUnion, MissingField, UnexpectedItem, ValidationError, \
     LoadError, DumpError, MutableTypesInModel, FieldMissingSerializer
 from serious.preconditions import check_is_instance
+from serious.utils import Dataclass
 from serious.types import FrozenList, Email, Timestamp
-from serious.utils import DataclassType
 from serious.validation import validate
 from .process import Loading, Dumping
 from .serializer import FieldSerializer
@@ -168,7 +168,7 @@ class SeriousModel(Generic[T]):
         return optional_sr
 
 
-def _check_for_missing(cls: DataclassType, data: Mapping) -> None:
+def _check_for_missing(cls: Type[Dataclass], data: Mapping) -> None:
     """
     Checks for missing keys in data that are part of the provided dataclass.
 
@@ -181,7 +181,7 @@ def _check_for_missing(cls: DataclassType, data: Mapping) -> None:
         raise MissingField(cls, data, field_names)
 
 
-def _check_for_unexpected(cls: DataclassType, data: Mapping) -> None:
+def _check_for_unexpected(cls: Type[Dataclass], data: Mapping) -> None:
     """
     Checks for keys in data that are not part of the provided dataclass.
 
@@ -194,7 +194,7 @@ def _check_for_unexpected(cls: DataclassType, data: Mapping) -> None:
         raise UnexpectedItem(cls, data, unexpected_fields)
 
 
-def _fields_missing_from(data: Mapping, cls: DataclassType) -> Iterator[Field]:
+def _fields_missing_from(data: Mapping, cls: Type[Dataclass]) -> Iterator[Field]:
     """Fields missing from data, but present in the dataclass."""
 
     def _is_missing(field: Field) -> bool:
