@@ -53,5 +53,5 @@ stages:
               COVERALLS_REPO_TOKEN: $(COVERALLS_REPO_TOKEN)
     dependsOn:
       - Check
-      condition: succeeded('Check')
+        condition: succeeded('Check')
 
