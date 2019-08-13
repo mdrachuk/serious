@@ -15,35 +15,43 @@ strategy:
     Python37:
       python.version: '3.7'
 
-steps:
-  - task: UsePythonVersion@0
-    inputs:
-      versionSpec: '$(python.version)'
-    displayName: 'Use Python $(python.version)'
+stages:
+  - stage: Check
+    jobs:
+      - job: Test
+        steps:
+          - template: .use-python.yml
+          - script: pytest tests --cov=serious
+            displayName: 'Test'
 
-  - script: |
-      git checkout $(System.PullRequest.SourceBranch)
-    displayName: 'Checkout branch'
+      - job: Mypy
+        steps:
+          - template: .use-python.yml
+          - script: mypy serious
+            displayName: 'Check typings'
 
-  - script: |
-      python -m pip install --upgrade pip
-      pip install -r requirements.txt
-    displayName: 'Install dependencies'
+      - job: CheckVersion
+        steps:
+          - template: .use-python.yml
+          - script: python version.py
+            displayName: 'Check version changed'
 
-  - script: |
-      pytest tests --cov=serious --cov-report=html
-    displayName: 'Test'
+  - stage: Report
+    jobs:
+      - job: TestCoverage
+        steps:
+          - template: .use-python.yml
+          - script: git checkout $(System.PullRequest.SourceBranch)
+            displayName: 'Checkout branch'
 
-  - script: |
-      coveralls
-    displayName: 'Save code coverage'
-    env:
-      COVERALLS_REPO_TOKEN: $(COVERALLS_REPO_TOKEN)
+          - script: pytest tests --cov=serious --cov-report=html
+            displayName: 'Test'
 
-  - script: |
-      mypy serious
-    displayName: 'Check typings'
+          - script: coveralls
+            displayName: 'Save code coverage'
+            env:
+              COVERALLS_REPO_TOKEN: $(COVERALLS_REPO_TOKEN)
+    dependsOn:
+      - Check
+      condition: succeeded('Check')
 
-  - script: |
-      python version.py
-    displayName: 'Check version changed'
