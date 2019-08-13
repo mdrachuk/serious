@@ -8,42 +8,68 @@ pr:
   - master
   - dev
 
-pool:
-  vmImage: 'Ubuntu-16.04'
-strategy:
-  matrix:
-    Python37:
-      python.version: '3.7'
+stages:
+  - stage: Check
+    jobs:
+      - job: Tests
+        pool:
+          vmImage: 'Ubuntu-16.04'
+        strategy:
+          matrix:
+            Python37:
+              python.version: '3.7'
+        steps:
+          - template: .use-python.yml
+          - script: pytest tests
+            displayName: 'Test'
 
-steps:
-  - task: UsePythonVersion@0
-    inputs:
-      versionSpec: '$(python.version)'
-    displayName: 'Use Python $(python.version)'
+      - job: Typings
+        pool:
+          vmImage: 'Ubuntu-16.04'
+        strategy:
+          matrix:
+            Python37:
+              python.version: '3.7'
+        steps:
+          - template: .use-python.yml
+          - script: mypy serious
+            displayName: 'Check typings'
 
-  - script: |
-      git checkout $(System.PullRequest.SourceBranch)
-    displayName: 'Checkout branch'
+      - job: Version
+        pool:
+          vmImage: 'Ubuntu-16.04'
+        strategy:
+          matrix:
+            Python37:
+              python.version: '3.7'
+        steps:
+          - template: .use-python.yml
+          - script: python version.py
+            displayName: 'Check version changed'
 
-  - script: |
-      python -m pip install --upgrade pip
-      pip install -r requirements.txt
-    displayName: 'Install dependencies'
+  - stage: Report
+    jobs:
+      - job: TestCoverage
+        pool:
+          vmImage: 'Ubuntu-16.04'
+        strategy:
+          matrix:
+            Python37:
+              python.version: '3.7'
+        steps:
+          - template: .use-python.yml
 
-  - script: |
-      pytest tests --cov=serious --cov-report=html
-    displayName: 'Test'
+          - script: git checkout $(System.PullRequest.SourceBranch)
+            displayName: 'Checkout branch'
 
-  - script: |
-      coveralls
-    displayName: 'Save code coverage'
-    env:
-      COVERALLS_REPO_TOKEN: $(COVERALLS_REPO_TOKEN)
+          - script: pytest tests --cov=serious --cov-report=html
+            displayName: 'Test with coverage'
 
-  - script: |
-      mypy serious
-    displayName: 'Check typings'
+          - script: coveralls
+            displayName: 'Save code coverage'
+            env:
+              COVERALLS_REPO_TOKEN: $(COVERALLS_REPO_TOKEN)
+    dependsOn:
+      - Check
+    condition: succeeded('Check')
 
-  - script: |
-      python version.py
-    displayName: 'Check version changed'
