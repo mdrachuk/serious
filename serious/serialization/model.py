@@ -4,15 +4,15 @@ from abc import ABC, abstractmethod
 from dataclasses import fields, MISSING, Field, is_dataclass
 from datetime import datetime, date, time
 from decimal import Decimal
-from typing import Generic, Iterable, Type, Dict, Any, Union, Mapping, Optional, Iterator, TypeVar, List, Collection
+from typing import Generic, Iterable, Type, Dict, Any, Union, Mapping, Optional, Iterator, TypeVar, List
 from uuid import UUID
 
 from serious.descriptors import scan_types, TypeDescriptor, DescTypes
 from serious.errors import ModelContainsAny, ModelContainsUnion, MissingField, UnexpectedItem, ValidationError, \
     LoadError, DumpError, MutableTypesInModel, FieldMissingSerializer
 from serious.preconditions import check_is_instance
-from serious.utils import Dataclass
 from serious.types import FrozenList, Email, Timestamp
+from serious.utils import Dataclass
 from serious.validation import validate
 from .process import Loading, Dumping
 from .serializer import FieldSerializer
@@ -88,7 +88,7 @@ class SeriousModel(Generic[T]):
 
         check_is_instance(data, Mapping, f'Invalid data for {self._cls}')  # type: ignore
         root = _ctx is None
-        loading: Loading = Loading() if root else _ctx  # type: ignore # checked above
+        loading: Loading = Loading(validating=True) if root else _ctx  # type: ignore # checked above
         mut_data = {self._keys.to_model(key): value for key, value in data.items()}
         if self._allow_missing:
             for field in _fields_missing_from(mut_data, self._cls):
@@ -119,7 +119,7 @@ class SeriousModel(Generic[T]):
 
         check_is_instance(o, self._cls)
         root = _ctx is None
-        dumping: Dumping = Dumping() if root else _ctx  # type: ignore # checked above
+        dumping: Dumping = Dumping(validating=True) if root else _ctx  # type: ignore # checked above
         _s = self._keys.to_serialized
         try:
             return {
