@@ -1,8 +1,16 @@
 from dataclasses import dataclass, field
-from typing import Dict, FrozenSet, List, Optional, Set, Tuple, TypeVar, Union
+from typing import Dict, FrozenSet, List, Optional, Set, Tuple, TypeVar, Union, Type
 from uuid import UUID
 
 A = TypeVar('A')
+
+
+def dataclass_of(type_: Type):
+    @dataclass(frozen=True)
+    class GenericDataclass:
+        value: type_
+
+    return GenericDataclass
 
 
 @dataclass(frozen=True)

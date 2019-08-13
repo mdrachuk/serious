@@ -1,9 +1,8 @@
-from typing import Any, overload
+from typing import overload
 
 from .dict import DictModel
 from .json import JsonModel
-
-Dataclass = Any  # a dataclass instance
+from .utils import Dataclass
 
 
 @overload
