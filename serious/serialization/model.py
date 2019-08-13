@@ -119,7 +119,7 @@ class SeriousModel(Generic[T]):
 
         check_is_instance(o, self._cls)
         root = _ctx is None
-        dumping: Dumping = Dumping(validating=True) if root else _ctx  # type: ignore # checked above
+        dumping: Dumping = Dumping(validating=False) if root else _ctx  # type: ignore # checked above
         _s = self._keys.to_serialized
         try:
             return {
