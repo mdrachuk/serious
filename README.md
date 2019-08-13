@@ -5,7 +5,7 @@
 [![Supported Python](https://img.shields.io/pypi/pyversions/serious)][pypi]
 [![Documentation](https://img.shields.io/readthedocs/serious)][docs]
 
-Define models in dataclasses: serialization, validation, and more.
+A dataclass model toolkit: serialization, validation, and more.
 
 [Documentation][docs]
 

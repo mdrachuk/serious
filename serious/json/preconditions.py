@@ -5,7 +5,7 @@ from typing import Any, Type
 from serious.json.errors import UnexpectedJson
 
 
-def _check_that_loading_an_object(data: Any, cls: Type):
+def check_that_loading_an_object(data: Any, cls: Type):
     """Checks data is a Mapping. If not raises an `serious.json.errors.UnexpectedJson` with a helpful error message."""
 
     if not isinstance(data, collections.abc.Mapping):
@@ -16,7 +16,7 @@ def _check_that_loading_an_object(data: Any, cls: Type):
         raise UnexpectedJson(f'Expecting a single {cls} object encoded in JSON.')
 
 
-def _check_that_loading_a_list(data: Any, cls: Type):
+def check_that_loading_a_list(data: Any, cls: Type):
     """Checks data is a Collection but not a Mapping.
     If not raises an `serious.json.errors.UnexpectedJson` with a helpful error message.
     """

@@ -33,15 +33,29 @@ class Serialization(ABC):
 
 
 class Loading(Serialization):
+
+    def __init__(self, *, validating: bool):
+        super().__init__()
+        self.validating = validating
+
     def run(self, step: str, serializer: Serializer[M, S], value: S) -> M:
         with self._entering(step, serializer):
             result = serializer.load(value, self)
-            return validate(result)
+            if self.validating:
+                validate(result)
+            return result
 
 
 class Dumping(Serialization):
+
+    def __init__(self, *, validating: bool):
+        super().__init__()
+        self.validating = validating
+
     def run(self, step: str, serializer: Serializer[M, S], o: M) -> S:
         with self._entering(step, serializer):
+            if self.validating:
+                validate(o)
             return serializer.dump(o, self)
 
 

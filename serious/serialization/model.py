@@ -4,15 +4,15 @@ from abc import ABC, abstractmethod
 from dataclasses import fields, MISSING, Field, is_dataclass
 from datetime import datetime, date, time
 from decimal import Decimal
-from typing import Generic, Iterable, Type, Dict, Any, Union, Mapping, Optional, Iterator, TypeVar
+from typing import Generic, Iterable, Type, Dict, Any, Union, Mapping, Optional, Iterator, TypeVar, List
 from uuid import UUID
 
-from serious.descriptors import scan_types, TypeDescriptor, DescriptorTypes
+from serious.descriptors import scan_types, TypeDescriptor, DescTypes
 from serious.errors import ModelContainsAny, ModelContainsUnion, MissingField, UnexpectedItem, ValidationError, \
     LoadError, DumpError, MutableTypesInModel, FieldMissingSerializer
-from serious.preconditions import _check_is_instance
+from serious.preconditions import check_is_instance
 from serious.types import FrozenList, Email, Timestamp
-from serious.utils import DataclassType
+from serious.utils import Dataclass
 from serious.validation import validate
 from .process import Loading, Dumping
 from .serializer import FieldSerializer
@@ -65,7 +65,8 @@ class SeriousModel(Generic[T]):
         if Union in all_types:
             raise ModelContainsUnion(descriptor.cls)
         if ensure_frozen:
-            mutable_types = extract_mutable(all_types, also_immutable={} if ensure_frozen is True else ensure_frozen)
+            user_frozen = ensure_frozen if isinstance(ensure_frozen, Iterable) else {}
+            mutable_types = extract_mutable(all_types, also_immutable=user_frozen)
             if len(mutable_types):
                 raise MutableTypesInModel(descriptor.cls, mutable_types)
         self._descriptor = descriptor
@@ -85,9 +86,9 @@ class SeriousModel(Generic[T]):
     def load(self, data: Mapping, _ctx: Optional[Loading] = None) -> T:
         """Loads dataclass from a dictionary or other mapping. """
 
-        _check_is_instance(data, Mapping, f'Invalid data for {self._cls}')  # type: ignore
+        check_is_instance(data, Mapping, f'Invalid data for {self._cls}')  # type: ignore
         root = _ctx is None
-        loading: Loading = Loading() if root else _ctx  # type: ignore # checked above
+        loading: Loading = Loading(validating=True) if root else _ctx  # type: ignore # checked above
         mut_data = {self._keys.to_model(key): value for key, value in data.items()}
         if self._allow_missing:
             for field in _fields_missing_from(mut_data, self._cls):
@@ -98,7 +99,7 @@ class SeriousModel(Generic[T]):
             _check_for_unexpected(self._cls, mut_data)
         try:
             init_kwargs = {
-                field: loading.run(f'.[{self._keys.to_serialized(field)}]', serializer, mut_data[field])
+                field: loading.run(f'.{self._keys.to_serialized(field)}', serializer, mut_data[field])
                 for field, serializer in self._serializers_by_field.items()
                 if field in mut_data
             }
@@ -116,13 +117,13 @@ class SeriousModel(Generic[T]):
     def dump(self, o: T, _ctx: Optional[Dumping] = None) -> Dict[str, Any]:
         """Dumps a dataclass object to a dictionary."""
 
-        _check_is_instance(o, self._cls)
+        check_is_instance(o, self._cls)
         root = _ctx is None
-        dumping: Dumping = Dumping() if root else _ctx  # type: ignore # checked above
+        dumping: Dumping = Dumping(validating=False) if root else _ctx  # type: ignore # checked above
         _s = self._keys.to_serialized
         try:
             return {
-                _s(field): dumping.run(f'.[{_s(field)}]', serializer, getattr(o, field))
+                _s(field): dumping.run(f'.{_s(field)}', serializer, getattr(o, field))
                 for field, serializer in self._serializers_by_field.items()
             }
         except Exception as e:
@@ -167,7 +168,7 @@ class SeriousModel(Generic[T]):
         return optional_sr
 
 
-def _check_for_missing(cls: DataclassType, data: Mapping) -> None:
+def _check_for_missing(cls: Type[Dataclass], data: Mapping) -> None:
     """
     Checks for missing keys in data that are part of the provided dataclass.
 
@@ -180,7 +181,7 @@ def _check_for_missing(cls: DataclassType, data: Mapping) -> None:
         raise MissingField(cls, data, field_names)
 
 
-def _check_for_unexpected(cls: DataclassType, data: Mapping) -> None:
+def _check_for_unexpected(cls: Type[Dataclass], data: Mapping) -> None:
     """
     Checks for keys in data that are not part of the provided dataclass.
 
@@ -193,7 +194,7 @@ def _check_for_unexpected(cls: DataclassType, data: Mapping) -> None:
         raise UnexpectedItem(cls, data, unexpected_fields)
 
 
-def _fields_missing_from(data: Mapping, cls: DataclassType) -> Iterator[Field]:
+def _fields_missing_from(data: Mapping, cls: Type[Dataclass]) -> Iterator[Field]:
     """Fields missing from data, but present in the dataclass."""
 
     def _is_missing(field: Field) -> bool:
@@ -224,8 +225,12 @@ class NoopKeyMapper(KeyMapper):
         return item
 
 
-def extract_mutable(desc: DescriptorTypes, also_immutable):
+def extract_mutable(desc: DescTypes, also_immutable: Iterable[Type]) -> List[Type]:
     allowed_types = set(_IMMUTABLE_TYPES) | set(also_immutable)
     maybe_dc = set(desc.types) - allowed_types
-    restricted = [type_ for type_ in maybe_dc if not (is_dataclass(type_) and type_.__dataclass_params__.frozen)]
+    restricted = [type_ for type_ in maybe_dc if not is_frozen_dc(type_)]
     return restricted
+
+
+def is_frozen_dc(type_: Any) -> bool:
+    return is_dataclass(type_) and type_.__dataclass_params__.frozen

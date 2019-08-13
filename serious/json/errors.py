@@ -1,3 +1,5 @@
 class UnexpectedJson(Exception):
+    """Invalid JSON provided to JSON model."""
+
     def __init__(self, extra_message=None):
-        super(UnexpectedJson, self).__init__(f'Unexpected JSON document. {extra_message}')
+        super().__init__(f'Unexpected JSON document. {extra_message}')

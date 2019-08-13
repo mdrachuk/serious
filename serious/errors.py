@@ -1,16 +1,44 @@
 from __future__ import annotations
 
+__all__ = [
+    'SerializationError',
+    'LoadError',
+    'DumpError',
+    'UnexpectedItem',
+    'MissingField',
+    'ModelError',
+    'FieldMissingSerializer',
+    'ModelContainsAny',
+    'ModelContainsUnion',
+    'MutableTypesInModel',
+    'ValidationError',
+]
+__doc__ = """Errors raised by serious.
+
+Errors are divided into 3 main groups:
+
+1. Validation errors -- raised by serious or library users if an objects fails validation. 
+Contains the stack pointing to an object which raised the error. 
+2. Serialization errors -- wrap the exceptions which occur during serialization. 
+They also contain the stack pointing to a specific place which raised the error.
+Can be one of `LoadError` or `DumpError`.
+3. Model errors -- raised when traversing the dataclass and building the model. 
+When no serializer found for field, etc.
+"""
+
 from typing import Type, Mapping, Collection, TYPE_CHECKING, Iterable
 
-from .utils import DataclassType, class_path
+from .utils import class_path, Dataclass
 
-if TYPE_CHECKING:  # To reference in typings
+if TYPE_CHECKING:
     from .serialization.process import SerializationStep
     from .descriptors import TypeDescriptor
 
 
 class SerializationError(Exception):
-    def __init__(self, cls: Type[DataclassType], serializer_stack: Collection[SerializationStep]):
+    """Base for any non-validation error during load or dump."""
+
+    def __init__(self, cls: Type, serializer_stack: Collection[SerializationStep]):
         super().__init__()
         self.cls = cls
         self._path = self.__parse_stack(serializer_stack)
@@ -31,7 +59,13 @@ class SerializationError(Exception):
 
 
 class LoadError(SerializationError):
-    def __init__(self, cls: DataclassType, serializer_stack: Collection[SerializationStep], data: Mapping):
+    """Non-validation error during construction of a dataclass instance from external data.
+
+    This will wrap any error during load process.
+    Either invalid data is supplied, or the serializers are handling data incorrectly.
+    """
+
+    def __init__(self, cls: Type, serializer_stack: Collection[SerializationStep], data: Mapping):
         super().__init__(cls, serializer_stack)
         self._data = data
 
@@ -41,7 +75,13 @@ class LoadError(SerializationError):
 
 
 class DumpError(SerializationError):
-    def __init__(self, obj: DataclassType, serializer_stack: Collection[SerializationStep]):
+    """Non-validation error during encoding of a dataclass instance.
+
+    This error will wrap any error during dump and signifies that
+    an invalid dataclass object got into serializers hands or serializers behave incorrectly.
+    """
+
+    def __init__(self, obj: Dataclass, serializer_stack: Collection[SerializationStep]):
         super().__init__(type(obj), serializer_stack)
         self._object = obj
 
@@ -51,7 +91,8 @@ class DumpError(SerializationError):
 
 
 class UnexpectedItem(LoadError):
-    def __init__(self, cls: Type[DataclassType], data, fields: Collection[str]):
+
+    def __init__(self, cls: Type[Dataclass], data, fields: Collection[str]):
         super().__init__(cls, [], data)
         self._fields = fields
 
@@ -65,7 +106,8 @@ class UnexpectedItem(LoadError):
 
 
 class MissingField(LoadError):
-    def __init__(self, cls: Type[DataclassType], data, fields: Collection[str]):
+
+    def __init__(self, cls: Type[Dataclass], data, fields: Collection[str]):
         super().__init__(cls, [], data)
         self._fields = fields
 
@@ -79,6 +121,12 @@ class MissingField(LoadError):
 
 
 class ModelError(Exception):
+    """An error that can occur when traversing class structure.
+
+    Library and the user can place restrictions on what the model can be.
+    This would include containing Any, model mutability, etc.
+    Instances of this error will be raised during model construction if such restrictions are unsatisfied.
+    """
 
     def __init__(self, cls: Type):
         self.cls = cls
@@ -96,7 +144,7 @@ class FieldMissingSerializer(ModelError):
 
     @property
     def message(self):
-        return (f'{class_path(self.cls)} is has unserializable member: {self.desc}.'
+        return (f'{class_path(self.cls)} contains unserializable member: {self.desc}.'
                 f'Create a serializer fitting the descriptor and pass it to the model `serializers`.')
 
 
@@ -119,6 +167,7 @@ class ModelContainsUnion(ModelError):
 
 
 class MutableTypesInModel(ModelError):
+
     def __init__(self, cls: Type, mutable_types: Iterable[Type]):
         super().__init__(cls)
         self.mutable_types = mutable_types
@@ -133,5 +182,12 @@ class MutableTypesInModel(ModelError):
 
 
 class ValidationError(Exception):
+    """An error manifesting an invalid object state.
+
+    Raised when calling `validate(obj)` and internally by serious during load/dump.
+
+    Contains the stack pointing to an exact point where validation failed in data structure.
+    """
+
     def __init__(self, message='Failed validation'):
         super().__init__(message)

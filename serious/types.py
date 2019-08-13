@@ -1,5 +1,6 @@
 __all__ = ['Timestamp', 'Email', 'FrozenList', 'FrozenDict']
-__doc__ = """
+__doc__ = """Serializable types provided by serious.
+
 `serious.types` module lists a number of types useful for as part of serious modules:
 - Timestamp — an alternative to datetime, that is serialized to a float ms value
 - Email — a Tiny Type made out of string, which is checked to match the format

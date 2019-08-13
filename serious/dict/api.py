@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TypeVar, Type, Generic, List, Collection, Dict, Iterable, Any, Mapping, Union
 
 from serious.descriptors import describe
-from serious.preconditions import _check_is_instance
+from serious.preconditions import check_is_instance
 from serious.serialization import FieldSerializer, SeriousModel, field_serializers
 from serious.utils import class_path
 
@@ -53,14 +53,14 @@ class DictModel(Generic[T]):
         return [self._from_dict(each) for each in items]
 
     def dump(self, o: T) -> Dict[str, Any]:
-        _check_is_instance(o, self.cls)
-        return self._serializer.dump(o)
+        return self._dump(o)
 
     def dump_many(self, items: Collection[T]) -> List[Dict[str, Any]]:
         return [self._dump(o) for o in items]
 
     def _dump(self, o) -> Dict[str, Any]:
-        return self._serializer.dump(_check_is_instance(o, self.cls))
+        check_is_instance(o, self.cls)
+        return self._serializer.dump(o)
 
     def _from_dict(self, data: Mapping):
         return self._serializer.load(data)

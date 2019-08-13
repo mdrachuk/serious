@@ -31,12 +31,10 @@ steps:
     displayName: 'Install dependencies'
 
   - script: |
-      pip install pytest pytest-cov
       pytest tests --cov=serious --cov-report=html
     displayName: 'Test'
 
   - script: |
-      pip install coveralls
       coveralls
     displayName: 'Save code coverage'
     env:

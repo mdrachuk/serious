@@ -1,12 +1,10 @@
 from __future__ import annotations
 
-import inspect
 from dataclasses import dataclass
 from datetime import date, datetime, time
 from decimal import Decimal
 from enum import Enum
-from itertools import product
-from typing import List, Sequence, Generic, TypeVar, Dict, Tuple, Set, Any, FrozenSet
+from typing import List, Generic, TypeVar, Dict, Tuple, Set, Any, FrozenSet
 from uuid import UUID
 
 import pytest
@@ -14,6 +12,7 @@ import pytest
 from serious import FrozenList, JsonModel, DictModel, Email, Timestamp, FrozenDict, TypeDescriptor
 from serious.errors import MutableTypesInModel, ModelContainsAny
 from serious.serialization import FieldSerializer, field_serializers
+from tests.utils import with_
 
 
 @dataclass(frozen=True)
@@ -63,27 +62,6 @@ class FrozenNode:
 
 
 models = [JsonModel, DictModel]
-
-
-def with_(*collections: Tuple[Sequence], cartesian_product=True):
-    def _wrapped(f):
-        signature = inspect.signature(f)
-        func_params = list(signature.parameters)
-        if len(func_params) and func_params[0] == 'self':
-            func_params.pop(0)
-        pytest_keys = ','.join(func_params)
-        if len(collections) > 1:
-            if cartesian_product:
-                pytest_values = list(product(*collections))
-            else:
-                if len(set(map(len, collections))) != 1:
-                    raise Exception('Parameters must be of equal length')
-                pytest_values = list(zip(*collections))
-        else:
-            pytest_values = collections[0]
-        return pytest.mark.parametrize(pytest_keys, pytest_values)(f)
-
-    return _wrapped
 
 
 @dataclass
