@@ -18,12 +18,14 @@ stages:
           matrix:
             Python37:
               python.version: '3.7'
+            Python38:
+              python.version: '3.8'
         steps:
           - template: .use-python.yml
           - script: pytest tests
             displayName: 'Test'
 
-      - job: Mypy
+      - job: Typings
         pool:
           vmImage: 'Ubuntu-16.04'
         strategy:
@@ -35,7 +37,7 @@ stages:
           - script: mypy serious
             displayName: 'Check typings'
 
-      - job: CheckVersion
+      - job: Version
         pool:
           vmImage: 'Ubuntu-16.04'
         strategy:
@@ -58,6 +60,7 @@ stages:
               python.version: '3.7'
         steps:
           - template: .use-python.yml
+
           - script: git checkout $(System.PullRequest.SourceBranch)
             displayName: 'Checkout branch'
 
