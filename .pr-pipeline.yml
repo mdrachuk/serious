@@ -8,29 +8,40 @@ pr:
   - master
   - dev
 
-pool:
-  vmImage: 'Ubuntu-16.04'
-strategy:
-  matrix:
-    Python37:
-      python.version: '3.7'
-
 stages:
   - stage: Check
     jobs:
       - job: Test
+        pool:
+          vmImage: 'Ubuntu-16.04'
+        strategy:
+          matrix:
+            Python37:
+              python.version: '3.7'
         steps:
           - template: .use-python.yml
-          - script: pytest tests --cov=serious
+          - script: pytest tests
             displayName: 'Test'
 
       - job: Mypy
+        pool:
+          vmImage: 'Ubuntu-16.04'
+        strategy:
+          matrix:
+            Python37:
+              python.version: '3.7'
         steps:
           - template: .use-python.yml
           - script: mypy serious
             displayName: 'Check typings'
 
       - job: CheckVersion
+        pool:
+          vmImage: 'Ubuntu-16.04'
+        strategy:
+          matrix:
+            Python37:
+              python.version: '3.7'
         steps:
           - template: .use-python.yml
           - script: python version.py
@@ -39,6 +50,12 @@ stages:
   - stage: Report
     jobs:
       - job: TestCoverage
+        pool:
+          vmImage: 'Ubuntu-16.04'
+        strategy:
+          matrix:
+            Python37:
+              python.version: '3.7'
         steps:
           - template: .use-python.yml
           - script: git checkout $(System.PullRequest.SourceBranch)
