@@ -1,6 +1,7 @@
 # Validating Objects
 
-In serious any “loaded” object is validated before being returned. 
+By default, any “loaded” object is validated before being returned.
+This can be overridden by passing `validate_on_load` and `validate_on_dump` options to models. 
 
 To add validators to an object just create a `__validate__(self)` method in it.
  
