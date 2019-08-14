@@ -6,6 +6,7 @@ __all__ = [
     'field_serializers',
     'Loading',
     'Dumping',
+    'KeyMapper',
     'OptionalSerializer',
     'AnySerializer',
     'EnumSerializer',
@@ -31,4 +32,5 @@ from .field_serializers import field_serializers, OptionalSerializer, AnySeriali
     DataclassSerializer, UtcTimestampSerializer, DateTimeIsoSerializer, DateIsoSerializer, TimeIsoSerializer, \
     UuidSerializer, DecimalSerializer
 from .model import SeriousModel
+from .key_mapper import KeyMapper
 from .serializer import Serializer, FieldSerializer

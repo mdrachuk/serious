@@ -1,33 +1,22 @@
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
 from dataclasses import fields, MISSING, Field, is_dataclass
-from datetime import datetime, date, time
-from decimal import Decimal
-from typing import Generic, Iterable, Type, Dict, Any, Union, Mapping, Optional, Iterator, TypeVar, List
-from uuid import UUID
+from typing import Generic, Iterable, Type, Dict, Any, Union, Mapping, Optional, Iterator, TypeVar
 
-from serious.descriptors import scan_types, TypeDescriptor, DescTypes
+from serious.descriptors import scan_types, TypeDescriptor
 from serious.errors import ModelContainsAny, ModelContainsUnion, MissingField, UnexpectedItem, ValidationError, \
-    LoadError, DumpError, MutableTypesInModel, FieldMissingSerializer
+    LoadError, DumpError, FieldMissingSerializer
 from serious.preconditions import check_is_instance
-from serious.types import FrozenList, Email, Timestamp
 from serious.utils import Dataclass
 from serious.validation import validate
+from .check_frozen import check_frozen
+from .key_mapper import KeyMapper, NoopKeyMapper
 from .process import Loading, Dumping
 from .serializer import FieldSerializer
 
 T = TypeVar('T')
 M = TypeVar('M')  # Python model value
 S = TypeVar('S')  # Serialized value
-
-_IMMUTABLE_TYPES = tuple([
-    str, int, float, bool,
-    bytes, tuple, frozenset, FrozenList,
-    Decimal, UUID, datetime, date, time,
-    Email, Timestamp,
-    Ellipsis,
-])
 
 
 class SeriousModel(Generic[T]):
@@ -69,10 +58,7 @@ class SeriousModel(Generic[T]):
         if Union in all_types:
             raise ModelContainsUnion(descriptor.cls)
         if ensure_frozen:
-            user_frozen = ensure_frozen if isinstance(ensure_frozen, Iterable) else {}
-            mutable_types = extract_mutable(all_types, also_immutable=user_frozen)
-            if len(mutable_types):
-                raise MutableTypesInModel(descriptor.cls, mutable_types)
+            check_frozen(descriptor, all_types, ensure_frozen)
         self._descriptor = descriptor
         self._serializers = tuple(serializers)
         self._allow_any = allow_any
@@ -95,7 +81,8 @@ class SeriousModel(Generic[T]):
 
         check_is_instance(data, Mapping, f'Invalid data for {self._cls}')  # type: ignore
         root = _ctx is None
-        loading: Loading = Loading(validating=self._validate_on_load) if root else _ctx  # type: ignore # checked above
+        loading: Loading
+        loading = Loading(validating=self._validate_on_load) if root else _ctx  # type: ignore # checked above
         mut_data = {self._keys.to_model(key): value for key, value in data.items()}
         if self._allow_missing:
             for field in _fields_missing_from(mut_data, self._cls):
@@ -218,34 +205,3 @@ def _fields_missing_from(data: Mapping, cls: Type[Dataclass]) -> Iterator[Field]
                and field.default_factory is MISSING  # type: ignore # default factory is an unbound function
 
     return filter(_is_missing, fields(cls))
-
-
-class KeyMapper(ABC):
-
-    @abstractmethod
-    def to_model(self, item: str) -> str:
-        raise NotImplementedError
-
-    @abstractmethod
-    def to_serialized(self, item: str) -> str:
-        raise NotImplementedError
-
-
-class NoopKeyMapper(KeyMapper):
-
-    def to_model(self, item: str) -> str:
-        return item
-
-    def to_serialized(self, item: str) -> str:
-        return item
-
-
-def extract_mutable(desc: DescTypes, also_immutable: Iterable[Type]) -> List[Type]:
-    allowed_types = set(_IMMUTABLE_TYPES) | set(also_immutable)
-    maybe_dc = set(desc.types) - allowed_types
-    restricted = [type_ for type_ in maybe_dc if not is_frozen_dc(type_)]
-    return restricted
-
-
-def is_frozen_dc(type_: Any) -> bool:
-    return is_dataclass(type_) and type_.__dataclass_params__.frozen
