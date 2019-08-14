@@ -20,6 +20,8 @@ class DictModel(Generic[T]):
             allow_any: bool = False,
             allow_missing: bool = False,
             allow_unexpected: bool = False,
+            validate_on_load: bool = True,
+            validate_on_dump: bool = False,
             ensure_frozen: Union[bool, Iterable[Type]] = False,
     ):
         """
@@ -29,6 +31,8 @@ class DictModel(Generic[T]):
                 (this includes generics like `List[Any]`, or simply `list`).
         @param allow_missing `False` to raise during load if data is missing the optional fields.
         @param allow_unexpected `False` to raise during load if data contains some unknown fields.
+        @param validate_on_load to call dataclass __validate__ method after object construction.
+        @param validate_on_load to call object __validate__ before dumping.
         @param ensure_frozen `False` to skip check of model immutability; `True` will perform the check
                 against built-in immutable types; a list of custom immutable types is added to built-ins.
         """
@@ -39,6 +43,8 @@ class DictModel(Generic[T]):
             allow_any=allow_any,
             allow_missing=allow_missing,
             allow_unexpected=allow_unexpected,
+            validate_on_load=validate_on_load,
+            validate_on_dump=validate_on_dump,
             ensure_frozen=ensure_frozen,
         )
 

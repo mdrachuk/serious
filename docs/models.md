@@ -187,20 +187,28 @@ class JsonModel(Generic[T]):
     def __init__(
             self,
             cls: Type[T],
-            *,
             serializers: Iterable[Type[FieldSerializer]] = field_serializers(),
+            *,
             allow_any: bool = False,
             allow_missing: bool = False,
             allow_unexpected: bool = False,
+            validate_on_load: bool = True,
+            validate_on_dump: bool = False,
+            ensure_frozen: Union[bool, Iterable[Type]] = False,
+            camel_case: bool = True,
             indent: Optional[int] = None,
     ):
         self._descriptor = describe(cls)
-        self._serializer = SeriousModel(
-            self.descriptor,
+        self._serializer: SeriousModel = SeriousModel(
+            self._descriptor,
             serializers,
             allow_any=allow_any,
             allow_missing=allow_missing,
             allow_unexpected=allow_unexpected,
+            validate_on_load=validate_on_load,
+            validate_on_dump=validate_on_dump,
+            ensure_frozen=ensure_frozen,
+            key_mapper=JsonKeyMapper() if camel_case else None,
         )
         self._dump_indentation = indent
 
@@ -210,16 +218,16 @@ class JsonModel(Generic[T]):
 
     def load(self, json_: str) -> T:
         data: MutableMapping = self._load_from_str(json_)
-        _check_that_loading_an_object(data, self.cls)
+        check_that_loading_an_object(data, self.cls)
         return self._from_dict(data)
 
     def load_many(self, json_: str) -> List[T]:
         data: Collection = self._load_from_str(json_)
-        _check_that_loading_a_list(data, self.cls)
+        check_that_loading_a_list(data, self.cls)
         return [self._from_dict(each) for each in data]
 
     def dump(self, o: T) -> str:
-        _check_is_instance(o, self.cls)
+        check_is_instance(o, self.cls)
         return self._dump_to_str(self._serializer.dump(o))
 
     def dump_many(self, items: Collection[T]) -> str:
@@ -227,7 +235,7 @@ class JsonModel(Generic[T]):
         return self._dump_to_str(dict_items)
 
     def _dump(self, o) -> Dict[str, Any]:
-        return self._serializer.dump(_check_is_instance(o, self.cls))
+        return self._serializer.dump(check_is_instance(o, self.cls))
 
     def _from_dict(self, data: MutableMapping) -> T:
         return self._serializer.load(data)

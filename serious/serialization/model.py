@@ -41,7 +41,9 @@ class SeriousModel(Generic[T]):
             allow_any: bool,
             allow_missing: bool,
             allow_unexpected: bool,
-            ensure_frozen: Union[bool, Iterable[Type]] = False,
+            validate_on_load: bool,
+            validate_on_dump: bool,
+            ensure_frozen: Union[bool, Iterable[Type]],
             key_mapper: Optional[KeyMapper] = None,
             _registry: Dict[TypeDescriptor, SeriousModel] = None
     ):
@@ -52,9 +54,11 @@ class SeriousModel(Generic[T]):
                 (this includes generics like `List[Any]`, or simply `list`).
         @param allow_missing `False` to raise during load if data is missing the optional fields.
         @param allow_unexpected `False` to raise during load if data contains some unknown fields.
+        @param validate_on_load to call dataclass __validate__ method after object construction.
+        @param validate_on_load to call object __validate__ before dumping.
         @param ensure_frozen `False` to skip check of model immutability; `True` will perform the check
                 against built-in immutable types; a list of custom immutable types is added to built-ins.
-        @param key_mapper remap field names of between dataclass and serialized objects
+        @param key_mapper remap field names of between dataclass and serialized objects.
         @param _registry a mapping of dataclass type descriptors to corresponding serious serializer;
                 used internally to create child serializers.
         """
@@ -71,9 +75,12 @@ class SeriousModel(Generic[T]):
                 raise MutableTypesInModel(descriptor.cls, mutable_types)
         self._descriptor = descriptor
         self._serializers = tuple(serializers)
+        self._allow_any = allow_any
         self._allow_missing = allow_missing
         self._allow_unexpected = allow_unexpected
-        self._allow_any = allow_any
+        self._validate_on_load = validate_on_load
+        self._validate_on_dump = validate_on_dump
+        self._ensure_frozen = ensure_frozen
         self._serializer_registry = {descriptor: self} if _registry is None else _registry
         self._keys = key_mapper or NoopKeyMapper()
         self._serializers_by_field = {name: self.find_serializer(desc) for name, desc in descriptor.fields.items()}
@@ -88,7 +95,7 @@ class SeriousModel(Generic[T]):
 
         check_is_instance(data, Mapping, f'Invalid data for {self._cls}')  # type: ignore
         root = _ctx is None
-        loading: Loading = Loading(validating=True) if root else _ctx  # type: ignore # checked above
+        loading: Loading = Loading(validating=self._validate_on_load) if root else _ctx  # type: ignore # checked above
         mut_data = {self._keys.to_model(key): value for key, value in data.items()}
         if self._allow_missing:
             for field in _fields_missing_from(mut_data, self._cls):
@@ -104,14 +111,14 @@ class SeriousModel(Generic[T]):
                 if field in mut_data
             }
             result = self._cls(**init_kwargs)  # type: ignore # not an object
-            validate(result)
+            if self._validate_on_load:
+                validate(result)
             return result
+        except ValidationError:
+            raise
         except Exception as e:
             if root:
-                if isinstance(e, ValidationError):
-                    raise
-                else:
-                    raise LoadError(self._cls, loading.stack, data) from e
+                raise LoadError(self._cls, loading.stack, data) from e
             raise
 
     def dump(self, o: T, _ctx: Optional[Dumping] = None) -> Dict[str, Any]:
@@ -120,12 +127,16 @@ class SeriousModel(Generic[T]):
         check_is_instance(o, self._cls)
         root = _ctx is None
         dumping: Dumping = Dumping(validating=False) if root else _ctx  # type: ignore # checked above
-        _s = self._keys.to_serialized
         try:
+            _s = self._keys.to_serialized
+            if self._validate_on_dump:
+                validate(o)
             return {
                 _s(field): dumping.run(f'.{_s(field)}', serializer, getattr(o, field))
                 for field, serializer in self._serializers_by_field.items()
             }
+        except ValidationError:
+            raise
         except Exception as e:
             if root:
                 raise DumpError(o, dumping.stack) from e
@@ -143,9 +154,13 @@ class SeriousModel(Generic[T]):
         new_model: SeriousModel = SeriousModel(
             descriptor=descriptor,
             serializers=self._serializers,
+            allow_any=self._allow_any,
             allow_missing=self._allow_missing,
             allow_unexpected=self._allow_unexpected,
-            allow_any=self._allow_any,
+            validate_on_load=self._validate_on_load,
+            validate_on_dump=self._validate_on_dump,
+            ensure_frozen=self._ensure_frozen,
+            key_mapper=self._keys,
             _registry=self._serializer_registry
         )
         self._serializer_registry[descriptor] = new_model

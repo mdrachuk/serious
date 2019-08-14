@@ -1,7 +1,7 @@
 import requests
 from pkg_resources import safe_version
 
-__version__ = '1.0.0.dev16'
+__version__ = '1.0.0.dev17'
 
 __doc__ = """
 This module is querying PyPI to check if the current version set to package is already present on PyPI.

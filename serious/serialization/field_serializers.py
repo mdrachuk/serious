@@ -528,7 +528,7 @@ class UuidSerializer(FieldSerializer[UUID, str]):
         return issubclass(desc.cls, UUID)
 
 
-_decimal_re = re.compile(r'\A\d+?\.\d+?\Z')
+_decimal_re = re.compile(r'\A\d+(\.\d+)?\Z')
 
 
 class DecimalSerializer(FieldSerializer[Decimal, str]):
