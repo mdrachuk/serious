@@ -14,11 +14,11 @@ if TYPE_CHECKING:
 class Serializer(Generic[M, S], ABC):
 
     @abstractmethod
-    def load(self, value: S, ctx: 'Loading') -> M:
+    def load(self, value: S, ctx: Loading) -> M:
         raise NotImplementedError
 
     @abstractmethod
-    def dump(self, value: M, ctx: 'Dumping') -> S:
+    def dump(self, value: M, ctx: Dumping) -> S:
         raise NotImplementedError
 
 
