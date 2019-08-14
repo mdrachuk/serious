@@ -63,7 +63,7 @@ Loading them will result in error:
 >>> JsonModel(Message, allow_any=False)
 Traceback (most recent call last):
   File "<input>", line 1, in <module>
-  File ".../serious/json/api.py", line 42, in __init__
+  File model.py, line 42, in __init__
     allow_unexpected=allow_unexpected,
   File ".../serious/serialization.py", line 729, in __init__
     raise ModelContainsAny(descriptor.cls)

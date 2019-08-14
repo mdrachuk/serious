@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TypeVar, Type, Generic, List, Collection, Dict, Iterable, Any, Mapping, Union
 
-from serious.descriptors import describe
+from serious.descriptors import describe, TypeDescriptor
 from serious.preconditions import check_is_instance
 from serious.serialization import FieldSerializer, SeriousModel, field_serializers
 from serious.utils import class_path
@@ -11,6 +11,8 @@ T = TypeVar('T')
 
 
 class DictModel(Generic[T]):
+    descriptor: TypeDescriptor
+    serializer: SeriousModel
 
     def __init__(
             self,
@@ -36,9 +38,9 @@ class DictModel(Generic[T]):
         @param ensure_frozen `False` to skip check of model immutability; `True` will perform the check
                 against built-in immutable types; a list of custom immutable types is added to built-ins.
         """
-        self._descriptor = describe(cls)
-        self._serializer: SeriousModel = SeriousModel(
-            self._descriptor,
+        self.descriptor = describe(cls)
+        self.serializer = SeriousModel(
+            self.descriptor,
             serializers,
             allow_any=allow_any,
             allow_missing=allow_missing,
@@ -50,7 +52,7 @@ class DictModel(Generic[T]):
 
     @property
     def cls(self):
-        return self._descriptor.cls
+        return self.descriptor.cls
 
     def load(self, data: Dict[str, Any]) -> T:
         return self._from_dict(data)
@@ -66,10 +68,10 @@ class DictModel(Generic[T]):
 
     def _dump(self, o) -> Dict[str, Any]:
         check_is_instance(o, self.cls)
-        return self._serializer.dump(o)
+        return self.serializer.dump(o)
 
     def _from_dict(self, data: Mapping):
-        return self._serializer.load(data)
+        return self.serializer.load(data)
 
     def __repr__(self):
         path = class_path(type(self))
