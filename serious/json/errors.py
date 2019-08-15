@@ -1,3 +1,6 @@
+"""Errors specific to JSON model."""
+
+
 class UnexpectedJson(Exception):
     """Invalid JSON provided to JSON model."""
 

@@ -1,5 +1,13 @@
 from __future__ import annotations
 
+__all__ = [
+    'field_serializers',
+    'OptionalSerializer', 'AnySerializer', 'EnumSerializer', 'DictSerializer', 'CollectionSerializer',
+    'TupleSerializer', 'StringSerializer', 'BooleanSerializer', 'IntegerSerializer', 'FloatSerializer',
+    'DataclassSerializer', 'UtcTimestampSerializer', 'DateTimeIsoSerializer', 'DateIsoSerializer',
+    'TimeIsoSerializer', 'UuidSerializer', 'DecimalSerializer'
+]
+
 import re
 from dataclasses import replace
 from datetime import datetime, date, time
@@ -11,15 +19,19 @@ from uuid import UUID
 from serious.descriptors import TypeDescriptor
 from serious.errors import ValidationError
 from serious.types import Timestamp
-from .process import Serialization, Loading, Dumping
+from .context import Context, Loading, Dumping
 from .serializer import FieldSerializer, Serializer
 
 
 def field_serializers(custom: Iterable[Type[FieldSerializer]] = tuple()) -> Tuple[Type[FieldSerializer], ...]:
-    """
+    """Default list of Serious field serializers.
+
     Returns a frozen collection of field serializers in the default order.
     You can provide a list of custom field serializers to include them along with default serializers.
     The order in the collection defines the order in which the serializers will be tested for fitness for each field.
+
+    :param custom: a list of custom serializers which are injected into the default list
+
     """
     return tuple([
         OptionalSerializer,
@@ -45,21 +57,20 @@ def field_serializers(custom: Iterable[Type[FieldSerializer]] = tuple()) -> Tupl
 
 class OptionalSerializer(FieldSerializer[Optional[Any], Optional[Any]]):
     """
-    A serializer for field marked as [Optional]. An optional field has internally a serializer for the target type,
+    A serializer for field marked as `Optional`. An optional field has internally a serializer for the target type,
     but first checks if the loaded data is `None`.
 
-    Example:
-    ```python
-    @dataclass
-    class Node:
-        node: Optional[Node]
-    ```
+        :Example:
+
+        @dataclass
+        class Node:
+            node: Optional[Node]
     """
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        item_descriptor = replace(self._type, is_optional=False)
-        self._serializer = self._root.find_serializer(item_descriptor)
+        item_descriptor = replace(self.type, is_optional=False)
+        self._serializer = self.root.find_serializer(item_descriptor)
 
     def load(self, value: Optional[Any], ctx: Loading) -> Optional[Any]:
         return None if value is None else self._serializer.load(value, ctx)
@@ -77,43 +88,45 @@ class EnumSerializer(FieldSerializer[Any, Any]):
 
     It is possible to serialize enums of non-S type if the enum is supplying this type as parent class.
     For example a date serialized to ISO string:
-    ```python
-    class Date(date, Enum):
-        TRINITY = 1945, 6, 16
-        GAGARIN = 1961, 4, 11
+
+        :Example:
+
+        class Date(date, Enum):
+            TRINITY = 1945, 6, 16
+            GAGARIN = 1961, 4, 11
 
 
-    @dataclass(frozen=True)
-    class HistoricEvent:
-        name: str
-        date: Date
+        @dataclass(frozen=True)
+        class HistoricEvent:
+            name: str
+            date: Date
 
-    model = DictModel(HistoricEvent)
-    dict = {'name': name, 'date': '1961-04-11'}
-    dataclass = HistoricEvent(name, Date.GAGARIN)
-    assert model.load(dict) == dataclass  # True
-    ```"""
+        model = DictModel(HistoricEvent)
+        dict = {'name': name, 'date': '1961-04-11'}
+        dataclass = HistoricEvent(name, Date.GAGARIN)
+        assert model.load(dict) == dataclass  # True
+    """
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._serializer = self._value_serializer()
-        self._enum_values = {e.value for e in list(self._type.cls)}
+        self._enum_values = {e.value for e in list(self.type.cls)}
 
     def _value_serializer(self) -> Optional[FieldSerializer]:
-        cls = self._type.cls
+        cls = self.type.cls
         bases = cls.__bases__
         while len(bases) == 1:
             cls = bases[0]
             bases = cls.__bases__
         if len(bases) == 0:
             return None
-        item_descriptor = self._type.describe(bases[0])
-        return self._root.find_serializer(item_descriptor)
+        item_descriptor = self.type.describe(bases[0])
+        return self.root.find_serializer(item_descriptor)
 
     def load(self, value: Any, ctx: Loading) -> Any:
         if self._serializer is None and value not in self._enum_values:
-            raise ValidationError(f'"{value}" is not part of the {self._type.cls} enum')
-        enum_cls = self._type.cls
+            raise ValidationError(f'"{value}" is not part of the {self.type.cls} enum')
+        enum_cls = self.type.cls
         if self._serializer is not None:
             loaded_value = self._serializer.load(value, ctx)
             try:
@@ -134,7 +147,7 @@ class EnumSerializer(FieldSerializer[Any, Any]):
 
 
 class AnySerializer(FieldSerializer[Any, Any]):
-    """Serializer for [Any] fields."""
+    """Serializer for `Any` fields."""
 
     def load(self, value: Any, ctx: Loading) -> Any:
         return value
@@ -148,13 +161,13 @@ class AnySerializer(FieldSerializer[Any, Any]):
 
 
 class DictSerializer(FieldSerializer[Dict[str, Any], Dict[str, Any]]):
-    """Serializer for `dict` fields with `str` keys (Dict[str, Any])."""
+    """Serializer for `dict` fields with `str` keys (`Dict[str, Any]`)."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        key = self._type.parameters[0]
+        key = self.type.parameters[0]
         assert key.cls is str and not key.is_optional, 'Dict keys must have explicit "str" type (Dict[str, Any]).'
-        self._serializer = self._root.find_serializer(self._type.parameters[1])
+        self._serializer = self.root.find_serializer(self.type.parameters[1])
 
     @classmethod
     def fits(cls, desc: TypeDescriptor) -> bool:
@@ -164,12 +177,12 @@ class DictSerializer(FieldSerializer[Dict[str, Any], Dict[str, Any]]):
         if not isinstance(data, dict):
             raise ValidationError('Expecting a dictionary')
         items = self._serialize_dict(data, ctx)
-        return self._type.cls(items)
+        return self.type.cls(items)
 
     def dump(self, data: Dict[str, Any], ctx: Dumping) -> Dict[str, Any]:
         return self._serialize_dict(data, ctx)
 
-    def _serialize_dict(self, data: Dict[str, Any], ctx: Serialization) -> Dict[str, Any]:
+    def _serialize_dict(self, data: Dict[str, Any], ctx: Context) -> Dict[str, Any]:
         serializer = Alias(self._serializer)
         return {key: ctx.run(f'[{key}]', serializer(key), value) for key, value in data.items()}
 
@@ -182,8 +195,8 @@ class CollectionSerializer(FieldSerializer[Collection, list]):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._serializer = self._root.find_serializer(self._type.parameters[0])
-        self._item_type = self._serializer._type
+        self._serializer = self.root.find_serializer(self.type.parameters[0])
+        self._item_type = self._serializer.type
 
     @classmethod
     def fits(cls, desc: TypeDescriptor) -> bool:
@@ -196,12 +209,12 @@ class CollectionSerializer(FieldSerializer[Collection, list]):
         if not isinstance(value, list):
             raise ValidationError(f'Expecting a list of {self._item_type.cls} values')
         items = self._serialize_collection(value, ctx)
-        return self._type.cls(items)
+        return self.type.cls(items)
 
     def dump(self, value: Collection, ctx: Dumping) -> list:
         return self._serialize_collection(value, ctx)
 
-    def _serialize_collection(self, data: Any, ctx: Serialization) -> List[Any]:
+    def _serialize_collection(self, data: Any, ctx: Context) -> List[Any]:
         serializer = Alias(self._serializer)
         return [ctx.run(f'[{i}]', serializer(i), item) for i, item in enumerate(data)]
 
@@ -211,7 +224,7 @@ class TupleSerializer(FieldSerializer[tuple, list]):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._serializers = [self._root.find_serializer(self._type.parameters[i]) for i in self._type.parameters]
+        self._serializers = [self.root.find_serializer(self.type.parameters[i]) for i in self.type.parameters]
         self._size = len(self._serializers)
 
     @classmethod
@@ -224,12 +237,12 @@ class TupleSerializer(FieldSerializer[tuple, list]):
         if len(value) != self._size:
             raise ValidationError(f'Expecting a list of {self._size} tuple values')  # type: ignore
         items = self._serialize_tuple(value, ctx)
-        return self._type.cls(items)
+        return self.type.cls(items)
 
     def dump(self, value: tuple, ctx: Dumping) -> list:
         return self._serialize_tuple(value, ctx)
 
-    def _serialize_tuple(self, data: Any, ctx: Serialization) -> List[Any]:
+    def _serialize_tuple(self, data: Any, ctx: Context) -> List[Any]:
         serializer = OrdinalAlias(self._serializers)
         return [ctx.run(f'[{i}]', serializer(i), item) for i, item in enumerate(data)]
 
@@ -257,7 +270,8 @@ class Alias(Serializer):
 class OrdinalAlias(Serializer[Any, Any]):
     """Serializes values using the provided serializer at the currently set index.
     The index is set via calling instance as a function.
-    Step name is changed to match the index."""
+    Step name is changed to match the index.
+    """
 
     def __init__(self, serializers: List[Serializer]):
         self._serializers = serializers
@@ -286,7 +300,7 @@ class BooleanSerializer(FieldSerializer[bool, bool]):
     def load(self, value: bool, ctx: Loading) -> bool:
         if not isinstance(value, bool):
             raise ValidationError(f"Invalid data type. Expecting boolean")
-        return self._type.cls(value)
+        return self.type.cls(value)
 
     def dump(self, value: bool, ctx: Dumping) -> bool:
         return bool(value)
@@ -302,7 +316,7 @@ class StringSerializer(FieldSerializer[str, str]):
     def load(self, value: str, ctx: Loading) -> str:
         if not isinstance(value, str):
             raise ValidationError('Invalid data type. Expecting a string')
-        return self._type.cls(value)
+        return self.type.cls(value)
 
     def dump(self, value: str, ctx: Dumping) -> str:
         return str(value)
@@ -311,7 +325,9 @@ class StringSerializer(FieldSerializer[str, str]):
 class IntegerSerializer(FieldSerializer[int, int]):
     """A serializer for integer field values.
 
-    In Python bool is a subclass of int, thus the check."""
+    .. note::
+        In Python `bool` is a subclass of `int`, thus the check.
+    """
 
     @classmethod
     def fits(cls, desc: TypeDescriptor) -> bool:
@@ -320,7 +336,7 @@ class IntegerSerializer(FieldSerializer[int, int]):
     def load(self, value: int, ctx: Loading) -> int:
         if not isinstance(value, int) or isinstance(value, bool):
             raise ValidationError('Invalid data type. Expecting an integer')
-        return self._type.cls(value)
+        return self.type.cls(value)
 
     def dump(self, value: int, ctx: Dumping) -> int:
         return int(value)
@@ -339,7 +355,7 @@ class FloatSerializer(FieldSerializer[float, float]):
         is_numeric = isinstance(value, (int, float)) and not isinstance(value, bool)
         if not is_numeric:
             raise ValidationError('Invalid data type. Expecting a numeric value')
-        return self._type.cls(value)
+        return self.type.cls(value)
 
     def dump(self, value: float, ctx: Dumping) -> float:
         return float(value)
@@ -350,8 +366,8 @@ class DataclassSerializer(FieldSerializer[Any, Dict[str, Any]]):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._serializer = self._root.child_model(self._type)
-        self._dc_name = self._type.cls.__name__
+        self._serializer = self.root.child_model(self.type)
+        self._dc_name = self.type.cls.__name__
 
     @classmethod
     def fits(cls, desc: TypeDescriptor) -> bool:
@@ -369,16 +385,16 @@ class DataclassSerializer(FieldSerializer[Any, Dict[str, Any]]):
 class UtcTimestampSerializer(FieldSerializer[Timestamp, Union[float, int]]):
     """A serializer of UTC timestamp field values to/from float value.
 
-    Example:
-    ```
-    from serious.types import timestamp
+        :Example:
 
-    @dataclass
-    class Transaction:
-        created_at: timestamp
+        from serious.types import timestamp
 
-    transaction = Transaction(timestamp(1542473728.456753))
-    ```
+        @dataclass
+        class Transaction:
+            created_at: timestamp
+
+        transaction = Transaction(timestamp(1542473728.456753))
+
     Dumping the `post` will return `{"created_at": 1542473728.456753}`.
     """
 
@@ -412,20 +428,20 @@ _iso_time_re = re.compile(
 
 
 class DateTimeIsoSerializer(FieldSerializer[datetime, str]):
-    """A serializer for datetime field values to a timestamp represented by a [ISO formatted string][1].
+    """A serializer for datetime field values to a timestamp represented by a `ISO formatted string`_.
 
-    Example:
-    ```
-    @dataclass
-    class Post:
-        timestamp: datetime
+        :Example:
 
-    timestamp = datetime(2018, 11, 17, 16, 55, 28, 456753, tzinfo=timezone.utc)
-    post = Post(timestamp)
-    ```
+        @dataclass
+        class Post:
+            timestamp: datetime
+
+        timestamp = datetime(2018, 11, 17, 16, 55, 28, 456753, tzinfo=timezone.utc)
+        post = Post(timestamp)
+
     Dumping the `post` will return `'{"timestamp": "2018-11-17T16:55:28.456753+00:00"}'`.
 
-    [1]: https://en.wikipedia.org/wiki/ISO_8601
+    .. _ISO formatted string: https://en.wikipedia.org/wiki/ISO_8601
     """
 
     def load(self, value: str, ctx: Loading) -> datetime:
@@ -444,20 +460,20 @@ class DateTimeIsoSerializer(FieldSerializer[datetime, str]):
 
 
 class DateIsoSerializer(FieldSerializer[date, str]):
-    """A serializer of `date` field values to a timestamp represented by an [ISO formatted string][1].
+    """A serializer of `date` field values to a timestamp represented by an `ISO formatted string`_.
 
-    Example:
-    ```
-    @dataclass
-    class Event:
-        name: str
-        when: date
+        :Example:
 
-    event = Event('Albert Einstein won Nobel Prize in Physics', date(1922, 9, 9))
-    ```
+        @dataclass
+        class Event:
+            name: str
+            when: date
+
+        event = Event('Albert Einstein won Nobel Prize in Physics', date(1922, 9, 9))
+
     Dumping the `event` will return `'{"name": "…", "when": "1922-09-09"}'`.
 
-    [1]: https://en.wikipedia.org/wiki/ISO_8601
+    .. _ISO formatted string: https://en.wikipedia.org/wiki/ISO_8601
     """
 
     def load(self, value: str, ctx: Loading) -> date:
@@ -476,20 +492,20 @@ class DateIsoSerializer(FieldSerializer[date, str]):
 
 
 class TimeIsoSerializer(FieldSerializer[time, str]):
-    """A serializer for `time` field values to an [ISO formatted string][1].
+    """A serializer for `time` field values to an `ISO formatted string`_.
 
-    Example:
-    ```
-    @dataclass
-    class Alarm:
-        at: time
-        enabled: bool
+        :Example:
 
-    alarm = Alarm(time(7, 0, 0), enabled=True)
-    ```
+        @dataclass
+        class Alarm:
+            at: time
+            enabled: bool
+
+        alarm = Alarm(time(7, 0, 0), enabled=True)
+
     Dumping the `post` will return `'{"at": "07:00:00", "enabled": True}'`.
 
-    [1]: https://en.wikipedia.org/wiki/ISO_8601
+    .. _ISO formatted string: https://en.wikipedia.org/wiki/ISO_8601
     """
 
     def load(self, value: str, ctx: Loading) -> time:
@@ -511,7 +527,7 @@ _uuid4_hex_re = re.compile(r'\A([a-f0-9]{8}-?[a-f0-9]{4}-?4[a-f0-9]{3}-?[89ab][a
 
 
 class UuidSerializer(FieldSerializer[UUID, str]):
-    """A [UUID] value serializer to `str`."""
+    """A `UUID` value serializer to `str`."""
 
     def load(self, value: str, ctx: Loading) -> UUID:
         if not isinstance(value, str):
@@ -532,7 +548,7 @@ _decimal_re = re.compile(r'\A\d+(\.\d+)?\Z')
 
 
 class DecimalSerializer(FieldSerializer[Decimal, str]):
-    """[Decimal] value serializer to `str`."""
+    """`Decimal` value serializer to `str`."""
 
     def load(self, value: str, ctx: Loading) -> Decimal:
         if not isinstance(value, str):

@@ -1,7 +1,7 @@
 import requests
 from pkg_resources import safe_version
 
-__version__ = '1.0.0.dev17'
+__version__ = '1.0.0.dev18'
 
 __doc__ = """
 This module is querying PyPI to check if the current version set to package is already present on PyPI.
@@ -34,7 +34,7 @@ class PypiPackage:
 class VersionExists(Exception):
     def __init__(self, name: str, version: str):
         super().__init__(f'Package "{name}" with version "{version}" already exists on PyPI. '
-                         f'You can change the version in "config.py".')
+                         f'You can change the version in "version.py".')
 
 
 def fetch(name: str):

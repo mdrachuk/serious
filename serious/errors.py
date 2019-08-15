@@ -1,3 +1,15 @@
+"""Errors raised by serious.
+
+Errors are divided into 3 main groups:
+
+1. Validation errors -- raised by serious or library users if an objects fails validation.
+Contains the stack pointing to an object which raised the error.
+2. Serialization errors -- wrap the exceptions which occur during serialization.
+They also contain the stack pointing to a specific place which raised the error.
+Can be one of `LoadError` or `DumpError`.
+3. Model errors -- raised when traversing the dataclass and building the model.
+When no serializer found for field, etc.
+"""
 from __future__ import annotations
 
 __all__ = [
@@ -13,25 +25,13 @@ __all__ = [
     'MutableTypesInModel',
     'ValidationError',
 ]
-__doc__ = """Errors raised by serious.
-
-Errors are divided into 3 main groups:
-
-1. Validation errors -- raised by serious or library users if an objects fails validation. 
-Contains the stack pointing to an object which raised the error. 
-2. Serialization errors -- wrap the exceptions which occur during serialization. 
-They also contain the stack pointing to a specific place which raised the error.
-Can be one of `LoadError` or `DumpError`.
-3. Model errors -- raised when traversing the dataclass and building the model. 
-When no serializer found for field, etc.
-"""
 
 from typing import Type, Mapping, Collection, TYPE_CHECKING, Iterable
 
 from .utils import class_path, Dataclass
 
 if TYPE_CHECKING:
-    from .serialization.process import SerializationStep
+    from .serialization.context import SerializationStep
     from .descriptors import TypeDescriptor
 
 
@@ -145,7 +145,7 @@ class FieldMissingSerializer(ModelError):
     @property
     def message(self):
         return (f'{class_path(self.cls)} contains unserializable member: {self.desc}.'
-                f'Create a serializer fitting the descriptor and pass it to the model `serializers`.')
+                f'Create a serializer fitting the descriptor and pass it to the model ``serializers``.')
 
 
 class ModelContainsAny(ModelError):
@@ -154,7 +154,7 @@ class ModelContainsAny(ModelError):
     def message(self):
         return (f'{class_path(self.cls)} contains fields annotated as Any or missing type annotation. '
                 f'Provide a type annotation or pass `allow_any=True` to the serializer. '
-                f'This may also be an ambiguous `Generic` definitions like `x: list`, `x: List` '
+                f'This may also be an ambiguous ``Generic`` definitions like `x: list`, `x: List` '
                 f'which are resolved as `List[Any]`. ')
 
 

@@ -1,13 +1,10 @@
-from typing import TypeVar
-
-__all__ = ['validate']
-__doc__ = """
+"""
 Serious has a simple understanding of what validation should be: a `__validate__` instance method raising ValidationError.
 
 First of all, this puts all of validation together instead spreading it all over the place simplifying understanding.
 
 Secondly, explicit `raise ValidationError` hits can be seen in test coverage which reduces possibility of missing them
-in tests. 
+in tests.
 
 Serious runs objects `__validate__` method if it’s present during object load by default.
 This can be overridden by passing `validate_on_load` and `validate_on_dump` to model.
@@ -15,6 +12,9 @@ This can be overridden by passing `validate_on_load` and `validate_on_dump` to m
 
 You can run validation yourself by calling `serious.validation.validate(obj)` whenever you need.
 """
+__all__ = ['validate']
+
+from typing import TypeVar
 
 T = TypeVar('T')
 
@@ -25,7 +25,7 @@ def validate(obj: T) -> T:
     Serious defines this validation as an instance `__validate__` method raising `ValidationError`.
     It also does not return nothing or returns None.
 
-    Example:
+        :Example:
 
         @dataclass
         class Note:

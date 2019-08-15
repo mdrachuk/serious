@@ -1,4 +1,5 @@
 """Checks performed in other places, throwing errors when unsatisfied."""
+
 import collections
 from typing import Any, Type
 

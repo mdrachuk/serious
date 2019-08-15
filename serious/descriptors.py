@@ -1,7 +1,4 @@
-from __future__ import annotations
-
-__all__ = ['TypeDescriptor', 'describe', 'DescTypes', 'scan_types']
-__doc__ = """Descriptors of types used by serious. 
+"""Descriptors of types used by Serious.
 
 Descriptors are simplifying work with types, enriching them with more contextual information.
 This allows to make decisions, like picking a serializer, easier.
@@ -11,6 +8,10 @@ dataclass checks and more.
 
 The data is carried by `TypeDescriptor`s which are created by a call to `serious.descriptors.describe(cls)`.
 """
+from __future__ import annotations
+
+__all__ = ['TypeDescriptor', 'describe', 'DescTypes', 'scan_types']
+
 from collections import ChainMap
 from dataclasses import dataclass, fields, is_dataclass
 from typing import Type, Any, TypeVar, get_type_hints, Dict, Mapping, List, Union, Iterable
@@ -24,6 +25,13 @@ GenericParams = Mapping[Any, 'TypeDescriptor']
 
 @dataclass(frozen=True)
 class TypeDescriptor:
+    """A descriptor of a type unwrapping the aliases, optionals, separating generic parameters,
+    extracting the parameters from broader context, etc.
+
+    Type descriptors are mostly used for mapping serializers to particular objects.
+
+    A proper way of creating a `TypeDescriptor` is using the `serious.descriptors.describe(cls)` factory.
+    """
     _cls: Type
     parameters: FrozenDict[Any, TypeDescriptor]
     is_optional: bool = False
@@ -37,7 +45,7 @@ class TypeDescriptor:
     def fields(self) -> Mapping[str, TypeDescriptor]:
         """A mapping of all dataclass field names to their corresponding Type Descriptors.
 
-        Returns an empty mapping if the object is not a dataclass."""
+        An empty mapping is returned if the object is not a dataclass."""
         if not is_dataclass(self.cls):
             return {}
         types = get_type_hints(self.cls)  # type: Dict[str, Type]
@@ -73,10 +81,10 @@ _generic_params: Dict[Type, Dict[int, TypeDescriptor]] = {
 def _get_default_generic_params(cls: Type, params: GenericParams) -> GenericParams:
     """Returns mapping of default generic params for the provided cls.
 
-    Examples:
-    - `dict` -> {0: <TypeDescriptor cls=Any>, 1: <TypeDescriptor cls=Any>};
-    - `list` -> {0: <TypeDescriptor cls=Any>};
-    - `tuple` -> {0: <TypeDescriptor cls=Any>, 1: <TypeDescriptor cls=Ellipses>}.
+    **Examples**:
+     - `dict` -> `{0: <TypeDescriptor cls=Any>, 1: <TypeDescriptor cls=Any>}`;
+     - `list` -> `{0: <TypeDescriptor cls=Any>}`;
+     - `tuple` -> `{0: <TypeDescriptor cls=Any>, 1: <TypeDescriptor cls=Ellipses>}`.
     """
     for generic, default_params in _generic_params.items():
         if issubclass(cls, generic):
@@ -87,9 +95,9 @@ def _get_default_generic_params(cls: Type, params: GenericParams) -> GenericPara
 def _describe_generic(cls: Type, generic_params: GenericParams) -> TypeDescriptor:
     """Creates a TypeDescriptor for Python _GenericAlias, unwrapping it to its origin/
 
-    Examples:
-    - Tuple[str] -> <TypeDescriptor cls=tuple params={0: <TypeDescriptor cls=str>}>
-    - Optional[int] -> <TypeDescriptor cls=int is_optional=True>
+    **Examples**:
+     - `Tuple[str]` -> `<TypeDescriptor cls=tuple params={0: <TypeDescriptor cls=str>}>`;
+     - `Optional[int]` -> `<TypeDescriptor cls=int is_optional=True>`.
     """
     params: GenericParams = {}
     is_optional = _is_optional(cls)
@@ -162,14 +170,14 @@ _empty_desc_types = DescTypes({})
 
 
 def scan_types(desc: TypeDescriptor) -> DescTypes:
-    """Create a DescTypes object for the provided descriptor.
+    """Create a `DescTypes` object for the provided descriptor.
 
-    DescTypes allow checks of the descriptor tree."""
+    `DescTypes` allow checks of the descriptor tree."""
     return DescTypes.scan(desc, known=[])
 
 
 def _is_optional(cls: Type) -> bool:
-    """Returns True if the provided type is Optional."""
+    """Returns True if the provided type is `Optional`."""
     return getattr(cls, '__origin__', None) == Union \
            and len(cls.__args__) == 2 \
            and cls.__args__[1] == type(None)

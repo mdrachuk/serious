@@ -63,9 +63,9 @@ Loading them will result in error:
 >>> JsonModel(Message, allow_any=False)
 Traceback (most recent call last):
   File "<input>", line 1, in <module>
-  File ".../serious/json/api.py", line 42, in __init__
-    allow_unexpected=allow_unexpected,
-  File ".../serious/serialization.py", line 729, in __init__
+  File "..serious/serious/json/model.py", line 80, in __init__
+    key_mapper=JsonKeyMapper() if camel_case else None,
+  File "..serious/serious/serialization/model.py", line 71, in __init__
     raise ModelContainsAny(descriptor.cls)
 serious.errors.ModelContainsAny: <class '__main__.Message'>
 ```
