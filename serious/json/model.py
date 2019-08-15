@@ -128,8 +128,8 @@ class JsonModel(Generic[T]):
 
 class JsonKeyMapper(KeyMapper):
 
-    def to_model(self, item: str) -> str:
-        return camel_to_snake(item)
+    def to_model(self, key: str) -> str:
+        return camel_to_snake(key)
 
-    def to_serialized(self, item: str) -> str:
-        return snake_to_camel(item)
+    def to_serialized(self, field: str) -> str:
+        return snake_to_camel(field)
