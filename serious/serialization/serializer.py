@@ -33,9 +33,9 @@ class FieldSerializer(Serializer[S, M], ABC):
 
     A clean way to add custom serializers to the defaults is to use the `field_serializers` function.
 
-    .. _JsonModel: serious.json.api.JsonModel
-    .. _DictModel: serious.dict.api.DictModel
-    .. _YamlModel: serious.yaml.api.YamlModel
+    .. _JsonModel: serious.json.model.JsonModel
+    .. _DictModel: serious.dict.model.DictModel
+    .. _YamlModel: serious.yaml.model.YamlModel
     """
 
     def __init__(self, descriptor: TypeDescriptor, root_model: 'SeriousModel'):
