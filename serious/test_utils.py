@@ -1,3 +1,12 @@
+"""
+Test utilities for use with pytest.
+
+Right now contains single check -- `assert_symmetric`.
+With it’s possible to check that a dataclass stays the same after dumping and loading the dumped instance.
+"""
+
+__all__ = ['assert_symmetric']
+
 from typing import overload
 
 from .dict import DictModel
