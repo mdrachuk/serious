@@ -4,10 +4,10 @@ import json
 from typing import Optional, TypeVar, Type, Generic, List, MutableMapping, Collection, Iterable, Any, Dict, Union
 
 from serious.descriptors import describe
-from serious.preconditions import check_is_instance
+from serious.checks import check_is_instance
 from serious.serialization import FieldSerializer, SeriousModel, field_serializers, KeyMapper
 from serious.utils import class_path, snake_to_camel, camel_to_snake
-from .preconditions import check_that_loading_an_object, check_that_loading_a_list
+from .checks import check_that_loading_an_object, check_that_loading_a_list
 
 T = TypeVar('T')
 
@@ -29,18 +29,18 @@ class JsonModel(Generic[T]):
             indent: Optional[int] = None,
     ):
         """
-        @param cls the dataclass type to load/dump.
-        @param serializers field serializer classes in an order they will be tested for fitness for each field.
-        @param allow_any `False` to raise if the model contains fields annotated with `Any`
+        :param cls: the dataclass type to load/dump.
+        :param serializers: field serializer classes in an order they will be tested for fitness for each field.
+        :param allow_any: `False` to raise if the model contains fields annotated with `Any`
                 (this includes generics like `List[Any]`, or simply `list`).
-        @param allow_missing `False` to raise during load if data is missing the optional fields.
-        @param allow_unexpected `False` to raise during load if data contains some unknown fields.
-        @param validate_on_load to call dataclass __validate__ method after object construction.
-        @param validate_on_load to call object __validate__ before dumping.
-        @param ensure_frozen `False` to skip check of model immutability; `True` will perform the check
+        :param allow_missing: `False` to raise during load if data is missing the optional fields.
+        :param allow_unexpected: `False` to raise during load if data contains some unknown fields.
+        :param validate_on_load: to call dataclass `__validate__` method after object construction.
+        :param validate_on_load: to call object `__validate__` before dumping.
+        :param ensure_frozen: `False` to skip check of model immutability; `True` will perform the check
                 against built-in immutable types; a list of custom immutable types is added to built-ins.
-        @param camel_case `True` to transform dataclass "snake_case" to JSON "camelCase".
-        @param indent number of spaces JSON output will be indented by; `None` for most compact representation.
+        :param camel_case: `True` to transform dataclass "snake_case" to JSON "camelCase".
+        :param indent: number of spaces JSON output will be indented by; `None` for most compact representation.
         """
         self._descriptor = describe(cls)
         self._serializer: SeriousModel = SeriousModel(

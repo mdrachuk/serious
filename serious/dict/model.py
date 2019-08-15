@@ -1,9 +1,12 @@
+"""A module with `DictModel` -- Serious model to transform between dataclasses and dictionaries."""
 from __future__ import annotations
+
+__all__ = ['DictModel']
 
 from typing import TypeVar, Type, Generic, List, Collection, Dict, Iterable, Any, Mapping, Union
 
+from serious.checks import check_is_instance
 from serious.descriptors import describe, TypeDescriptor
-from serious.preconditions import check_is_instance
 from serious.serialization import FieldSerializer, SeriousModel, field_serializers
 from serious.utils import class_path
 
@@ -11,6 +14,10 @@ T = TypeVar('T')
 
 
 class DictModel(Generic[T]):
+    """A model convert dataclasses to dicts and back.
+
+    Check __init__ parameters for all of configuration options.
+    """
     descriptor: TypeDescriptor
     serializer: SeriousModel
 
@@ -27,17 +34,18 @@ class DictModel(Generic[T]):
             ensure_frozen: Union[bool, Iterable[Type]] = False,
     ):
         """
-        @param cls the dataclass type to load/dump.
-        @param serializers field serializer classes in an order they will be tested for fitness for each field.
-        @param allow_any `False` to raise if the model contains fields annotated with `Any`
+        :param cls: the dataclass type to load/dump.
+        :param serializers: field serializer classes in an order they will be tested for fitness for each field.
+        :param allow_any: `False` to raise if the model contains fields annotated with `Any`
                 (this includes generics like `List[Any]`, or simply `list`).
-        @param allow_missing `False` to raise during load if data is missing the optional fields.
-        @param allow_unexpected `False` to raise during load if data contains some unknown fields.
-        @param validate_on_load to call dataclass __validate__ method after object construction.
-        @param validate_on_load to call object __validate__ before dumping.
-        @param ensure_frozen `False` to skip check of model immutability; `True` will perform the check
+        :param allow_missing: `False` to raise during load if data is missing the optional fields.
+        :param allow_unexpected: `False` to raise during load if data contains some unknown fields.
+        :param validate_on_load: to call dataclass `__validate__` method after object construction.
+        :param validate_on_dump: to call object `__validate__` before dumping.
+        :param ensure_frozen: `False` to skip check of model immutability; `True` will perform the check
                 against built-in immutable types; a list of custom immutable types is added to built-ins.
         """
+        self.cls = cls
         self.descriptor = describe(cls)
         self.serializer = SeriousModel(
             self.descriptor,
@@ -49,10 +57,6 @@ class DictModel(Generic[T]):
             validate_on_dump=validate_on_dump,
             ensure_frozen=ensure_frozen,
         )
-
-    @property
-    def cls(self):
-        return self.descriptor.cls
 
     def load(self, data: Dict[str, Any]) -> T:
         return self._from_dict(data)

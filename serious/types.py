@@ -1,11 +1,13 @@
-__all__ = ['Timestamp', 'Email', 'FrozenList', 'FrozenDict']
-__doc__ = """Serializable types provided by serious.
+"""Serializable types provided by serious.
 
 `serious.types` module lists a number of types useful for as part of serious modules:
 - Timestamp — an alternative to datetime, that is serialized to a float ms value
 - Email — a Tiny Type made out of string, which is checked to match the format
 - FrozenList and FrozenDict — immutable alternatives for standard collections
 """
+
+__all__ = ['Timestamp', 'Email', 'FrozenList', 'FrozenDict']
+
 import re
 from datetime import datetime, timezone
 from typing import TypeVar, Generic, overload, Optional
@@ -22,7 +24,7 @@ class FrozenDict(dict, Generic[KT, VT]):
 
     Does not check for immutability of its members.
 
-    Implementation from [PEP-351](https://www.python.org/dev/peps/pep-0351/).
+    Implementation from `PEP-351 <https://www.python.org/dev/peps/pep-0351/>`_.
     """
 
     def __hash__(self):

@@ -16,10 +16,14 @@ from .serializer import FieldSerializer, Serializer
 
 
 def field_serializers(custom: Iterable[Type[FieldSerializer]] = tuple()) -> Tuple[Type[FieldSerializer], ...]:
-    """
+    """Default list of Serious field serializers.
+
     Returns a frozen collection of field serializers in the default order.
     You can provide a list of custom field serializers to include them along with default serializers.
     The order in the collection defines the order in which the serializers will be tested for fitness for each field.
+
+    :param custom: a list of custom serializers which are injected into the default list
+
     """
     return tuple([
         OptionalSerializer,
@@ -45,15 +49,14 @@ def field_serializers(custom: Iterable[Type[FieldSerializer]] = tuple()) -> Tupl
 
 class OptionalSerializer(FieldSerializer[Optional[Any], Optional[Any]]):
     """
-    A serializer for field marked as [Optional]. An optional field has internally a serializer for the target type,
+    A serializer for field marked as `Optional`. An optional field has internally a serializer for the target type,
     but first checks if the loaded data is `None`.
 
-    Example:
-    ```python
-    @dataclass
-    class Node:
-        node: Optional[Node]
-    ```
+        :Example:
+
+        @dataclass
+        class Node:
+            node: Optional[Node]
     """
 
     def __init__(self, *args, **kwargs):
@@ -77,22 +80,24 @@ class EnumSerializer(FieldSerializer[Any, Any]):
 
     It is possible to serialize enums of non-S type if the enum is supplying this type as parent class.
     For example a date serialized to ISO string:
-    ```python
-    class Date(date, Enum):
-        TRINITY = 1945, 6, 16
-        GAGARIN = 1961, 4, 11
+
+        :Example:
+
+        class Date(date, Enum):
+            TRINITY = 1945, 6, 16
+            GAGARIN = 1961, 4, 11
 
 
-    @dataclass(frozen=True)
-    class HistoricEvent:
-        name: str
-        date: Date
+        @dataclass(frozen=True)
+        class HistoricEvent:
+            name: str
+            date: Date
 
-    model = DictModel(HistoricEvent)
-    dict = {'name': name, 'date': '1961-04-11'}
-    dataclass = HistoricEvent(name, Date.GAGARIN)
-    assert model.load(dict) == dataclass  # True
-    ```"""
+        model = DictModel(HistoricEvent)
+        dict = {'name': name, 'date': '1961-04-11'}
+        dataclass = HistoricEvent(name, Date.GAGARIN)
+        assert model.load(dict) == dataclass  # True
+    """
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -134,7 +139,7 @@ class EnumSerializer(FieldSerializer[Any, Any]):
 
 
 class AnySerializer(FieldSerializer[Any, Any]):
-    """Serializer for [Any] fields."""
+    """Serializer for `Any` fields."""
 
     def load(self, value: Any, ctx: Loading) -> Any:
         return value
@@ -148,7 +153,7 @@ class AnySerializer(FieldSerializer[Any, Any]):
 
 
 class DictSerializer(FieldSerializer[Dict[str, Any], Dict[str, Any]]):
-    """Serializer for `dict` fields with `str` keys (Dict[str, Any])."""
+    """Serializer for `dict` fields with `str` keys (`Dict[str, Any]`)."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -257,7 +262,8 @@ class Alias(Serializer):
 class OrdinalAlias(Serializer[Any, Any]):
     """Serializes values using the provided serializer at the currently set index.
     The index is set via calling instance as a function.
-    Step name is changed to match the index."""
+    Step name is changed to match the index.
+    """
 
     def __init__(self, serializers: List[Serializer]):
         self._serializers = serializers
@@ -311,7 +317,9 @@ class StringSerializer(FieldSerializer[str, str]):
 class IntegerSerializer(FieldSerializer[int, int]):
     """A serializer for integer field values.
 
-    In Python bool is a subclass of int, thus the check."""
+    .. note::
+        In Python `bool` is a subclass of `int`, thus the check.
+    """
 
     @classmethod
     def fits(cls, desc: TypeDescriptor) -> bool:
@@ -369,16 +377,16 @@ class DataclassSerializer(FieldSerializer[Any, Dict[str, Any]]):
 class UtcTimestampSerializer(FieldSerializer[Timestamp, Union[float, int]]):
     """A serializer of UTC timestamp field values to/from float value.
 
-    Example:
-    ```
-    from serious.types import timestamp
+        :Example:
 
-    @dataclass
-    class Transaction:
-        created_at: timestamp
+        from serious.types import timestamp
 
-    transaction = Transaction(timestamp(1542473728.456753))
-    ```
+        @dataclass
+        class Transaction:
+            created_at: timestamp
+
+        transaction = Transaction(timestamp(1542473728.456753))
+
     Dumping the `post` will return `{"created_at": 1542473728.456753}`.
     """
 
@@ -412,20 +420,20 @@ _iso_time_re = re.compile(
 
 
 class DateTimeIsoSerializer(FieldSerializer[datetime, str]):
-    """A serializer for datetime field values to a timestamp represented by a [ISO formatted string][1].
+    """A serializer for datetime field values to a timestamp represented by a `ISO formatted string`_.
 
-    Example:
-    ```
-    @dataclass
-    class Post:
-        timestamp: datetime
+        :Example:
 
-    timestamp = datetime(2018, 11, 17, 16, 55, 28, 456753, tzinfo=timezone.utc)
-    post = Post(timestamp)
-    ```
+        @dataclass
+        class Post:
+            timestamp: datetime
+
+        timestamp = datetime(2018, 11, 17, 16, 55, 28, 456753, tzinfo=timezone.utc)
+        post = Post(timestamp)
+
     Dumping the `post` will return `'{"timestamp": "2018-11-17T16:55:28.456753+00:00"}'`.
 
-    [1]: https://en.wikipedia.org/wiki/ISO_8601
+    .. _ISO formatted string: https://en.wikipedia.org/wiki/ISO_8601
     """
 
     def load(self, value: str, ctx: Loading) -> datetime:
@@ -444,20 +452,20 @@ class DateTimeIsoSerializer(FieldSerializer[datetime, str]):
 
 
 class DateIsoSerializer(FieldSerializer[date, str]):
-    """A serializer of `date` field values to a timestamp represented by an [ISO formatted string][1].
+    """A serializer of `date` field values to a timestamp represented by an `ISO formatted string`_.
 
     Example:
-    ```
+    ``
     @dataclass
     class Event:
         name: str
         when: date
 
     event = Event('Albert Einstein won Nobel Prize in Physics', date(1922, 9, 9))
-    ```
+    ``
     Dumping the `event` will return `'{"name": "…", "when": "1922-09-09"}'`.
 
-    [1]: https://en.wikipedia.org/wiki/ISO_8601
+    .. _ISO formatted string: https://en.wikipedia.org/wiki/ISO_8601
     """
 
     def load(self, value: str, ctx: Loading) -> date:
@@ -476,20 +484,20 @@ class DateIsoSerializer(FieldSerializer[date, str]):
 
 
 class TimeIsoSerializer(FieldSerializer[time, str]):
-    """A serializer for `time` field values to an [ISO formatted string][1].
+    """A serializer for `time` field values to an `ISO formatted string`_.
 
-    Example:
-    ```
-    @dataclass
-    class Alarm:
-        at: time
-        enabled: bool
+        :Example:
 
-    alarm = Alarm(time(7, 0, 0), enabled=True)
-    ```
+        @dataclass
+        class Alarm:
+            at: time
+            enabled: bool
+
+        alarm = Alarm(time(7, 0, 0), enabled=True)
+
     Dumping the `post` will return `'{"at": "07:00:00", "enabled": True}'`.
 
-    [1]: https://en.wikipedia.org/wiki/ISO_8601
+    .. _ISO formatted string: https://en.wikipedia.org/wiki/ISO_8601
     """
 
     def load(self, value: str, ctx: Loading) -> time:
@@ -511,7 +519,7 @@ _uuid4_hex_re = re.compile(r'\A([a-f0-9]{8}-?[a-f0-9]{4}-?4[a-f0-9]{3}-?[89ab][a
 
 
 class UuidSerializer(FieldSerializer[UUID, str]):
-    """A [UUID] value serializer to `str`."""
+    """A `UUID` value serializer to `str`."""
 
     def load(self, value: str, ctx: Loading) -> UUID:
         if not isinstance(value, str):
@@ -532,7 +540,7 @@ _decimal_re = re.compile(r'\A\d+(\.\d+)?\Z')
 
 
 class DecimalSerializer(FieldSerializer[Decimal, str]):
-    """[Decimal] value serializer to `str`."""
+    """`Decimal` value serializer to `str`."""
 
     def load(self, value: str, ctx: Loading) -> Decimal:
         if not isinstance(value, str):

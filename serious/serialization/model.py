@@ -6,7 +6,7 @@ from typing import Generic, Iterable, Type, Dict, Any, Union, Mapping, Optional,
 from serious.descriptors import scan_types, TypeDescriptor
 from serious.errors import ModelContainsAny, ModelContainsUnion, MissingField, UnexpectedItem, ValidationError, \
     LoadError, DumpError, FieldMissingSerializer
-from serious.preconditions import check_is_instance
+from serious.checks import check_is_instance
 from serious.utils import Dataclass
 from serious.validation import validate
 from .check_frozen import check_frozen
@@ -36,19 +36,20 @@ class SeriousModel(Generic[T]):
             key_mapper: Optional[KeyMapper] = None,
             _registry: Dict[TypeDescriptor, SeriousModel] = None
     ):
-        """
-        @param descriptor the descriptor of the dataclass to load/dump.
-        @param serializers field serializer classes in an order they will be tested for fitness for each field.
-        @param allow_any `False` to raise if the model contains fields annotated with `Any`
-                (this includes generics like `List[Any]`, or simply `list`).
-        @param allow_missing `False` to raise during load if data is missing the optional fields.
-        @param allow_unexpected `False` to raise during load if data contains some unknown fields.
-        @param validate_on_load to call dataclass __validate__ method after object construction.
-        @param validate_on_load to call object __validate__ before dumping.
-        @param ensure_frozen `False` to skip check of model immutability; `True` will perform the check
+        """A new model.
+
+        :param descriptor: the descriptor of the dataclass to load/dump.
+        :param serializers: field serializer classes in an order they will be tested for fitness for each field.
+        :param allow_any: `False` to raise if the model contains fields annotated with `Any`
+                    (this includes generics like `List[Any]`, or simply `list`).
+        :param allow_missing: `False` to raise during load if data is missing the optional fields.
+        :param allow_unexpected: `False` to raise during load if data contains some unknown fields.
+        :param validate_on_load: to call dataclass __validate__ method after object construction.
+        :param validate_on_load: to call object __validate__ before dumping.
+        :param ensure_frozen: `False` to skip check of model immutability; `True` will perform the check
                 against built-in immutable types; a list of custom immutable types is added to built-ins.
-        @param key_mapper remap field names of between dataclass and serialized objects.
-        @param _registry a mapping of dataclass type descriptors to corresponding serious serializer;
+        :param key_mapper: remap field names of between dataclass and serialized objects.
+        :param _registry: a mapping of dataclass type descriptors to corresponding serious serializer;
                 used internally to create child serializers.
         """
         assert is_dataclass(descriptor.cls), 'Serious can only operate on dataclasses.'
@@ -131,7 +132,7 @@ class SeriousModel(Generic[T]):
 
     def child_model(self, descriptor: TypeDescriptor) -> SeriousModel:
         """
-        Creates a [SeriousModel] for dataclass fields nested in the current serializers.
+        Creates a `SeriousModel` for dataclass fields nested in the current serializers.
         The preferences of the nested dataclasses match those of the root one.
         """
         if descriptor == self._descriptor:
@@ -157,7 +158,7 @@ class SeriousModel(Generic[T]):
         """
         Creates a serializer fitting the provided field descriptor.
 
-        @param descriptor descriptor of a field to serialize.
+        :param descriptor: descriptor of a field to serialize.
         """
         serializer = self._find_serializer(descriptor)
         if serializer is None:

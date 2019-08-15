@@ -26,17 +26,16 @@ class Serializer(Generic[M, S], ABC):
 
 class FieldSerializer(Serializer[S, M], ABC):
     """
-    A abstract field serializer defining a constructor invoked by serious, [dump](#dump)/[load](#load)
-    and class [fits](#fits) methods.
+    A abstract field serializer defining a constructor invoked by serious `dump`, `load` and class `fits` methods.
 
-    Field serializers are provided to a serious model ([JsonModel][1], [DictModel][2], [YamlModel][3]) serializers
+    Field serializers are provided to a serious model (`JsonModel`_, `DictModel`_, `YamlModel`_) serializers
     parameter in an order in which they will be tested for fitness in.
 
-    A clean way to add custom serializers to the defaults is to use the [field_serializers] function.
+    A clean way to add custom serializers to the defaults is to use the `field_serializers` function.
 
-    [1]: serious.json.api.JsonModel
-    [2]: serious.dict.api.DictModel
-    [3]: serious.yaml.api.YamlModel
+    .. _JsonModel: serious.json.api.JsonModel
+    .. _DictModel: serious.dict.api.DictModel
+    .. _YamlModel: serious.yaml.api.YamlModel
     """
 
     def __init__(self, descriptor: TypeDescriptor, root_model: 'SeriousModel'):
