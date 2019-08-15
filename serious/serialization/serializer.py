@@ -10,7 +10,7 @@ S = TypeVar('S')  # Serialized value
 
 if TYPE_CHECKING:
     from .model import SeriousModel
-    from .process import Loading, Dumping
+    from .context import Loading, Dumping
 
 
 class Serializer(Generic[M, S], ABC):

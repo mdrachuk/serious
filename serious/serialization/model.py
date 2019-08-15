@@ -1,17 +1,19 @@
 from __future__ import annotations
 
+__all__ = ['SeriousModel']
+
 from dataclasses import fields, MISSING, Field, is_dataclass
 from typing import Generic, Iterable, Type, Dict, Any, Union, Mapping, Optional, Iterator, TypeVar
 
+from serious.checks import check_is_instance
 from serious.descriptors import scan_types, TypeDescriptor
 from serious.errors import ModelContainsAny, ModelContainsUnion, MissingField, UnexpectedItem, ValidationError, \
     LoadError, DumpError, FieldMissingSerializer
-from serious.checks import check_is_instance
 from serious.utils import Dataclass
 from serious.validation import validate
 from .check_frozen import check_frozen
 from .key_mapper import KeyMapper, NoopKeyMapper
-from .process import Loading, Dumping
+from .context import Loading, Dumping
 from .serializer import FieldSerializer
 
 T = TypeVar('T')
@@ -20,7 +22,7 @@ S = TypeVar('S')  # Serialized value
 
 
 class SeriousModel(Generic[T]):
-    """A dataclasses/dict serialization model."""
+    """Serious internal model implementation reused by the exposed models (like JSON/YAML/dict/etc)."""
 
     def __init__(
             self,
@@ -36,7 +38,7 @@ class SeriousModel(Generic[T]):
             key_mapper: Optional[KeyMapper] = None,
             _registry: Dict[TypeDescriptor, SeriousModel] = None
     ):
-        """A new model.
+        """Initialize a Serious Model.
 
         :param descriptor: the descriptor of the dataclass to load/dump.
         :param serializers: field serializer classes in an order they will be tested for fitness for each field.
@@ -68,37 +70,37 @@ class SeriousModel(Generic[T]):
         self._validate_on_load = validate_on_load
         self._validate_on_dump = validate_on_dump
         self._ensure_frozen = ensure_frozen
-        self._serializer_registry = {descriptor: self} if _registry is None else _registry
+        self._serializer_registry = {descriptor: self} if not _registry else _registry
         self._keys = key_mapper or NoopKeyMapper()
         self._serializers_by_field = {name: self.find_serializer(desc) for name, desc in descriptor.fields.items()}
 
     @property
-    def _cls(self) -> Type[T]:
+    def cls(self) -> Type[T]:
         # A shortcut to root dataclass type.
         return self._descriptor.cls
 
     def load(self, data: Mapping, _ctx: Optional[Loading] = None) -> T:
         """Loads dataclass from a dictionary or other mapping. """
 
-        check_is_instance(data, Mapping, f'Invalid data for {self._cls}')  # type: ignore
+        check_is_instance(data, Mapping, f'Invalid data for {self.cls}')  # type: ignore
         root = _ctx is None
         loading: Loading
         loading = Loading(validating=self._validate_on_load) if root else _ctx  # type: ignore # checked above
         mut_data = {self._keys.to_model(key): value for key, value in data.items()}
         if self._allow_missing:
-            for field in _fields_missing_from(mut_data, self._cls):
+            for field in fields_missing_from(mut_data, self.cls):
                 mut_data[field.name] = None
         else:
-            _check_for_missing(self._cls, mut_data)
+            check_for_missing(self.cls, mut_data)
         if not self._allow_unexpected:
-            _check_for_unexpected(self._cls, mut_data)
+            check_for_unexpected(self.cls, mut_data)
         try:
             init_kwargs = {
                 field: loading.run(f'.{self._keys.to_serialized(field)}', serializer, mut_data[field])
                 for field, serializer in self._serializers_by_field.items()
                 if field in mut_data
             }
-            result = self._cls(**init_kwargs)  # type: ignore # not an object
+            result = self.cls(**init_kwargs)  # type: ignore # not an object
             if self._validate_on_load:
                 validate(result)
             return result
@@ -106,13 +108,13 @@ class SeriousModel(Generic[T]):
             raise
         except Exception as e:
             if root:
-                raise LoadError(self._cls, loading.stack, data) from e
+                raise LoadError(self.cls, loading.stack, data) from e
             raise
 
     def dump(self, o: T, _ctx: Optional[Dumping] = None) -> Dict[str, Any]:
         """Dumps a dataclass object to a dictionary."""
 
-        check_is_instance(o, self._cls)
+        check_is_instance(o, self.cls)
         root = _ctx is None
         dumping: Dumping = Dumping(validating=False) if root else _ctx  # type: ignore # checked above
         try:
@@ -161,7 +163,7 @@ class SeriousModel(Generic[T]):
         :param descriptor: descriptor of a field to serialize.
         """
         serializer = self._find_serializer(descriptor)
-        if serializer is None:
+        if not serializer:
             raise FieldMissingSerializer(self._descriptor.cls, descriptor)
         return serializer
 
@@ -171,7 +173,7 @@ class SeriousModel(Generic[T]):
         return optional_sr
 
 
-def _check_for_missing(cls: Type[Dataclass], data: Mapping) -> None:
+def check_for_missing(cls: Type[Dataclass], data: Mapping) -> None:
     """ Checks for missing keys in data that are part of the provided dataclass.
     :raises: MissingField
     """
@@ -182,7 +184,7 @@ def _check_for_missing(cls: Type[Dataclass], data: Mapping) -> None:
         raise MissingField(cls, data, field_names)
 
 
-def _check_for_unexpected(cls: Type[Dataclass], data: Mapping) -> None:
+def check_for_unexpected(cls: Type[Dataclass], data: Mapping) -> None:
     """ Checks for keys in data that are not part of the provided dataclass.
     :raises: UnexpectedItem
     """
@@ -193,7 +195,7 @@ def _check_for_unexpected(cls: Type[Dataclass], data: Mapping) -> None:
         raise UnexpectedItem(cls, data, unexpected_fields)
 
 
-def _fields_missing_from(data: Mapping, cls: Type[Dataclass]) -> Iterator[Field]:
+def fields_missing_from(data: Mapping, cls: Type[Dataclass]) -> Iterator[Field]:
     """Fields missing from data, but present in the dataclass."""
 
     def _is_missing(field: Field) -> bool:

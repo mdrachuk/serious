@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+__all__ = ['Context', 'Loading', 'Dumping']
+
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from typing import List, Any, NamedTuple, TypeVar
@@ -12,7 +14,7 @@ M = TypeVar('M')  # Python model value
 S = TypeVar('S')  # Serialized value
 
 
-class Serialization(ABC):
+class Context(ABC):
 
     def __init__(self):
         self._steps: List[SerializationStep] = list()
@@ -32,7 +34,7 @@ class Serialization(ABC):
         raise NotImplementedError
 
 
-class Loading(Serialization):
+class Loading(Context):
 
     def __init__(self, *, validating: bool):
         super().__init__()
@@ -46,7 +48,7 @@ class Loading(Serialization):
             return result
 
 
-class Dumping(Serialization):
+class Dumping(Context):
 
     def __init__(self, *, validating: bool):
         super().__init__()

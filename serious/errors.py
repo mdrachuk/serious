@@ -31,7 +31,7 @@ from typing import Type, Mapping, Collection, TYPE_CHECKING, Iterable
 from .utils import class_path, Dataclass
 
 if TYPE_CHECKING:
-    from .serialization.process import SerializationStep
+    from .serialization.context import SerializationStep
     from .descriptors import TypeDescriptor
 
 

@@ -122,7 +122,7 @@ class TestEnumLoadValidation:
 
     def test_non_primitive(self):
         model = DictModel(EventComment)
-        serializer = model.serializer._serializers_by_field['event']
+        serializer = model.serious_model._serializers_by_field['event']
         assert type(serializer) is EnumSerializer
         ctx = Loading(validating=True)
         with pytest.raises(ValidationError):
@@ -178,7 +178,7 @@ class MockDataclass:
 
 def test_dataclass_load_validation():
     model = DictModel(MockDataclass)
-    serializer = model.serializer._serializers_by_field['child']
+    serializer = model.serious_model._serializers_by_field['child']
     assert type(serializer) is OptionalSerializer
     assert type(serializer._serializer) is DataclassSerializer
     ctx = Loading(validating=True)
