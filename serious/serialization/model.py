@@ -1,3 +1,7 @@
+"""
+`SeriousModel` is the core of Serious implementation traversing the dataclass, checking it’s correctness,
+ and serializing it to/from dictionaries of primitives.
+"""
 from __future__ import annotations
 
 __all__ = ['SeriousModel']
@@ -22,7 +26,14 @@ S = TypeVar('S')  # Serialized value
 
 
 class SeriousModel(Generic[T]):
-    """Serious internal model implementation reused by the exposed models (like JSON/YAML/dict/etc)."""
+    """Serious internal model implementation reused by the exposed models (like JSON/YAML/dict/etc).
+
+    Checks the provided descriptor for model errors when instantiated.
+
+    Used to serialize dataclasses to python dictionaries of primitives.
+    Dictionaries of primitives are then transformed to target output formats like JSON by other tools.
+    For JSON it’s Python built-in `json` module.
+    """
 
     def __init__(
             self,
