@@ -25,6 +25,13 @@ GenericParams = Mapping[Any, 'TypeDescriptor']
 
 @dataclass(frozen=True)
 class TypeDescriptor:
+    """A descriptor of a type unwrapping the aliases, optionals, separating generic parameters,
+    extracting the parameters from broader context, etc.
+
+    Type descriptors are mostly used for mapping serializers to particular objects.
+
+    A proper way of creating a `TypeDescriptor` is using the `serious.descriptors.describe(cls)` factory.
+    """
     _cls: Type
     parameters: FrozenDict[Any, TypeDescriptor]
     is_optional: bool = False
@@ -38,7 +45,7 @@ class TypeDescriptor:
     def fields(self) -> Mapping[str, TypeDescriptor]:
         """A mapping of all dataclass field names to their corresponding Type Descriptors.
 
-        Returns an empty mapping if the object is not a dataclass."""
+        An empty mapping is returned if the object is not a dataclass."""
         if not is_dataclass(self.cls):
             return {}
         types = get_type_hints(self.cls)  # type: Dict[str, Type]
