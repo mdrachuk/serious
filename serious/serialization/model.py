@@ -15,7 +15,7 @@ from serious.errors import ModelContainsAny, ModelContainsUnion, MissingField, U
     LoadError, DumpError, FieldMissingSerializer
 from serious.utils import Dataclass
 from serious.validation import validate
-from .check_frozen import check_frozen
+from .check_immutable import check_immutable
 from .key_mapper import KeyMapper, NoopKeyMapper
 from .context import Loading, Dumping
 from .serializer import FieldSerializer
@@ -72,7 +72,7 @@ class SeriousModel(Generic[T]):
         if Union in all_types:
             raise ModelContainsUnion(descriptor.cls)
         if ensure_frozen:
-            check_frozen(descriptor, all_types, ensure_frozen)
+            check_immutable(descriptor, all_types, ensure_frozen)
         self._descriptor = descriptor
         self._serializers = tuple(serializers)
         self._allow_any = allow_any

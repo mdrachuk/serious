@@ -1,3 +1,6 @@
+"""Check that whole dataclass structure is immutable, i.e. it’s objects cannot be changed. """
+__all__ = ['check_immutable']
+
 from dataclasses import is_dataclass
 from datetime import datetime, date, time
 from decimal import Decimal
@@ -17,7 +20,7 @@ _IMMUTABLE_TYPES = {
 }
 
 
-def check_frozen(desc: TypeDescriptor, all_types: DescTypes, ensure_frozen: Union[bool, Iterable[Type]]):
+def check_immutable(desc: TypeDescriptor, all_types: DescTypes, ensure_frozen: Union[bool, Iterable[Type]]):
     user_frozen = ensure_frozen if isinstance(ensure_frozen, Iterable) else {}
     mutable_types = extract_mutable(all_types, also_immutable=user_frozen)
     if len(mutable_types):
