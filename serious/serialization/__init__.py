@@ -1,3 +1,9 @@
+"""Serialization module includes implementation of Serious internal model (`SeriousModel`),
+serializers (`FieldSerializer` and subclasses), and more (listed in `__all__`).
+
+You’ll be referring to contents of this model when creating custom field serializers.
+"""
+
 from __future__ import annotations
 
 __all__ = [

@@ -9,7 +9,8 @@ from uuid import UUID
 
 import pytest
 
-from serious import FrozenList, JsonModel, DictModel, Email, Timestamp, FrozenDict, TypeDescriptor
+from serious import FrozenList, JsonModel, DictModel, Email, Timestamp, FrozenDict
+from serious.descriptors import TypeDescriptor
 from serious.errors import MutableTypesInModel, ModelContainsAny
 from serious.serialization import FieldSerializer, field_serializers
 from tests.utils import with_
