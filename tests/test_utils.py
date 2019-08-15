@@ -1,7 +1,7 @@
 from collections import namedtuple
 from typing import Callable
 
-from serious.utils import snake_to_camel, camel_to_snake
+from serious.json.utils import camel_to_snake, snake_to_camel
 
 Ex = namedtuple('Example', ['snake', 'camel'])
 

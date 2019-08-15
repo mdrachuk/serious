@@ -5,7 +5,8 @@ from typing import Optional, TypeVar, Type, Generic, List, MutableMapping, Colle
 
 from serious.descriptors import describe
 from serious.serialization import FieldSerializer, SeriousModel, field_serializers, KeyMapper
-from serious.utils import class_path, snake_to_camel, camel_to_snake
+from serious.utils import class_path
+from serious.json.utils import camel_to_snake, snake_to_camel
 from .checks import check_that_loading_an_object, check_that_loading_a_list
 
 T = TypeVar('T')
