@@ -1,4 +1,4 @@
-"""Errors specific to Json model."""
+"""Errors specific to JSON model."""
 
 
 class UnexpectedJson(Exception):

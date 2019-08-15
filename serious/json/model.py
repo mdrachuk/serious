@@ -1,4 +1,7 @@
+"""A module with `JsonModule` -- Serious model to transform between dataclasses and JSON strings."""
 from __future__ import annotations
+
+__all__ = ['JsonModel']
 
 import json
 from typing import Optional, TypeVar, Type, Generic, List, MutableMapping, Collection, Iterable, Any, Union
