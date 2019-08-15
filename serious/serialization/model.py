@@ -172,10 +172,8 @@ class SeriousModel(Generic[T]):
 
 
 def _check_for_missing(cls: Type[Dataclass], data: Mapping) -> None:
-    """
-    Checks for missing keys in data that are part of the provided dataclass.
-
-    @raises MissingField
+    """ Checks for missing keys in data that are part of the provided dataclass.
+    :raises: MissingField
     """
     missing_fields = filter(lambda f: f.name not in data, fields(cls))
     first_missing_field: Any = next(missing_fields, MISSING)
@@ -185,10 +183,8 @@ def _check_for_missing(cls: Type[Dataclass], data: Mapping) -> None:
 
 
 def _check_for_unexpected(cls: Type[Dataclass], data: Mapping) -> None:
-    """
-    Checks for keys in data that are not part of the provided dataclass.
-
-    @raises UnexpectedItem
+    """ Checks for keys in data that are not part of the provided dataclass.
+    :raises: UnexpectedItem
     """
     field_names = {field.name for field in fields(cls)}
     data_keys = set(data.keys())
