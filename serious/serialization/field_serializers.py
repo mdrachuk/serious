@@ -69,8 +69,8 @@ class OptionalSerializer(FieldSerializer[Optional[Any], Optional[Any]]):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        item_descriptor = replace(self._type, is_optional=False)
-        self._serializer = self._root.find_serializer(item_descriptor)
+        item_descriptor = replace(self.type, is_optional=False)
+        self._serializer = self.root.find_serializer(item_descriptor)
 
     def load(self, value: Optional[Any], ctx: Loading) -> Optional[Any]:
         return None if value is None else self._serializer.load(value, ctx)
@@ -110,23 +110,23 @@ class EnumSerializer(FieldSerializer[Any, Any]):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._serializer = self._value_serializer()
-        self._enum_values = {e.value for e in list(self._type.cls)}
+        self._enum_values = {e.value for e in list(self.type.cls)}
 
     def _value_serializer(self) -> Optional[FieldSerializer]:
-        cls = self._type.cls
+        cls = self.type.cls
         bases = cls.__bases__
         while len(bases) == 1:
             cls = bases[0]
             bases = cls.__bases__
         if len(bases) == 0:
             return None
-        item_descriptor = self._type.describe(bases[0])
-        return self._root.find_serializer(item_descriptor)
+        item_descriptor = self.type.describe(bases[0])
+        return self.root.find_serializer(item_descriptor)
 
     def load(self, value: Any, ctx: Loading) -> Any:
         if self._serializer is None and value not in self._enum_values:
-            raise ValidationError(f'"{value}" is not part of the {self._type.cls} enum')
-        enum_cls = self._type.cls
+            raise ValidationError(f'"{value}" is not part of the {self.type.cls} enum')
+        enum_cls = self.type.cls
         if self._serializer is not None:
             loaded_value = self._serializer.load(value, ctx)
             try:
@@ -165,9 +165,9 @@ class DictSerializer(FieldSerializer[Dict[str, Any], Dict[str, Any]]):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        key = self._type.parameters[0]
+        key = self.type.parameters[0]
         assert key.cls is str and not key.is_optional, 'Dict keys must have explicit "str" type (Dict[str, Any]).'
-        self._serializer = self._root.find_serializer(self._type.parameters[1])
+        self._serializer = self.root.find_serializer(self.type.parameters[1])
 
     @classmethod
     def fits(cls, desc: TypeDescriptor) -> bool:
@@ -177,7 +177,7 @@ class DictSerializer(FieldSerializer[Dict[str, Any], Dict[str, Any]]):
         if not isinstance(data, dict):
             raise ValidationError('Expecting a dictionary')
         items = self._serialize_dict(data, ctx)
-        return self._type.cls(items)
+        return self.type.cls(items)
 
     def dump(self, data: Dict[str, Any], ctx: Dumping) -> Dict[str, Any]:
         return self._serialize_dict(data, ctx)
@@ -195,8 +195,8 @@ class CollectionSerializer(FieldSerializer[Collection, list]):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._serializer = self._root.find_serializer(self._type.parameters[0])
-        self._item_type = self._serializer._type
+        self._serializer = self.root.find_serializer(self.type.parameters[0])
+        self._item_type = self._serializer.type
 
     @classmethod
     def fits(cls, desc: TypeDescriptor) -> bool:
@@ -209,7 +209,7 @@ class CollectionSerializer(FieldSerializer[Collection, list]):
         if not isinstance(value, list):
             raise ValidationError(f'Expecting a list of {self._item_type.cls} values')
         items = self._serialize_collection(value, ctx)
-        return self._type.cls(items)
+        return self.type.cls(items)
 
     def dump(self, value: Collection, ctx: Dumping) -> list:
         return self._serialize_collection(value, ctx)
@@ -224,7 +224,7 @@ class TupleSerializer(FieldSerializer[tuple, list]):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._serializers = [self._root.find_serializer(self._type.parameters[i]) for i in self._type.parameters]
+        self._serializers = [self.root.find_serializer(self.type.parameters[i]) for i in self.type.parameters]
         self._size = len(self._serializers)
 
     @classmethod
@@ -237,7 +237,7 @@ class TupleSerializer(FieldSerializer[tuple, list]):
         if len(value) != self._size:
             raise ValidationError(f'Expecting a list of {self._size} tuple values')  # type: ignore
         items = self._serialize_tuple(value, ctx)
-        return self._type.cls(items)
+        return self.type.cls(items)
 
     def dump(self, value: tuple, ctx: Dumping) -> list:
         return self._serialize_tuple(value, ctx)
@@ -300,7 +300,7 @@ class BooleanSerializer(FieldSerializer[bool, bool]):
     def load(self, value: bool, ctx: Loading) -> bool:
         if not isinstance(value, bool):
             raise ValidationError(f"Invalid data type. Expecting boolean")
-        return self._type.cls(value)
+        return self.type.cls(value)
 
     def dump(self, value: bool, ctx: Dumping) -> bool:
         return bool(value)
@@ -316,7 +316,7 @@ class StringSerializer(FieldSerializer[str, str]):
     def load(self, value: str, ctx: Loading) -> str:
         if not isinstance(value, str):
             raise ValidationError('Invalid data type. Expecting a string')
-        return self._type.cls(value)
+        return self.type.cls(value)
 
     def dump(self, value: str, ctx: Dumping) -> str:
         return str(value)
@@ -336,7 +336,7 @@ class IntegerSerializer(FieldSerializer[int, int]):
     def load(self, value: int, ctx: Loading) -> int:
         if not isinstance(value, int) or isinstance(value, bool):
             raise ValidationError('Invalid data type. Expecting an integer')
-        return self._type.cls(value)
+        return self.type.cls(value)
 
     def dump(self, value: int, ctx: Dumping) -> int:
         return int(value)
@@ -355,7 +355,7 @@ class FloatSerializer(FieldSerializer[float, float]):
         is_numeric = isinstance(value, (int, float)) and not isinstance(value, bool)
         if not is_numeric:
             raise ValidationError('Invalid data type. Expecting a numeric value')
-        return self._type.cls(value)
+        return self.type.cls(value)
 
     def dump(self, value: float, ctx: Dumping) -> float:
         return float(value)
@@ -366,8 +366,8 @@ class DataclassSerializer(FieldSerializer[Any, Dict[str, Any]]):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._serializer = self._root.child_model(self._type)
-        self._dc_name = self._type.cls.__name__
+        self._serializer = self.root.child_model(self.type)
+        self._dc_name = self.type.cls.__name__
 
     @classmethod
     def fits(cls, desc: TypeDescriptor) -> bool:
@@ -462,15 +462,15 @@ class DateTimeIsoSerializer(FieldSerializer[datetime, str]):
 class DateIsoSerializer(FieldSerializer[date, str]):
     """A serializer of `date` field values to a timestamp represented by an `ISO formatted string`_.
 
-    Example:
-    ``
-    @dataclass
-    class Event:
-        name: str
-        when: date
+        :Example:
 
-    event = Event('Albert Einstein won Nobel Prize in Physics', date(1922, 9, 9))
-    ``
+        @dataclass
+        class Event:
+            name: str
+            when: date
+
+        event = Event('Albert Einstein won Nobel Prize in Physics', date(1922, 9, 9))
+
     Dumping the `event` will return `'{"name": "…", "when": "1922-09-09"}'`.
 
     .. _ISO formatted string: https://en.wikipedia.org/wiki/ISO_8601

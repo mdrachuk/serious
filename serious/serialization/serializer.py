@@ -39,8 +39,8 @@ class FieldSerializer(Serializer[S, M], ABC):
     """
 
     def __init__(self, descriptor: TypeDescriptor, root_model: 'SeriousModel'):
-        self._type = descriptor
-        self._root = root_model
+        self.type = descriptor
+        self.root = root_model
 
     @classmethod
     @abstractmethod

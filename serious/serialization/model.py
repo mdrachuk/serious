@@ -73,22 +73,22 @@ class SeriousModel(Generic[T]):
             raise ModelContainsUnion(descriptor.cls)
         if ensure_frozen:
             check_immutable(descriptor, all_types, ensure_frozen)
-        self._descriptor = descriptor
-        self._serializers = tuple(serializers)
-        self._allow_any = allow_any
-        self._allow_missing = allow_missing
-        self._allow_unexpected = allow_unexpected
-        self._validate_on_load = validate_on_load
-        self._validate_on_dump = validate_on_dump
-        self._ensure_frozen = ensure_frozen
-        self._serializer_registry = {descriptor: self} if not _registry else _registry
-        self._keys = key_mapper or NoopKeyMapper()
-        self._serializers_by_field = {name: self.find_serializer(desc) for name, desc in descriptor.fields.items()}
+        self.descriptor = descriptor
+        self.serializers = tuple(serializers)
+        self.allow_any = allow_any
+        self.allow_missing = allow_missing
+        self.allow_unexpected = allow_unexpected
+        self.validate_on_load = validate_on_load
+        self.validate_on_dump = validate_on_dump
+        self.ensure_frozen = ensure_frozen
+        self.serializer_registry = {descriptor: self} if not _registry else _registry
+        self.keys = key_mapper or NoopKeyMapper()
+        self.serializers_by_field = {name: self.find_serializer(desc) for name, desc in descriptor.fields.items()}
 
     @property
     def cls(self) -> Type[T]:
         # A shortcut to root dataclass type.
-        return self._descriptor.cls
+        return self.descriptor.cls
 
     def load(self, data: Mapping, _ctx: Optional[Loading] = None) -> T:
         """Loads dataclass from a dictionary or other mapping. """
@@ -96,23 +96,23 @@ class SeriousModel(Generic[T]):
         check_is_instance(data, Mapping, f'Invalid data for {self.cls}')  # type: ignore
         root = _ctx is None
         loading: Loading
-        loading = Loading(validating=self._validate_on_load) if root else _ctx  # type: ignore # checked above
-        mut_data = {self._keys.to_model(key): value for key, value in data.items()}
-        if self._allow_missing:
+        loading = Loading(validating=self.validate_on_load) if root else _ctx  # type: ignore # checked above
+        mut_data = {self.keys.to_model(key): value for key, value in data.items()}
+        if self.allow_missing:
             for field in fields_missing_from(mut_data, self.cls):
                 mut_data[field.name] = None
         else:
             check_for_missing(self.cls, mut_data)
-        if not self._allow_unexpected:
+        if not self.allow_unexpected:
             check_for_unexpected(self.cls, mut_data)
         try:
             init_kwargs = {
-                field: loading.run(f'.{self._keys.to_serialized(field)}', serializer, mut_data[field])
-                for field, serializer in self._serializers_by_field.items()
+                field: loading.run(f'.{self.keys.to_serialized(field)}', serializer, mut_data[field])
+                for field, serializer in self.serializers_by_field.items()
                 if field in mut_data
             }
             result = self.cls(**init_kwargs)  # type: ignore # not an object
-            if self._validate_on_load:
+            if self.validate_on_load:
                 validate(result)
             return result
         except ValidationError:
@@ -129,12 +129,12 @@ class SeriousModel(Generic[T]):
         root = _ctx is None
         dumping: Dumping = Dumping(validating=False) if root else _ctx  # type: ignore # checked above
         try:
-            _s = self._keys.to_serialized
-            if self._validate_on_dump:
+            _s = self.keys.to_serialized
+            if self.validate_on_dump:
                 validate(o)
             return {
                 _s(field): dumping.run(f'.{_s(field)}', serializer, getattr(o, field))
-                for field, serializer in self._serializers_by_field.items()
+                for field, serializer in self.serializers_by_field.items()
             }
         except ValidationError:
             raise
@@ -148,23 +148,23 @@ class SeriousModel(Generic[T]):
         Creates a `SeriousModel` for dataclass fields nested in the current serializers.
         The preferences of the nested dataclasses match those of the root one.
         """
-        if descriptor == self._descriptor:
+        if descriptor == self.descriptor:
             return self
-        if descriptor in self._serializer_registry:
-            return self._serializer_registry[descriptor]
+        if descriptor in self.serializer_registry:
+            return self.serializer_registry[descriptor]
         new_model: SeriousModel = SeriousModel(
             descriptor=descriptor,
-            serializers=self._serializers,
-            allow_any=self._allow_any,
-            allow_missing=self._allow_missing,
-            allow_unexpected=self._allow_unexpected,
-            validate_on_load=self._validate_on_load,
-            validate_on_dump=self._validate_on_dump,
-            ensure_frozen=self._ensure_frozen,
-            key_mapper=self._keys,
-            _registry=self._serializer_registry
+            serializers=self.serializers,
+            allow_any=self.allow_any,
+            allow_missing=self.allow_missing,
+            allow_unexpected=self.allow_unexpected,
+            validate_on_load=self.validate_on_load,
+            validate_on_dump=self.validate_on_dump,
+            ensure_frozen=self.ensure_frozen,
+            key_mapper=self.keys,
+            _registry=self.serializer_registry
         )
-        self._serializer_registry[descriptor] = new_model
+        self.serializer_registry[descriptor] = new_model
         return new_model
 
     def find_serializer(self, descriptor: TypeDescriptor) -> FieldSerializer:
@@ -175,11 +175,11 @@ class SeriousModel(Generic[T]):
         """
         serializer = self._find_serializer(descriptor)
         if not serializer:
-            raise FieldMissingSerializer(self._descriptor.cls, descriptor)
+            raise FieldMissingSerializer(self.descriptor.cls, descriptor)
         return serializer
 
     def _find_serializer(self, desc: TypeDescriptor) -> Optional[FieldSerializer]:
-        sr_generator = (serializer(desc, self) for serializer in self._serializers if serializer.fits(desc))
+        sr_generator = (serializer(desc, self) for serializer in self.serializers if serializer.fits(desc))
         optional_sr = next(sr_generator, None)
         return optional_sr
 
