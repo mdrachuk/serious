@@ -1,7 +1,7 @@
 import requests
 from pkg_resources import safe_version
 
-__version__ = '1.0.0.dev18'
+__version__ = '1.0.0.dev19'
 
 __doc__ = """
 This module is querying PyPI to check if the current version set to package is already present on PyPI.
@@ -13,7 +13,7 @@ Finishes with an VersionExists exception and a non-zero exit code if the version
 from dataclasses import dataclass
 from typing import Dict, Set, List
 
-from serious.json import JsonModel
+from serious import JsonModel
 
 
 @dataclass
