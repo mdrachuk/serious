@@ -1,6 +1,6 @@
 coveralls==1.8.2
 mkdocs==1.0.4
-mypy==0.701
+mypy==0.720
 pytest==4.4.1
 pytest-cov==2.6.1
 requests==2.21.0
