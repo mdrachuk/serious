@@ -32,8 +32,8 @@ setup(
     include_package_data=True,
     classifiers=[
         "Intended Audience :: Developers",
-        "Topic :: Utilities"
-        "Development status :: 3 - Alpha"
+        "Topic :: Utilities",
+        "Development Status :: 3 - Alpha",
         "License :: OSI Approved :: MIT License",
         "Natural Language :: English",
         "Operating System :: MacOS :: MacOS X",
@@ -44,6 +44,6 @@ setup(
         "Programming Language :: Python",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: Implementation :: CPython",
-        "Typing :: Typed"
+        "Typing :: Typed",
     ],
 )
