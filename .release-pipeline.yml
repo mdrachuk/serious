@@ -59,7 +59,6 @@ stages:
         steps:
           - template: .use-python.yml
           - script: |
-              pip install setuptools wheel
               python setup.py sdist bdist_wheel
               twine upload dist/* -u serious -p $(PYPI_PASSWORD)
             displayName: 'Publish to PyPI'
