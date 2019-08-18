@@ -24,13 +24,16 @@ setup(
     project_urls={
         'Pipelines': 'https://dev.azure.com/misha-drachuk/serious',
         'Source': 'https://github.com/mdrachuk/serious/',
+        'Issues': 'https://github.com/mdrachuk/serious/issues',
     },
     extras_require={
-        "dev": ["pytest", "mypy", "hypothesis"]
+        "dev": ["pytest", "mypy"]
     },
     include_package_data=True,
     classifiers=[
         "Intended Audience :: Developers",
+        "Topic :: Utilities"
+        "Development status :: 3 - Alpha"
         "License :: OSI Approved :: MIT License",
         "Natural Language :: English",
         "Operating System :: MacOS :: MacOS X",
@@ -41,5 +44,6 @@ setup(
         "Programming Language :: Python",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: Implementation :: CPython",
+        "Typing :: Typed"
     ],
 )
