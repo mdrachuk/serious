@@ -44,7 +44,7 @@ stages:
               python.version: '3.7'
         steps:
           - template: .use-python.yml
-          - script: python version.py
+          - script: cv serious
             displayName: 'Check version changed'
 
   - stage: Publish

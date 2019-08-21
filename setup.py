@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-import version
+import serious
 
 
 def readme():
@@ -10,7 +10,7 @@ def readme():
 
 setup(
     name='serious',
-    version=version.__version__,
+    version=serious.__version__,
     packages=find_packages(exclude=("tests*",)),
     package_data={"serious": ["py.typed"]},
     zip_safe=False,
