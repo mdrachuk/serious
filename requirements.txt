@@ -1,5 +1,5 @@
 coveralls==1.8.2
-cv==1.0.0.dev5
+cv==1.0.0.dev6
 mkdocs==1.0.4
 mypy==0.720
 pytest==4.4.1

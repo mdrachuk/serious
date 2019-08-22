@@ -28,9 +28,6 @@ setup(
         'Source': 'https://github.com/mdrachuk/serious/',
         'Issues': 'https://github.com/mdrachuk/serious/issues',
     },
-    extras_require={
-        "dev": ["pytest", "mypy"]
-    },
     include_package_data=True,
     classifiers=[
         "Intended Audience :: Developers",
