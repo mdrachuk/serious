@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-import version
+import serious
 
 
 def readme():
@@ -10,7 +10,7 @@ def readme():
 
 setup(
     name='serious',
-    version=version.__version__,
+    version=serious.__version__,
     packages=find_packages(exclude=("tests*",)),
     package_data={"serious": ["py.typed"]},
     zip_safe=False,
@@ -27,9 +27,6 @@ setup(
         'Pipelines': 'https://dev.azure.com/misha-drachuk/serious',
         'Source': 'https://github.com/mdrachuk/serious/',
         'Issues': 'https://github.com/mdrachuk/serious/issues',
-    },
-    extras_require={
-        "dev": ["pytest", "mypy"]
     },
     include_package_data=True,
     classifiers=[
