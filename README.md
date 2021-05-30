@@ -138,11 +138,11 @@ boss_json = """{
     "minions": [
         {
             "name": "evil minion",
-            "type": 2
+            "type": "Fool"
         },
         {
             "name": "very evil minion",
-            "type": 1
+            "type": "Worker"
         }
     ]
 }"""

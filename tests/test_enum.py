@@ -1,3 +1,4 @@
+import json
 from dataclasses import dataclass
 from datetime import date
 from enum import Enum, IntFlag
@@ -28,34 +29,34 @@ class TestEnum:
 
     def test_load(self):
         enum = DataWithEnum('name1', Symbol.ALPHA)
-        enum_json = '{"name": "name1", "enum": "alpha"}'
+        enum_json = '{"name": "name1", "enum": "ALPHA"}'
         assert self.model.load(enum_json) == enum
 
         int_enum = DataWithEnum('name1', Symbol.ONE)
-        int_enum_json = '{"name": "name1", "enum": 1}'
+        int_enum_json = '{"name": "name1", "enum": "ONE"}'
         assert self.model.load(int_enum_json) == int_enum
 
         float_enum = DataWithEnum('name1', Symbol.PI)
-        float_enum_json = '{"name": "name1", "enum": 3.14}'
+        float_enum_json = '{"name": "name1", "enum": "PI"}'
         assert self.model.load(float_enum_json) == float_enum
 
     def test_dump(self):
         enum = DataWithEnum('name1', Symbol.ALPHA)
-        enum_json = '{"name": "name1", "enum": "alpha"}'
+        enum_json = '{"name": "name1", "enum": "ALPHA"}'
         assert self.model.dump(enum) == enum_json
 
         int_enum = DataWithEnum('name1', Symbol.ONE)
-        int_enum_json = '{"name": "name1", "enum": 1}'
+        int_enum_json = '{"name": "name1", "enum": "ONE"}'
         assert self.model.dump(int_enum) == int_enum_json
 
         float_enum = DataWithEnum('name1', Symbol.PI)
-        float_enum_json = '{"name": "name1", "enum": 3.14}'
+        float_enum_json = '{"name": "name1", "enum": "PI"}'
         assert self.model.dump(float_enum) == float_enum_json
 
     def test_default(self):
         model = JsonModel(DataWithEnum)
 
-        json = '{"name": "name2", "enum": "gamma"}'
+        json = '{"name": "name2", "enum": "GAMMA"}'
         assert model.dump(DataWithEnum('name2')) == json
 
         enum_from_json = model.load(json)
@@ -104,7 +105,7 @@ class EnumContainer:
 class TestEnumCollection:
     def setup(self):
         self.model = JsonModel(EnumContainer)
-        self.json = '{"enumList": ["gamma", 1], "enumMapping": {"first": "alpha", "second": 3.14}}'
+        self.json = '{"enumList": ["GAMMA", "ONE"], "enumMapping": {"first": "ALPHA", "second": "PI"}}'
         self.dataclass = EnumContainer(
             enum_list=[Symbol.GAMMA, Symbol.ONE],
             enum_mapping={"first": Symbol.ALPHA, "second": Symbol.PI}
@@ -173,3 +174,34 @@ class TestDateEnum:
     def test_dump(self):
         actual = self.model.dump(self.dataclass)
         assert actual == self.dict
+
+
+class Planet(Enum):
+    EARTH = (6371, 5.97237e24)
+    MARS = (3389.5, 6.4171e23)
+
+    def __init__(self, mean_radius, mass):
+        self.mean_radius = mean_radius
+        self.mass = mass
+
+
+@dataclass
+class SpaceTrip:
+    departure: Planet
+    arrival: Planet
+
+
+class TestRichEnum:
+    def setup(self):
+        self.model = JsonModel(SpaceTrip)
+        self.json = json.dumps({'departure': 'EARTH', 'arrival': 'MARS'})
+        self.dataclass = SpaceTrip(Planet.EARTH, Planet.MARS)
+
+    def test_load(self):
+        actual = self.model.load(self.json)
+        assert actual == self.dataclass
+        assert isinstance(actual.arrival, Planet)
+
+    def test_dump(self):
+        actual = self.model.dump(self.dataclass)
+        assert actual == self.json

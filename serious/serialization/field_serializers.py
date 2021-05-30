@@ -110,7 +110,7 @@ class EnumSerializer(FieldSerializer[Any, Any]):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._serializer = self._value_serializer()
-        self._enum_values = {e.value for e in list(self.type.cls)}
+        self._enum_values = {e.name for e in list(self.type.cls)}
 
     def _value_serializer(self) -> Optional[FieldSerializer]:
         cls = self.type.cls
@@ -133,13 +133,12 @@ class EnumSerializer(FieldSerializer[Any, Any]):
                 return enum_cls(loaded_value)
             except ValueError as e:
                 raise ValidationError(f'"{value}" is not part of the {enum_cls} enum') from e
-        return enum_cls(value)
+        return enum_cls[value]
 
     def dump(self, value: Any, ctx: Dumping) -> Any:
-        enum_value = value.value
         if self._serializer is not None:
-            return self._serializer.dump(enum_value, ctx)
-        return enum_value
+            return self._serializer.dump(value.value, ctx)
+        return value.name
 
     @classmethod
     def fits(cls, desc: TypeDescriptor) -> bool:

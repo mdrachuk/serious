@@ -82,13 +82,13 @@ def test_float_load_validation():
     assert serializer.load(1.01, ctx) == 1.01
 
 
-class Color(Enum):
+class Color(str, Enum):
     RED = '#ff0000'
     GREEN = '#00ff00'
     BLUE = '#0000ff'
 
 
-class Constant(Enum):
+class Constant(float, Enum):
     PI = 3.14
     TAU = PI * 2
 
@@ -98,6 +98,11 @@ class HistoricEvent(date, Enum):
     LUNAR_LANDING = 1969, 7, 20
 
 
+class Priority(Enum):
+    high = 1
+    low = 2
+
+
 @dataclass
 class EventComment:
     event: HistoricEvent
@@ -105,16 +110,22 @@ class EventComment:
 
 
 class TestEnumLoadValidation:
+    def test_simple_enum(self):
+        serializer = EnumSerializer(describe(Priority), None)
+        ctx = Loading(validating=True)
+        with pytest.raises(ValidationError):
+            serializer.load('medium', ctx)
+        assert serializer.load('high', ctx) is Priority.high
 
     def test_str(self):
-        serializer = EnumSerializer(describe(Color), None)
+        serializer = EnumSerializer(describe(Color), MockModel())
         ctx = Loading(validating=True)
         with pytest.raises(ValidationError):
             serializer.load('#f00', ctx)
         assert serializer.load('#ff0000', ctx) is Color.RED
 
     def test_number(self):
-        serializer = EnumSerializer(describe(Constant), None)
+        serializer = EnumSerializer(describe(Constant), MockModel())
         ctx = Loading(validating=True)
         with pytest.raises(ValidationError):
             serializer.load(9.18, ctx)
