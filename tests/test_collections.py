@@ -1,9 +1,10 @@
-from serious import JsonModel
+from serious import JsonModel, FrozenList
 from tests.entities import (DataclassIntImmutableDefault,
                             DataclassMutableDefaultDict, DataclassMutableDefaultList,
                             DataclassWithDict, DataclassWithFrozenSet, DataclassWithList,
                             DataclassWithListStr, DataclassWithOptional, DataclassWithOptionalStr,
-                            DataclassWithSet, DataclassWithTuple, DataclassWithUnionIntNone)
+                            DataclassWithSet, DataclassWithTuple, DataclassWithUnionIntNone, DataclassWithFrozenList,
+                            DataclassWithTupleCollection)
 
 
 class TestEncoder:
@@ -11,16 +12,24 @@ class TestEncoder:
         assert JsonModel(DataclassWithList).dump(DataclassWithList([1])) == '{"xs": [1]}'
 
     def test_list_str(self):
-        assert JsonModel(DataclassWithListStr).dump(DataclassWithListStr(['1'])) == '{"xs": ["1"]}'
+        assert JsonModel(DataclassWithListStr).dump(DataclassWithListStr(['1', '2'])) == '{"xs": ["1", "2"]}'
 
     def test_dict(self):
         assert JsonModel(DataclassWithDict).dump(DataclassWithDict({'1': 'a'})) == '{"kvs": {"1": "a"}}'
 
     def test_set(self):
-        assert JsonModel(DataclassWithSet).dump(DataclassWithSet({1})) == '{"xs": [1]}'
+        assert JsonModel(DataclassWithSet).dump(DataclassWithSet({1, 2})) == '{"xs": [1, 2]}'
 
     def test_tuple(self):
-        assert JsonModel(DataclassWithTuple).dump(DataclassWithTuple((1,))) == '{"xs": [1]}'
+        assert JsonModel(DataclassWithTuple).dump(DataclassWithTuple((1, "2"))) == '{"xs": [1, "2"]}'
+
+    def test_tuple_collection(self):
+        assert JsonModel(DataclassWithTupleCollection).dump(DataclassWithTupleCollection((1, 2))) == '{"xs": [1, 2]}'
+
+    def test_frozenlist(self):
+        model = JsonModel(DataclassWithFrozenList)
+        assert model.dump(DataclassWithFrozenList(FrozenList([1, 2, 3]))) == '{"xs": [1, 2, 3]}'
+        assert model.dump(DataclassWithFrozenList((1, 2, 3))) == '{"xs": [1, 2, 3]}'
 
     def test_frozenset(self):
         assert JsonModel(DataclassWithFrozenSet).dump(DataclassWithFrozenSet(frozenset([1]))) == '{"xs": [1]}'
@@ -73,8 +82,19 @@ class TestDecoder:
         assert actual == expected
 
     def test_tuple(self):
-        actual = JsonModel(DataclassWithTuple).load('{"xs": [1]}')
-        expected = DataclassWithTuple((1,))
+        actual = JsonModel(DataclassWithTuple).load('{"xs": [1, "2"]}')
+        expected = DataclassWithTuple((1, "2"))
+        assert actual == expected
+
+    def test_tuple_collection(self):
+        actual = JsonModel(DataclassWithTupleCollection).load('{"xs": [1, 2]}')
+        expected = DataclassWithTupleCollection((1, 2))
+        assert actual == expected
+
+
+    def test_frozenlist(self):
+        actual = JsonModel(DataclassWithFrozenList).load('{"xs": [1, 2, 3]}')
+        expected = DataclassWithFrozenList(FrozenList([1, 2, 3]))
         assert actual == expected
 
     def test_frozenset(self):
