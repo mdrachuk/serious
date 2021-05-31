@@ -2,6 +2,8 @@ from dataclasses import dataclass, field
 from typing import Dict, FrozenSet, List, Optional, Set, Tuple, TypeVar, Union
 from uuid import UUID
 
+from serious import FrozenList
+
 A = TypeVar('A')
 
 
@@ -27,7 +29,17 @@ class DataclassWithSet:
 
 @dataclass(frozen=True)
 class DataclassWithTuple:
-    xs: Tuple[int]
+    xs: Tuple[int, str]
+
+
+@dataclass(frozen=True)
+class DataclassWithTupleCollection:
+    xs: Tuple[int, ...]
+
+
+@dataclass(frozen=True)
+class DataclassWithFrozenList:
+    xs: FrozenList[int]
 
 
 @dataclass(frozen=True)

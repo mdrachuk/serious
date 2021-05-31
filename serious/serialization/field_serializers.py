@@ -18,7 +18,7 @@ from uuid import UUID
 
 from serious.descriptors import TypeDescriptor
 from serious.errors import ValidationError
-from serious.types import Timestamp
+from serious.types import Timestamp, FrozenList
 from .context import Context, Loading, Dumping
 from .serializer import FieldSerializer, Serializer
 
@@ -199,7 +199,7 @@ class CollectionSerializer(FieldSerializer[Collection, list]):
 
     @classmethod
     def fits(cls, desc: TypeDescriptor) -> bool:
-        return (issubclass(desc.cls, (list, set, frozenset))
+        return (issubclass(desc.cls, (list, set, frozenset, FrozenList))
                 or (issubclass(desc.cls, tuple)
                     and len(desc.parameters) == 2
                     and desc.parameters[1].cls is Ellipsis))
