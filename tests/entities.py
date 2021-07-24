@@ -73,6 +73,11 @@ class DataclassWithDataclass:
 
 
 @dataclass(frozen=True)
+class DataclassWithForwardRef:
+    child: Optional['DataclassWithForwardRef']
+
+
+@dataclass(frozen=True)
 class DataclassX:
     x: int
 
