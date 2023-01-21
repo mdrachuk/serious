@@ -13,7 +13,7 @@ stages:
     jobs:
       - job: Tests
         pool:
-          vmImage: 'Ubuntu-16.04'
+          vmImage: 'ubuntu-latest'
         strategy:
           matrix:
             Python37:
@@ -25,7 +25,7 @@ stages:
 
       - job: Typings
         pool:
-          vmImage: 'Ubuntu-16.04'
+          vmImage: 'ubuntu-latest'
         strategy:
           matrix:
             Python37:
@@ -37,7 +37,7 @@ stages:
 
       - job: Version
         pool:
-          vmImage: 'Ubuntu-16.04'
+          vmImage: 'ubuntu-latest'
         strategy:
           matrix:
             Python37:
@@ -51,7 +51,7 @@ stages:
     jobs:
       - job: PyPI
         pool:
-          vmImage: 'Ubuntu-16.04'
+          vmImage: 'ubuntu-latest'
         strategy:
           matrix:
             Python37:
@@ -70,7 +70,7 @@ stages:
     jobs:
       - job: TestCoverage
         pool:
-          vmImage: 'Ubuntu-16.04'
+          vmImage: 'ubuntu-latest'
         strategy:
           matrix:
             Python37:
