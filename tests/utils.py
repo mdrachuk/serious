@@ -1,6 +1,6 @@
 import inspect
 from itertools import product
-from typing import Tuple, Sequence
+from typing import Tuple, Sequence, Type
 
 import pytest
 

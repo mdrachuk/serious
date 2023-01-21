@@ -38,6 +38,7 @@ def field_serializers(custom: Iterable[Type[FieldSerializer]] = tuple()) -> Tupl
         AnySerializer,
         EnumSerializer,
         *custom,
+        TypedDictSerializer,
         DictSerializer,
         CollectionSerializer,
         TupleSerializer,
@@ -157,6 +158,35 @@ class AnySerializer(FieldSerializer[Any, Any]):
     @classmethod
     def fits(cls, desc: TypeDescriptor) -> bool:
         return desc.cls is Any
+
+
+class TypedDictSerializer(FieldSerializer[Dict[str, Any], Dict[str, Any]]):
+    """Serializer for `TypedDict` fields."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._field_serializers = {}
+        for field, desc in self.type.fields.items():
+            self._field_serializers[field] = Alias(self.root.find_serializer(desc))
+
+    @classmethod
+    def fits(cls, desc: TypeDescriptor) -> bool:
+        return desc.is_typed_dict
+
+    def load(self, data: Dict[str, Any], ctx: Loading) -> Dict[str, Any]:
+        if not isinstance(data, dict):
+            raise ValidationError('Expecting a dictionary')
+        items = self._serialize_typed_dict(data, ctx)
+        return self.type.cls(items)
+
+    def dump(self, data: Dict[str, Any], ctx: Dumping) -> Dict[str, Any]:
+        return self._serialize_typed_dict(data, ctx)
+
+    def _serialize_typed_dict(self, data: Dict[str, Any], ctx: Context) -> Dict[str, Any]:
+        return {
+            key: ctx.run(f'[key]', serializer(key), data[key])
+            for key, serializer in self._field_serializers.items()
+        }
 
 
 class DictSerializer(FieldSerializer[Dict[str, Any], Dict[str, Any]]):

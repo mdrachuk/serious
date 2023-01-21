@@ -14,7 +14,7 @@ __all__ = ['TypeDescriptor', 'describe', 'DescTypes', 'scan_types']
 
 from collections import ChainMap
 from dataclasses import dataclass, fields, is_dataclass
-from typing import Type, Any, TypeVar, get_type_hints, Dict, Mapping, List, Union, Iterable
+from typing import Type, Any, TypeVar, get_type_hints, Dict, Mapping, List, Union, Iterable, TypedDict
 
 from .types import FrozenDict, FrozenList
 
@@ -36,6 +36,7 @@ class TypeDescriptor:
     parameters: FrozenDict[Any, TypeDescriptor]
     is_optional: bool = False
     is_dataclass: bool = False
+    is_typed_dict: bool = False
 
     @property
     def cls(self):  # Python fails when providing cls as a keyword parameter to dataclasses
@@ -43,14 +44,18 @@ class TypeDescriptor:
 
     @property
     def fields(self) -> Mapping[str, TypeDescriptor]:
-        """A mapping of all dataclass field names to their corresponding Type Descriptors.
+        """A mapping of all dataclass or typed dict field names to their corresponding Type Descriptors.
 
         An empty mapping is returned if the object is not a dataclass."""
-        if not is_dataclass(self.cls):
-            return {}
-        types = get_type_hints(self.cls)  # type: Dict[str, Type]
-        descriptors = {name: self.describe(type_) for name, type_ in types.items()}
-        return {f.name: descriptors[f.name] for f in fields(self.cls)}
+        if self.is_dataclass:
+            types = get_type_hints(self.cls)  # type: Dict[str, Type]
+            descriptors = {name: self.describe(type_) for name, type_ in types.items()}
+            return {f.name: descriptors[f.name] for f in fields(self.cls)}
+        if self.is_typed_dict:
+            types = get_type_hints(self.cls)  # type: Dict[str, Type]
+            descriptors = {name: self.describe(type_) for name, type_ in types.items()}
+            return {key: descriptors[key] for key in self.cls.__annotations__}
+        return {}
 
     def describe(self, type_: Type) -> TypeDescriptor:
         return describe(type_, self.parameters)
@@ -103,14 +108,23 @@ def _describe_generic(cls: Type, generic_params: GenericParams) -> TypeDescripto
     is_optional = _is_optional(cls)
     if is_optional:
         cls = cls.__args__[0]
-    if hasattr(cls, '__orig_bases__') and is_dataclass(cls):
+    if hasattr(cls, '__orig_bases__'):
         params = dict(ChainMap(*(_describe_generic(base, generic_params).parameters for base in cls.__orig_bases__)))
-        return TypeDescriptor(
-            cls,
-            parameters=FrozenDict(params),
-            is_optional=is_optional,
-            is_dataclass=True
-        )
+        if is_dataclass(cls):
+            return TypeDescriptor(
+                cls,
+                parameters=FrozenDict(params),
+                is_optional=is_optional,
+                is_dataclass=True
+            )
+        if TypedDict in cls.__orig_bases__:
+            return TypeDescriptor(
+                cls,
+                parameters=FrozenDict(params),
+                is_optional=is_optional,
+                is_typed_dict=True
+            )
+
     if hasattr(cls, '__origin__'):
         origin = cls.__origin__
         origin_is_dc = is_dataclass(origin)
@@ -182,5 +196,5 @@ def scan_types(desc: TypeDescriptor) -> DescTypes:
 def _is_optional(cls: Type) -> bool:
     """Returns True if the provided type is `Optional`."""
     return getattr(cls, '__origin__', None) == Union \
-           and len(cls.__args__) == 2 \
-           and cls.__args__[1] == type(None)
+        and len(cls.__args__) == 2 \
+        and cls.__args__[1] == type(None)
