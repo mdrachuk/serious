@@ -6,11 +6,12 @@
 - FrozenList and FrozenDict — immutable alternatives for standard collections
 """
 
+from __future__ import annotations
 __all__ = ['Timestamp', 'Email', 'FrozenList', 'FrozenDict']
 
 import re
 from datetime import datetime, timezone
-from typing import TypeVar, Generic, overload, Optional
+from typing import TypeVar, Generic, overload, Optional, Mapping, Iterator, Any
 
 from .errors import ValidationError
 
@@ -18,14 +19,27 @@ KT = TypeVar('KT')  # Key type.
 VT = TypeVar('VT')  # Value type.
 
 
-class FrozenDict(dict, Generic[KT, VT]):
+class FrozenDict(Mapping[KT, VT]):
     """
     A dictionary which cannot be changed a la frozenset.
 
     Does not check for immutability of its members.
-
-    Implementation from `PEP-351 <https://www.python.org/dev/peps/pep-0351/>`_.
     """
+
+    def __init__(self, mapping: Optional[Mapping[KT, VT]] = None, **kwargs: Mapping[KT, VT]) -> None:
+        if mapping is not None:
+            self.__internal_mapping__ = dict(mapping)
+        else:
+            self.__internal_mapping__ = dict(**kwargs)
+
+    def __getitem__(self, __k: KT) -> VT:
+        return self.__internal_mapping__[__k]
+
+    def __len__(self) -> int:
+        return len(self.__internal_mapping__)
+
+    def __iter__(self) -> Iterator[KT]:
+        return iter(self.__internal_mapping__)
 
     def __hash__(self):
         hash_ = 0
@@ -33,16 +47,10 @@ class FrozenDict(dict, Generic[KT, VT]):
             hash_ ^= hash((key, value))
         return hash_
 
-    def _immutable(self, *args, **kws):
-        raise TypeError('A FrozenDict instance cannot be changed')
-
-    __setitem__ = _immutable
-    __delitem__ = _immutable
-    clear = _immutable
-    update = _immutable
-    setdefault = _immutable
-    pop = _immutable
-    popitem = _immutable
+    def __or__(self, other: Mapping) -> FrozenDict:
+        if hasattr(other, 'items'):
+            return FrozenDict(dict(self) | dict(other))
+        raise TypeError(f'Cannot merge {type(self)} with {type(other)}')
 
 
 class FrozenList(tuple, Generic[VT]):

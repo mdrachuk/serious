@@ -12,9 +12,9 @@ from __future__ import annotations
 
 __all__ = ['TypeDescriptor', 'describe', 'DescTypes', 'scan_types']
 
-from collections import ChainMap
 from dataclasses import dataclass, fields, is_dataclass
-from typing import Type, Any, TypeVar, get_type_hints, Dict, Mapping, List, Union, Iterable, TypedDict
+from functools import reduce
+from typing import Type, Any, TypeVar, get_type_hints, Dict, Mapping, List, Union, Iterable, TypedDict, Optional
 
 from .types import FrozenDict, FrozenList
 
@@ -47,13 +47,11 @@ class TypeDescriptor:
         """A mapping of all dataclass or typed dict field names to their corresponding Type Descriptors.
 
         An empty mapping is returned if the object is not a dataclass."""
-        if self.is_dataclass:
+        if self.is_dataclass or self.is_typed_dict:
             types = get_type_hints(self.cls)  # type: Dict[str, Type]
             descriptors = {name: self.describe(type_) for name, type_ in types.items()}
-            return {f.name: descriptors[f.name] for f in fields(self.cls)}
-        if self.is_typed_dict:
-            types = get_type_hints(self.cls)  # type: Dict[str, Type]
-            descriptors = {name: self.describe(type_) for name, type_ in types.items()}
+            if self.is_dataclass:
+                return {f.name: descriptors[f.name] for f in fields(self.cls)}
             return {key: descriptors[key] for key in self.cls.__annotations__}
         return {}
 
@@ -61,7 +59,7 @@ class TypeDescriptor:
         return describe(type_, self.parameters)
 
 
-def describe(type_: Type, generic_params: GenericParams = None) -> TypeDescriptor:
+def describe(type_: Type, generic_params: Optional[GenericParams] = None) -> TypeDescriptor:
     """Creates a TypeDescriptor for the provided type.
 
     Optionally generic params can be designated as a mapping of TypeVar to parameter Type or indexes in Dict/List/etc.
@@ -109,7 +107,10 @@ def _describe_generic(cls: Type, generic_params: GenericParams) -> TypeDescripto
     if is_optional:
         cls = cls.__args__[0]
     if hasattr(cls, '__orig_bases__'):
-        params = dict(ChainMap(*(_describe_generic(base, generic_params).parameters for base in cls.__orig_bases__)))
+        _params: Dict[Any, TypeDescriptor] = {}
+        for item in (_describe_generic(base, generic_params).parameters for base in cls.__orig_bases__):
+            _params.update(item)
+        params = FrozenDict(_params)
         if is_dataclass(cls):
             return TypeDescriptor(
                 cls,
