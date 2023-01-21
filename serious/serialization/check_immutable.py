@@ -9,11 +9,11 @@ from uuid import UUID
 
 from serious.descriptors import DescTypes, TypeDescriptor
 from serious.errors import MutableTypesInModel
-from serious.types import FrozenList, Email, Timestamp
+from serious.types import FrozenList, Email, Timestamp, FrozenDict
 
 _IMMUTABLE_TYPES = {
     str, int, float, bool,
-    bytes, tuple, frozenset, FrozenList,
+    bytes, tuple, frozenset, FrozenList, FrozenDict,
     Decimal, UUID, datetime, date, time,
     Email, Timestamp,
     Ellipsis,

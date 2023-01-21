@@ -12,9 +12,8 @@ from __future__ import annotations
 
 __all__ = ['TypeDescriptor', 'describe', 'DescTypes', 'scan_types']
 
-from collections import ChainMap
 from dataclasses import dataclass, fields, is_dataclass
-from typing import Type, Any, TypeVar, get_type_hints, Dict, Mapping, List, Union, Iterable, TypedDict
+from typing import Type, Any, TypeVar, get_type_hints, Dict, Mapping, List, Union, Iterable, Optional
 
 from .types import FrozenDict, FrozenList
 
@@ -47,13 +46,11 @@ class TypeDescriptor:
         """A mapping of all dataclass or typed dict field names to their corresponding Type Descriptors.
 
         An empty mapping is returned if the object is not a dataclass."""
-        if self.is_dataclass:
+        if self.is_dataclass or self.is_typed_dict:
             types = get_type_hints(self.cls)  # type: Dict[str, Type]
             descriptors = {name: self.describe(type_) for name, type_ in types.items()}
-            return {f.name: descriptors[f.name] for f in fields(self.cls)}
-        if self.is_typed_dict:
-            types = get_type_hints(self.cls)  # type: Dict[str, Type]
-            descriptors = {name: self.describe(type_) for name, type_ in types.items()}
+            if self.is_dataclass:
+                return {f.name: descriptors[f.name] for f in fields(self.cls)}
             return {key: descriptors[key] for key in self.cls.__annotations__}
         return {}
 
@@ -61,7 +58,7 @@ class TypeDescriptor:
         return describe(type_, self.parameters)
 
 
-def describe(type_: Type, generic_params: GenericParams = None) -> TypeDescriptor:
+def describe(type_: Type, generic_params: Optional[GenericParams] = None) -> TypeDescriptor:
     """Creates a TypeDescriptor for the provided type.
 
     Optionally generic params can be designated as a mapping of TypeVar to parameter Type or indexes in Dict/List/etc.
@@ -80,6 +77,7 @@ _generic_params: Dict[Type, Dict[int, TypeDescriptor]] = {
     frozenset: {0: _any_type_desc},
     tuple: {0: _any_type_desc, 1: TypeDescriptor(Ellipsis, FrozenDict())},  # type: ignore
     dict: {0: _any_type_desc, 1: _any_type_desc},
+    FrozenDict: {0: _any_type_desc, 1: _any_type_desc},
 }
 
 
@@ -108,22 +106,24 @@ def _describe_generic(cls: Type, generic_params: GenericParams) -> TypeDescripto
     is_optional = _is_optional(cls)
     if is_optional:
         cls = cls.__args__[0]
-    if hasattr(cls, '__orig_bases__'):
-        params = dict(ChainMap(*(_describe_generic(base, generic_params).parameters for base in cls.__orig_bases__)))
-        if is_dataclass(cls):
-            return TypeDescriptor(
-                cls,
-                parameters=FrozenDict(params),
-                is_optional=is_optional,
-                is_dataclass=True
-            )
-        if TypedDict in cls.__orig_bases__:
-            return TypeDescriptor(
-                cls,
-                parameters=FrozenDict(params),
-                is_optional=is_optional,
-                is_typed_dict=True
-            )
+
+    try:
+        is_typed_dict = issubclass(cls, dict) and bool(getattr(cls, '__annotations__', None))
+    except TypeError:
+        is_typed_dict = False
+
+    if hasattr(cls, '__orig_bases__') and is_dataclass(cls):
+        _params: Dict[Any, TypeDescriptor] = {}
+        for item in (_describe_generic(base, generic_params).parameters for base in getattr(cls, '__orig_bases__', [])):
+            _params.update(item)
+
+        return TypeDescriptor(
+            cls,
+            parameters=FrozenDict(_params),
+            is_optional=is_optional,
+            is_dataclass=True,
+            is_typed_dict=False,
+        )
 
     if hasattr(cls, '__origin__'):
         origin = cls.__origin__
@@ -139,15 +139,18 @@ def _describe_generic(cls: Type, generic_params: GenericParams) -> TypeDescripto
             origin,
             parameters=FrozenDict(params),
             is_optional=is_optional,
-            is_dataclass=origin_is_dc
+            is_dataclass=origin_is_dc,
+            is_typed_dict=is_typed_dict,
         )
-    if isinstance(cls, type) and len(params) == 0:
+
+    if isinstance(cls, type) and len(params) == 0 and not is_typed_dict:
         params = _get_default_generic_params(cls, params)
     return TypeDescriptor(
         cls,
         parameters=FrozenDict(params),
         is_optional=is_optional,
-        is_dataclass=is_dataclass(cls)
+        is_dataclass=is_dataclass(cls),
+        is_typed_dict=is_typed_dict,
     )
 
 

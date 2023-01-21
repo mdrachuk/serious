@@ -47,7 +47,7 @@ class SeriousModel(Generic[T]):
             validate_on_dump: bool,
             ensure_frozen: Union[bool, Iterable[Type]],
             key_mapper: Optional[KeyMapper] = None,
-            _registry: Dict[TypeDescriptor, SeriousModel] = None
+            _registry: Optional[Dict[TypeDescriptor, SeriousModel]] = None
     ):
         """Initialize a Serious Model.
 
