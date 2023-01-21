@@ -112,14 +112,17 @@ def _describe_generic(cls: Type, generic_params: GenericParams) -> TypeDescripto
             is_dataclass=True
         )
     if hasattr(cls, '__origin__'):
-        origin_is_dc = is_dataclass(cls.__origin__)
+        origin = cls.__origin__
+        origin_is_dc = is_dataclass(origin)
         if origin_is_dc:
             params = _collect_type_vars(cls, generic_params)
         else:
             describe_ = lambda arg: describe(Any if type(arg) is TypeVar else arg, generic_params)
-            params = dict(enumerate(map(describe_, cls.__args__)))
+            params = dict(enumerate(map(describe_, getattr(cls, '__args__', []))))
+        if isinstance(origin, type) and len(params) == 0:
+            params = _get_default_generic_params(origin, params)
         return TypeDescriptor(
-            cls.__origin__,
+            origin,
             parameters=FrozenDict(params),
             is_optional=is_optional,
             is_dataclass=origin_is_dc
