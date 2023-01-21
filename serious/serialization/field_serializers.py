@@ -18,7 +18,7 @@ from uuid import UUID
 
 from serious.descriptors import TypeDescriptor
 from serious.errors import ValidationError
-from serious.types import Timestamp, FrozenList
+from serious.types import Timestamp, FrozenList, FrozenDict
 from .context import Context, Loading, Dumping
 from .serializer import FieldSerializer, Serializer
 
@@ -200,7 +200,7 @@ class DictSerializer(FieldSerializer[Dict[str, Any], Dict[str, Any]]):
 
     @classmethod
     def fits(cls, desc: TypeDescriptor) -> bool:
-        return issubclass(desc.cls, dict)
+        return issubclass(desc.cls, dict) or issubclass(desc.cls, FrozenDict)
 
     def load(self, data: Dict[str, Any], ctx: Loading) -> Dict[str, Any]:
         if not isinstance(data, dict):
