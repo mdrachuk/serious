@@ -7,11 +7,12 @@
 """
 
 from __future__ import annotations
+
 __all__ = ['Timestamp', 'Email', 'FrozenList', 'FrozenDict']
 
 import re
 from datetime import datetime, timezone
-from typing import TypeVar, Generic, overload, Optional, Mapping, Iterator, Any
+from typing import TypeVar, Generic, overload, Optional, Mapping, Iterator
 
 from .errors import ValidationError
 
@@ -49,7 +50,9 @@ class FrozenDict(Mapping[KT, VT]):
 
     def __or__(self, other: Mapping) -> FrozenDict:
         if hasattr(other, 'items'):
-            return FrozenDict(dict(self) | dict(other))
+            result = dict(self)
+            result.update(other)
+            return FrozenDict(result)
         raise TypeError(f'Cannot merge {type(self)} with {type(other)}')
 
 
