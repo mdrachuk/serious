@@ -194,9 +194,11 @@ class DictSerializer(FieldSerializer[Dict[str, Any], Dict[str, Any]]):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        key = self.type.parameters[0]
-        assert key.cls is str and not key.is_optional, 'Dict keys must have explicit "str" type (Dict[str, Any]).'
-        self._serializer = self.root.find_serializer(self.type.parameters[1])
+        key_desc = self.type.parameters[0]
+        value_desc = self.type.parameters[1]
+        assert not key_desc.is_optional, 'Dict keys must have explicit "str" type (Dict[str, Any]).'
+        self._key_serializer = self.root.find_serializer(key_desc)
+        self._value_serializer = self.root.find_serializer(value_desc)
 
     @classmethod
     def fits(cls, desc: TypeDescriptor) -> bool:
@@ -212,8 +214,12 @@ class DictSerializer(FieldSerializer[Dict[str, Any], Dict[str, Any]]):
         return self._serialize_dict(data, ctx)
 
     def _serialize_dict(self, data: Dict[str, Any], ctx: Context) -> Dict[str, Any]:
-        serializer = Alias(self._serializer)
-        return {key: ctx.run(f'[{key}]', serializer(key), value) for key, value in data.items()}
+        key_serializer = Alias(self._key_serializer)
+        value_serializer = Alias(self._value_serializer)
+        return {
+            ctx.run(f'#{key}', key_serializer(key), key): ctx.run(f'[{key}]', value_serializer(key), value)
+            for key, value in data.items()
+        }
 
 
 Collection = Union[list, set, frozenset]
