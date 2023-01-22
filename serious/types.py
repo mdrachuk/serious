@@ -55,6 +55,9 @@ class FrozenDict(Mapping[KT, VT]):
             return FrozenDict(result)
         raise TypeError(f'Cannot merge {type(self)} with {type(other)}')
 
+    def __repr__(self):
+        return f'FrozenDict({self.__internal_mapping__})'
+
 
 class FrozenList(tuple, Generic[VT]):
     """A list that cannot be changed. `FrozenList[VT]` is equal to saying `Tuple[VT, ...]`."""
