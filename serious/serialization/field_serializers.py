@@ -13,7 +13,7 @@ from dataclasses import replace
 from datetime import datetime, date, time
 from decimal import Decimal
 from enum import Enum
-from typing import Any, Optional, Dict, List, Union, Pattern, Iterable, Type, Tuple
+from typing import Any, Optional, Dict, List, Union, Pattern, Iterable, Type, Tuple, Literal
 from uuid import UUID
 
 from serious.descriptors import TypeDescriptor
@@ -36,6 +36,7 @@ def field_serializers(custom: Iterable[Type[FieldSerializer]] = tuple()) -> Tupl
     return tuple([
         OptionalSerializer,
         AnySerializer,
+        LiteralSerializer,
         EnumSerializer,
         *custom,
         TypedDictSerializer,
@@ -158,6 +159,31 @@ class AnySerializer(FieldSerializer[Any, Any]):
     @classmethod
     def fits(cls, desc: TypeDescriptor) -> bool:
         return desc.cls is Any
+
+
+class LiteralSerializer(FieldSerializer[Any, Any]):
+    """Serializer for `Any` fields."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._dump_values = {
+            v.cls: self.root.find_serializer(self.type.describe(v.cls.__class__)).dump(v, Dumping(validating=False))
+            for v in self.type.parameters.values()
+        }
+        self._load_values = {
+            value: key
+            for key, value in self._dump_values.items()
+        }
+
+    def load(self, value: Any, ctx: Loading) -> Any:
+        return value
+
+    def dump(self, value: Any, ctx: Dumping) -> Any:
+        return value
+
+    @classmethod
+    def fits(cls, desc: TypeDescriptor) -> bool:
+        return desc.cls is Literal
 
 
 class TypedDictSerializer(FieldSerializer[Dict[str, Any], Dict[str, Any]]):
