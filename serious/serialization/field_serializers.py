@@ -584,7 +584,7 @@ class TimeIsoSerializer(FieldSerializer[time, str]):
         return issubclass(desc.cls, time)
 
 
-_uuid4_hex_re = re.compile(r'\A([a-f0-9]{8}-?[a-f0-9]{4}-?4[a-f0-9]{3}-?[89ab][a-f0-9]{3}-?[a-f0-9]{12})\Z', re.I)
+_uuid_hex_re = re.compile(r'\A([a-f0-9]{8}-?[a-f0-9]{4}-?[a-f0-9]{4}-?[a-f0-9]{4}-?[a-f0-9]{12})\Z', re.I)
 
 
 class UuidSerializer(FieldSerializer[UUID, str]):
@@ -593,8 +593,8 @@ class UuidSerializer(FieldSerializer[UUID, str]):
     def load(self, value: str, ctx: Loading) -> UUID:
         if not isinstance(value, str):
             raise ValidationError('Invalid data type. Expecting a string')
-        if not _matches(_uuid4_hex_re, value):
-            raise ValidationError('Invalid UUID4 hex format')
+        if not _matches(_uuid_hex_re, value):
+            raise ValidationError('Invalid UUID hex format')
         return UUID(value)  # type: ignore # expecting str
 
     def dump(self, value: UUID, ctx: Dumping) -> str:

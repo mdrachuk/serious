@@ -262,11 +262,14 @@ def test_uuid_load_validation():
         serializer.load('kaalksdjfglkjsadlfjlksdjdjka', ctx)
     with pytest.raises(ValidationError):
         serializer.load('d1d61dd7-c036-47d3-a6ed-91cc2e885f-c8', ctx)
-    with pytest.raises(ValidationError):
-        serializer.load('d1d61dd7-c036-57d3-a6ed-91cc2e885fc8', ctx)
+
     uuid_s = 'd1d61dd7-c036-47d3-a6ed-91cc2e885fc8'
     assert serializer.load(uuid_s, ctx) == UUID(uuid_s)
+
     assert serializer.load(uuid_s.upper(), ctx) == UUID(uuid_s)
+
+    uuid_s = '00000000-0000-0000-0000-000000000000'
+    assert serializer.load(uuid_s, ctx) == UUID(uuid_s)
 
 
 def test_decimal_load_validation():
