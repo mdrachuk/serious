@@ -104,17 +104,36 @@ class UnionSerializer(FieldSerializer[Any, Dict]):
         }
         self._serializers_by_name = {cls.__name__: serializer for cls, serializer in self._serializers_by_cls.items()}
 
-    def load(self, value: Optional[Any], ctx: Loading) -> Optional[Any]:
-        if '__value__' not in value or '__type__' not in value:
-            raise ValidationError(f'Invalid Union[{",".join(self._serializers_by_name)}] value: {value}')
-        return None if value is None else self._serializers_by_name[value['__type__']].load(value['__value__'], ctx)
+    def load(self, value: Dict, ctx: Loading) -> Any:
+        try:
+            value = dict(value)
+        except TypeError:
+            raise ValidationError(f'Invalid Union[{",".join(self._serializers_by_name)}] value: {value}, '
+                                  f'must be a dict with "__type__" and "__value__" keys')
 
-    def dump(self, value: Optional[Any], ctx: Dumping) -> Optional[Any]:
+        try:
+            t = value['__type__']
+        except KeyError:
+            raise ValidationError(f'Invalid Union[{",".join(self._serializers_by_name)}] value: {value}, '
+                                  f'missing "__type__" key')
+        try:
+            v = value['__value__']
+        except KeyError:
+            raise ValidationError(f'Invalid Union[{",".join(self._serializers_by_name)}] value: {value}, '
+                                  f'missing "__value__" key')
+        try:
+            serializer = self._serializers_by_name[t]
+        except KeyError:
+            raise ValidationError(f'Invalid Union[{",".join(self._serializers_by_name)}] value: {value}, '
+                                  f'unsupported type.')
+        return serializer.load(v, ctx)
+
+    def dump(self, value: Any, ctx: Dumping) -> Dict:
         try:
             serializer = self._serializers_by_cls[type(value)]
         except KeyError:
             raise ValidationError(f'Invalid Union[{",".join(self._serializers_by_name)}] value: {value}')
-        return value if value is None else {
+        return {
             '__type__': type(value).__name__,
             '__value__': serializer.dump(value, ctx),
         }
