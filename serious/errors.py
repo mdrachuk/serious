@@ -21,7 +21,6 @@ __all__ = [
     'ModelError',
     'FieldMissingSerializer',
     'ModelContainsAny',
-    'ModelContainsUnion',
     'MutableTypesInModel',
     'ValidationError',
 ]
@@ -156,14 +155,6 @@ class ModelContainsAny(ModelError):
                 f'Provide a type annotation or pass `allow_any=True` to the serializer. '
                 f'This may also be an ambiguous ``Generic`` definitions like `x: list`, `x: List` '
                 f'which are resolved as `List[Any]`. ')
-
-
-class ModelContainsUnion(ModelError):
-
-    @property
-    def message(self):
-        return (f'{class_path(self.cls)} contains fields annotated as Union. '
-                f'Union types are not supported by serious.')
 
 
 class MutableTypesInModel(ModelError):

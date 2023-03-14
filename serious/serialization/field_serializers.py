@@ -35,6 +35,7 @@ def field_serializers(custom: Iterable[Type[FieldSerializer]] = tuple()) -> Tupl
     """
     return tuple([
         OptionalSerializer,
+        UnionSerializer,
         AnySerializer,
         LiteralSerializer,
         EnumSerializer,
@@ -83,6 +84,44 @@ class OptionalSerializer(FieldSerializer[Optional[Any], Optional[Any]]):
     @classmethod
     def fits(cls, desc: TypeDescriptor) -> bool:
         return desc.is_optional
+
+
+class UnionSerializer(FieldSerializer[Any, Dict]):
+    """
+    A serializer for Union fields.
+
+        :Example:
+
+        @dataclass
+        class Character:
+            weapon: Union[Sword, Staff, Hammer]
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._serializers_by_cls = {
+            desc.cls: self.root.find_serializer(desc) for desc in self.type.parameters.values()
+        }
+        self._serializers_by_name = {cls.__name__: serializer for cls, serializer in self._serializers_by_cls.items()}
+
+    def load(self, value: Optional[Any], ctx: Loading) -> Optional[Any]:
+        if '__value__' not in value or '__type__' not in value:
+            raise ValidationError(f'Invalid Union[{",".join(self._serializers_by_name)}] value: {value}')
+        return None if value is None else self._serializers_by_name[value['__type__']].load(value['__value__'], ctx)
+
+    def dump(self, value: Optional[Any], ctx: Dumping) -> Optional[Any]:
+        try:
+            serializer = self._serializers_by_cls[type(value)]
+        except KeyError:
+            raise ValidationError(f'Invalid Union[{",".join(self._serializers_by_name)}] value: {value}')
+        return value if value is None else {
+            '__type__': type(value).__name__,
+            '__value__': serializer.dump(value, ctx),
+        }
+
+    @classmethod
+    def fits(cls, desc: TypeDescriptor) -> bool:
+        return desc.cls is Union
 
 
 class EnumSerializer(FieldSerializer[Any, Any]):
