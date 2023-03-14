@@ -35,6 +35,7 @@ def field_serializers(custom: Iterable[Type[FieldSerializer]] = tuple()) -> Tupl
     """
     return tuple([
         OptionalSerializer,
+        UnionSerializer,
         AnySerializer,
         LiteralSerializer,
         EnumSerializer,
@@ -83,6 +84,63 @@ class OptionalSerializer(FieldSerializer[Optional[Any], Optional[Any]]):
     @classmethod
     def fits(cls, desc: TypeDescriptor) -> bool:
         return desc.is_optional
+
+
+class UnionSerializer(FieldSerializer[Any, Dict]):
+    """
+    A serializer for Union fields.
+
+        :Example:
+
+        @dataclass
+        class Character:
+            weapon: Union[Sword, Staff, Hammer]
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._serializers_by_cls = {
+            desc.cls: self.root.find_serializer(desc) for desc in self.type.parameters.values()
+        }
+        self._serializers_by_name = {cls.__name__: serializer for cls, serializer in self._serializers_by_cls.items()}
+
+    def load(self, value: Dict, ctx: Loading) -> Any:
+        try:
+            value = dict(value)
+        except TypeError:
+            raise ValidationError(f'Invalid Union[{",".join(self._serializers_by_name)}] value: {value}, '
+                                  f'must be a dict with "__type__" and "__value__" keys')
+
+        try:
+            t = value['__type__']
+        except KeyError:
+            raise ValidationError(f'Invalid Union[{",".join(self._serializers_by_name)}] value: {value}, '
+                                  f'missing "__type__" key')
+        try:
+            v = value['__value__']
+        except KeyError:
+            raise ValidationError(f'Invalid Union[{",".join(self._serializers_by_name)}] value: {value}, '
+                                  f'missing "__value__" key')
+        try:
+            serializer = self._serializers_by_name[t]
+        except KeyError:
+            raise ValidationError(f'Invalid Union[{",".join(self._serializers_by_name)}] value: {value}, '
+                                  f'unsupported type.')
+        return serializer.load(v, ctx)
+
+    def dump(self, value: Any, ctx: Dumping) -> Dict:
+        try:
+            serializer = self._serializers_by_cls[type(value)]
+        except KeyError:
+            raise ValidationError(f'Invalid Union[{",".join(self._serializers_by_name)}] value: {value}')
+        return {
+            '__type__': type(value).__name__,
+            '__value__': serializer.dump(value, ctx),
+        }
+
+    @classmethod
+    def fits(cls, desc: TypeDescriptor) -> bool:
+        return desc.cls is Union
 
 
 class EnumSerializer(FieldSerializer[Any, Any]):

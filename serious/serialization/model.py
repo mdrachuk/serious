@@ -11,7 +11,7 @@ from typing import Generic, Iterable, Type, Dict, Any, Union, Mapping, Optional,
 
 from serious.checks import check_is_instance
 from serious.descriptors import scan_types, TypeDescriptor
-from serious.errors import ModelContainsAny, ModelContainsUnion, MissingField, UnexpectedItem, ValidationError, \
+from serious.errors import ModelContainsAny, MissingField, UnexpectedItem, ValidationError, \
     LoadError, DumpError, FieldMissingSerializer
 from serious.utils import Dataclass
 from serious.validation import validate
@@ -69,8 +69,6 @@ class SeriousModel(Generic[T]):
         all_types = scan_types(descriptor)
         if not allow_any and Any in all_types:
             raise ModelContainsAny(descriptor.cls)
-        if Union in all_types:
-            raise ModelContainsUnion(descriptor.cls)
         if ensure_frozen:
             check_immutable(descriptor, all_types, ensure_frozen)
         self.descriptor = descriptor
