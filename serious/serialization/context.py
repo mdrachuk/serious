@@ -39,6 +39,9 @@ class Context(ABC):
         """The stack is included in errors, mentioning the fields, array indexes, dictionary keys, etc."""
         return FrozenList(self._steps)
 
+    def __repr__(self):
+        return f"<Context: {'.'.join([step.name for step in self._steps])}>"
+
     @abstractmethod
     def run(self, step: str, serializer: Serializer, value: Any) -> Any:
         """Execute serializer in context.
