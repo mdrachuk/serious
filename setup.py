@@ -22,7 +22,7 @@ setup(
     url="https://github.com/mdrachuk/serious",
     license="MIT",
     keywords="dataclasses json serialization",
-    python_requires=">=3.8",
+    python_requires=">=3.10",
     project_urls={
         'Pipelines': 'https://dev.azure.com/misha-drachuk/serious',
         'Source': 'https://github.com/mdrachuk/serious/',
