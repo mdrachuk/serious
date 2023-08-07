@@ -13,6 +13,7 @@ from __future__ import annotations
 __all__ = ['TypeDescriptor', 'describe', 'DescTypes', 'scan_types']
 
 from dataclasses import dataclass, fields, is_dataclass
+from types import UnionType
 from typing import Type, Any, TypeVar, get_type_hints, Dict, Mapping, List, Union, Iterable, Optional
 
 from .types import FrozenDict, FrozenList
@@ -105,7 +106,9 @@ def _describe_generic(cls: Type, generic_params: GenericParams) -> TypeDescripto
     params: GenericParams = {}
     is_optional = _is_optional(cls)
     if is_optional:
-        cls = cls.__args__[0]
+        _args = set(cls.__args__)
+        _args.remove(type(None))
+        cls = Union[tuple(_args)]
 
     try:
         is_typed_dict = issubclass(cls, dict) and bool(getattr(cls, '__annotations__', None))
@@ -198,6 +201,6 @@ def scan_types(desc: TypeDescriptor) -> DescTypes:
 
 def _is_optional(cls: Type) -> bool:
     """Returns True if the provided type is `Optional`."""
-    return getattr(cls, '__origin__', None) == Union \
-        and len(cls.__args__) == 2 \
-        and cls.__args__[1] == type(None)
+    return (getattr(cls, '__origin__', None) == Union or isinstance(cls, UnionType)) \
+        and len(cls.__args__) > 1 \
+        and type(None) in set(cls.__args__)
