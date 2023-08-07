@@ -3,7 +3,7 @@ from typing import Callable
 
 from serious.json.utils import camel_to_snake, snake_to_camel
 
-Ex = namedtuple('Example', ['snake', 'camel'])
+Ex = namedtuple('Ex', ['snake', 'camel'])
 
 
 class TestCases:

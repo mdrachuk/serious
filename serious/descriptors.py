@@ -14,7 +14,7 @@ __all__ = ['TypeDescriptor', 'describe', 'DescTypes', 'scan_types']
 
 from dataclasses import dataclass, fields, is_dataclass
 from types import UnionType
-from typing import Type, Any, TypeVar, get_type_hints, Dict, Mapping, List, Union, Iterable, Optional
+from typing import Type, Any, TypeVar, get_type_hints, Dict, Mapping, List, Union, Iterable, Optional, cast
 
 from .types import FrozenDict, FrozenList
 
@@ -108,7 +108,7 @@ def _describe_generic(cls: Type, generic_params: GenericParams) -> TypeDescripto
     if is_optional:
         _args = set(cls.__args__)
         _args.remove(type(None))
-        cls = Union[tuple(_args)]
+        cls = cast(Type, Union[tuple(_args)])
 
     try:
         is_typed_dict = issubclass(cls, dict) and bool(getattr(cls, '__annotations__', None))

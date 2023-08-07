@@ -7,7 +7,7 @@ from serious import JsonModel, DictModel
 from serious.test_utils import assert_symmetric
 from tests.utils import with_
 
-Ex = namedtuple('Example', ['value_type', 'value'])
+Ex = namedtuple('Ex', ['value_type', 'value'])
 
 models = [JsonModel, DictModel]
 objects = [

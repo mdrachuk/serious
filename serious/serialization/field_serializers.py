@@ -13,7 +13,7 @@ from dataclasses import replace
 from datetime import datetime, date, time
 from decimal import Decimal
 from enum import Enum
-from typing import Any, Optional, Dict, List, Union, Pattern, Iterable, Type, Tuple, Literal
+from typing import Any, Optional, Dict, List, Union, Pattern, Iterable, Type, Tuple, Literal, TypeVar
 from uuid import UUID
 
 from serious.descriptors import TypeDescriptor
@@ -386,13 +386,16 @@ class Alias(Serializer):
         return self._serializer.dump(value, ctx)
 
 
+S = TypeVar("S", bound=Serializer)
+
+
 class OrdinalAlias(Serializer[Any, Any]):
     """Serializes values using the provided serializer at the currently set index.
     The index is set via calling instance as a function.
     Step name is changed to match the index.
     """
 
-    def __init__(self, serializers: List[Serializer]):
+    def __init__(self, serializers: List[S]):
         self._serializers = serializers
 
     def __call__(self, index: int) -> OrdinalAlias:
