@@ -13,12 +13,12 @@ from dataclasses import replace
 from datetime import datetime, date, time
 from decimal import Decimal
 from enum import Enum
-from typing import Any, Optional, Dict, List, Union, Pattern, Iterable, Type, Tuple
+from typing import Any, Optional, Dict, List, Union, Pattern, Iterable, Type, Tuple, Literal
 from uuid import UUID
 
 from serious.descriptors import TypeDescriptor
 from serious.errors import ValidationError
-from serious.types import Timestamp, FrozenList
+from serious.types import Timestamp, FrozenList, FrozenDict
 from .context import Context, Loading, Dumping
 from .serializer import FieldSerializer, Serializer
 
@@ -35,9 +35,12 @@ def field_serializers(custom: Iterable[Type[FieldSerializer]] = tuple()) -> Tupl
     """
     return tuple([
         OptionalSerializer,
+        UnionSerializer,
         AnySerializer,
+        LiteralSerializer,
         EnumSerializer,
         *custom,
+        TypedDictSerializer,
         DictSerializer,
         CollectionSerializer,
         TupleSerializer,
@@ -81,6 +84,63 @@ class OptionalSerializer(FieldSerializer[Optional[Any], Optional[Any]]):
     @classmethod
     def fits(cls, desc: TypeDescriptor) -> bool:
         return desc.is_optional
+
+
+class UnionSerializer(FieldSerializer[Any, Dict]):
+    """
+    A serializer for Union fields.
+
+        :Example:
+
+        @dataclass
+        class Character:
+            weapon: Union[Sword, Staff, Hammer]
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._serializers_by_cls = {
+            desc.cls: self.root.find_serializer(desc) for desc in self.type.parameters.values()
+        }
+        self._serializers_by_name = {cls.__name__: serializer for cls, serializer in self._serializers_by_cls.items()}
+
+    def load(self, value: Dict, ctx: Loading) -> Any:
+        try:
+            value = dict(value)
+        except TypeError:
+            raise ValidationError(f'Invalid Union[{",".join(self._serializers_by_name)}] value: {value}, '
+                                  f'must be a dict with "__type__" and "__value__" keys')
+
+        try:
+            t = value['__type__']
+        except KeyError:
+            raise ValidationError(f'Invalid Union[{",".join(self._serializers_by_name)}] value: {value}, '
+                                  f'missing "__type__" key')
+        try:
+            v = value['__value__']
+        except KeyError:
+            raise ValidationError(f'Invalid Union[{",".join(self._serializers_by_name)}] value: {value}, '
+                                  f'missing "__value__" key')
+        try:
+            serializer = self._serializers_by_name[t]
+        except KeyError:
+            raise ValidationError(f'Invalid Union[{",".join(self._serializers_by_name)}] value: {value}, '
+                                  f'unsupported type.')
+        return serializer.load(v, ctx)
+
+    def dump(self, value: Any, ctx: Dumping) -> Dict:
+        try:
+            serializer = self._serializers_by_cls[type(value)]
+        except KeyError:
+            raise ValidationError(f'Invalid Union[{",".join(self._serializers_by_name)}] value: {value}')
+        return {
+            '__type__': type(value).__name__,
+            '__value__': serializer.dump(value, ctx),
+        }
+
+    @classmethod
+    def fits(cls, desc: TypeDescriptor) -> bool:
+        return desc.cls is Union
 
 
 class EnumSerializer(FieldSerializer[Any, Any]):
@@ -159,18 +219,74 @@ class AnySerializer(FieldSerializer[Any, Any]):
         return desc.cls is Any
 
 
+class LiteralSerializer(FieldSerializer[Any, Any]):
+    """Serializer for `Any` fields."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._dump_values = {
+            v.cls: self.root.find_serializer(self.type.describe(v.cls.__class__)).dump(v, Dumping(validating=False))
+            for v in self.type.parameters.values()
+        }
+        self._load_values = {
+            value: key
+            for key, value in self._dump_values.items()
+        }
+
+    def load(self, value: Any, ctx: Loading) -> Any:
+        return value
+
+    def dump(self, value: Any, ctx: Dumping) -> Any:
+        return value
+
+    @classmethod
+    def fits(cls, desc: TypeDescriptor) -> bool:
+        return desc.cls is Literal
+
+
+class TypedDictSerializer(FieldSerializer[Dict[str, Any], Dict[str, Any]]):
+    """Serializer for `TypedDict` fields."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._field_serializers = {}
+        for field, desc in self.type.fields.items():
+            self._field_serializers[field] = Alias(self.root.find_serializer(desc))
+
+    @classmethod
+    def fits(cls, desc: TypeDescriptor) -> bool:
+        return desc.is_typed_dict
+
+    def load(self, data: Dict[str, Any], ctx: Loading) -> Dict[str, Any]:
+        if not isinstance(data, dict):
+            raise ValidationError('Expecting a dictionary')
+        items = self._serialize_typed_dict(data, ctx)
+        return self.type.cls(items)
+
+    def dump(self, data: Dict[str, Any], ctx: Dumping) -> Dict[str, Any]:
+        return self._serialize_typed_dict(data, ctx)
+
+    def _serialize_typed_dict(self, data: Dict[str, Any], ctx: Context) -> Dict[str, Any]:
+        return {
+            key: ctx.run(f'[key]', serializer(key), data[key])
+            for key, serializer in self._field_serializers.items()
+        }
+
+
 class DictSerializer(FieldSerializer[Dict[str, Any], Dict[str, Any]]):
     """Serializer for `dict` fields with `str` keys (`Dict[str, Any]`)."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        key = self.type.parameters[0]
-        assert key.cls is str and not key.is_optional, 'Dict keys must have explicit "str" type (Dict[str, Any]).'
-        self._serializer = self.root.find_serializer(self.type.parameters[1])
+        key_desc = self.type.parameters[0]
+        value_desc = self.type.parameters[1]
+        assert not key_desc.is_optional, 'Dict keys must have explicit "str" type (Dict[str, Any]).'
+        self._key_serializer = self.root.find_serializer(key_desc)
+        self._value_serializer = self.root.find_serializer(value_desc)
 
     @classmethod
     def fits(cls, desc: TypeDescriptor) -> bool:
-        return issubclass(desc.cls, dict)
+        return issubclass(desc.cls, dict) or issubclass(desc.cls, FrozenDict)
 
     def load(self, data: Dict[str, Any], ctx: Loading) -> Dict[str, Any]:
         if not isinstance(data, dict):
@@ -182,8 +298,12 @@ class DictSerializer(FieldSerializer[Dict[str, Any], Dict[str, Any]]):
         return self._serialize_dict(data, ctx)
 
     def _serialize_dict(self, data: Dict[str, Any], ctx: Context) -> Dict[str, Any]:
-        serializer = Alias(self._serializer)
-        return {key: ctx.run(f'[{key}]', serializer(key), value) for key, value in data.items()}
+        key_serializer = Alias(self._key_serializer)
+        value_serializer = Alias(self._value_serializer)
+        return {
+            ctx.run(f'#{key}', key_serializer(key), key): ctx.run(f'[{key}]', value_serializer(key), value)
+            for key, value in data.items()
+        }
 
 
 Collection = Union[list, set, frozenset]
@@ -522,7 +642,7 @@ class TimeIsoSerializer(FieldSerializer[time, str]):
         return issubclass(desc.cls, time)
 
 
-_uuid4_hex_re = re.compile(r'\A([a-f0-9]{8}-?[a-f0-9]{4}-?4[a-f0-9]{3}-?[89ab][a-f0-9]{3}-?[a-f0-9]{12})\Z', re.I)
+_uuid_hex_re = re.compile(r'\A([a-f0-9]{8}-?[a-f0-9]{4}-?[a-f0-9]{4}-?[a-f0-9]{4}-?[a-f0-9]{12})\Z', re.I)
 
 
 class UuidSerializer(FieldSerializer[UUID, str]):
@@ -531,8 +651,8 @@ class UuidSerializer(FieldSerializer[UUID, str]):
     def load(self, value: str, ctx: Loading) -> UUID:
         if not isinstance(value, str):
             raise ValidationError('Invalid data type. Expecting a string')
-        if not _matches(_uuid4_hex_re, value):
-            raise ValidationError('Invalid UUID4 hex format')
+        if not _matches(_uuid_hex_re, value):
+            raise ValidationError('Invalid UUID hex format')
         return UUID(value)  # type: ignore # expecting str
 
     def dump(self, value: UUID, ctx: Dumping) -> str:

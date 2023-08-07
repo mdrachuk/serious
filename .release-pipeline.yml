@@ -13,11 +13,11 @@ stages:
     jobs:
       - job: Tests
         pool:
-          vmImage: 'Ubuntu-16.04'
+          vmImage: 'ubuntu-latest'
         strategy:
           matrix:
-            Python37:
-              python.version: '3.7'
+            Python38:
+              python.version: '3.8'
         steps:
           - template: .use-python.yml
           - script: pytest tests
@@ -25,11 +25,11 @@ stages:
 
       - job: Typings
         pool:
-          vmImage: 'Ubuntu-16.04'
+          vmImage: 'ubuntu-latest'
         strategy:
           matrix:
-            Python37:
-              python.version: '3.7'
+            Python38:
+              python.version: '3.8'
         steps:
           - template: .use-python.yml
           - script: mypy serious
@@ -37,11 +37,11 @@ stages:
 
       - job: Version
         pool:
-          vmImage: 'Ubuntu-16.04'
+          vmImage: 'ubuntu-latest'
         strategy:
           matrix:
-            Python37:
-              python.version: '3.7'
+            Python38:
+              python.version: '3.8'
         steps:
           - template: .use-python.yml
           - script: cv serious
@@ -51,11 +51,11 @@ stages:
     jobs:
       - job: PyPI
         pool:
-          vmImage: 'Ubuntu-16.04'
+          vmImage: 'ubuntu-latest'
         strategy:
           matrix:
-            Python37:
-              python.version: '3.7'
+            Python38:
+              python.version: '3.8'
         steps:
           - template: .use-python.yml
           - script: |
@@ -70,11 +70,11 @@ stages:
     jobs:
       - job: TestCoverage
         pool:
-          vmImage: 'Ubuntu-16.04'
+          vmImage: 'ubuntu-latest'
         strategy:
           matrix:
-            Python37:
-              python.version: '3.7'
+            Python38:
+              python.version: '3.8'
         steps:
           - template: .use-python.yml
 
