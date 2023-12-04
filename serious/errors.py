@@ -70,7 +70,7 @@ class LoadError(SerializationError):
 
     @property
     def message(self):
-        return f'Failed to load "{self._path}" of {class_path(self.cls)} from {self._data}: {self.__cause__}'
+        return f'Failed to load "{self._path}" of {class_path(self.cls)}: {self.__cause__}. Data: {self._data}'
 
 
 class DumpError(SerializationError):
