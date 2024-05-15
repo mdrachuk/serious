@@ -60,7 +60,7 @@ stages:
           - template: .use-python.yml
           - script: |
               python setup.py sdist bdist_wheel
-              twine upload dist/* -u serious -p $(PYPI_PASSWORD)
+              twine upload dist/* -u mdrachuk -p $(PYPI_API_TOKEN)
             displayName: 'Publish to PyPI'
     dependsOn:
       - Check
