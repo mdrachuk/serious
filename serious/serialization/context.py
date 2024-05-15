@@ -4,7 +4,8 @@ from __future__ import annotations
 __all__ = ['Context', 'Loading', 'Dumping']
 
 from abc import ABC, abstractmethod
-from typing import List, Any, NamedTuple, TypeVar
+from collections import deque
+from typing import Any, TypeVar, Deque
 
 from serious.serialization.serializer import Serializer
 from serious.types import FrozenList
@@ -12,6 +13,8 @@ from serious.validation import validate
 
 M = TypeVar('M')  # Python model value
 S = TypeVar('S')  # Serialized value
+
+SerializationStep = str
 
 
 class Context(ABC):
@@ -23,9 +26,7 @@ class Context(ABC):
     All of serializers are called via context to include them in stack and to perform
     all the necessary validation and processing
     """
-
-    def __init__(self):
-        self._steps: List[SerializationStep] = list()
+    _steps: Deque[SerializationStep]
 
     @property
     def stack(self) -> FrozenList[SerializationStep]:
@@ -33,7 +34,7 @@ class Context(ABC):
         return FrozenList(self._steps)
 
     def __repr__(self):
-        return f"<Context: {'.'.join([step.name for step in self._steps])}>"
+        return f"<Context: {'.'.join(self._steps)}>"
 
     @abstractmethod
     def run(self, step: str, serializer: Serializer, value: Any) -> Any:
@@ -56,10 +57,11 @@ class Loading(Context):
 
     def __init__(self, *, validating: bool):
         super().__init__()
+        self._steps = deque()
         self.validating = validating
 
     def run(self, step: str, serializer: Serializer[M, S], value: S) -> M:
-        self._steps.append(SerializationStep(step, serializer))
+        self._steps.append(step)
         result = serializer.load(value, self)
         if self.validating:
             validate(result)
@@ -69,19 +71,16 @@ class Loading(Context):
 
 class Dumping(Context):
     """Context used during **dump** operations."""
+
     def __init__(self, *, validating: bool):
         super().__init__()
+        self._steps = deque()
         self.validating = validating
 
     def run(self, step: str, serializer: Serializer[M, S], o: M) -> S:
-        self._steps.append(SerializationStep(step, serializer))
+        self._steps.append(step)
         if self.validating:
             validate(o)
         result = serializer.dump(o, self)
         self._steps.pop()
         return result
-
-
-class SerializationStep(NamedTuple):
-    name: str
-    serializer: Serializer

@@ -46,7 +46,7 @@ class SerializationError(Exception):
     def __parse_stack(serializer_stack: Collection[SerializationStep]) -> str:
         if len(serializer_stack) == 0:
             return ''
-        return ''.join(step.name for step in serializer_stack)[1:]
+        return ''.join(serializer_stack)[1:]
 
     @property
     def message(self):
