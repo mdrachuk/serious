@@ -4,7 +4,6 @@ from __future__ import annotations
 __all__ = ['Context', 'Loading', 'Dumping']
 
 from abc import ABC, abstractmethod
-from contextlib import contextmanager
 from typing import List, Any, NamedTuple, TypeVar
 
 from serious.serialization.serializer import Serializer
@@ -27,12 +26,6 @@ class Context(ABC):
 
     def __init__(self):
         self._steps: List[SerializationStep] = list()
-
-    @contextmanager
-    def _entering(self, step: str, serializer: Serializer):
-        self._steps.append(SerializationStep(step, serializer))
-        yield
-        self._steps.pop()
 
     @property
     def stack(self) -> FrozenList[SerializationStep]:
@@ -66,11 +59,12 @@ class Loading(Context):
         self.validating = validating
 
     def run(self, step: str, serializer: Serializer[M, S], value: S) -> M:
-        with self._entering(step, serializer):
-            result = serializer.load(value, self)
-            if self.validating:
-                validate(result)
-            return result
+        self._steps.append(SerializationStep(step, serializer))
+        result = serializer.load(value, self)
+        if self.validating:
+            validate(result)
+        self._steps.pop()
+        return result
 
 
 class Dumping(Context):
@@ -80,10 +74,12 @@ class Dumping(Context):
         self.validating = validating
 
     def run(self, step: str, serializer: Serializer[M, S], o: M) -> S:
-        with self._entering(step, serializer):
-            if self.validating:
-                validate(o)
-            return serializer.dump(o, self)
+        self._steps.append(SerializationStep(step, serializer))
+        if self.validating:
+            validate(o)
+        result = serializer.dump(o, self)
+        self._steps.pop()
+        return result
 
 
 class SerializationStep(NamedTuple):
