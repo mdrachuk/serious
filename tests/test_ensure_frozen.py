@@ -75,11 +75,17 @@ class ImmutableDataclass:
     pass
 
 
+class CustomEnum(Enum):
+    A = 1
+    B = 2
+
+
 immutable = [str, int, float, bool,
-             Tuple[str], Tuple[str, Ellipsis], FrozenList[str], FrozenSet[str],
-             Decimal, UUID,
-             datetime, date, time, Email, Timestamp,
-             ImmutableDataclass, Enum]
+    Tuple[str], Tuple[str, Ellipsis], FrozenList[str], FrozenSet[str],
+    Decimal, UUID,
+    datetime, date, time, Email, Timestamp,
+    ImmutableDataclass,
+    Enum, CustomEnum]
 mutable = [List[str], Dict[str, str], Set[str], MutableDataclass, MutNode]
 
 
