@@ -4,5 +4,5 @@ mkdocs==1.5.2
 mypy==1.4.1
 pytest==7.4.0
 pytest-cov==4.1.0
-twine==4.0.2
+twine==5.1.1
 wheel==0.41.1
