@@ -18,6 +18,8 @@ stages:
           matrix:
             Python310:
               python.version: '3.10'
+            Python311:
+              python.version: '3.11'
         steps:
           - template: .use-python.yml
           - script: pytest tests
