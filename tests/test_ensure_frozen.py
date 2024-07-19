@@ -79,8 +79,8 @@ immutable = [str, int, float, bool,
              Tuple[str], Tuple[str, Ellipsis], FrozenList[str], FrozenSet[str],
              Decimal, UUID,
              datetime, date, time, Email, Timestamp,
-             ImmutableDataclass]
-mutable = [List[str], Dict[str, str], Set[str], Enum, MutableDataclass, MutNode]
+             ImmutableDataclass, Enum]
+mutable = [List[str], Dict[str, str], Set[str], MutableDataclass, MutNode]
 
 
 @with_(models)

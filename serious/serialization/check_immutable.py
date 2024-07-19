@@ -4,6 +4,7 @@ __all__ = ['check_immutable']
 from dataclasses import is_dataclass
 from datetime import datetime, date, time
 from decimal import Decimal
+from enum import Enum
 from typing import Iterable, Type, List, Any, Union
 from uuid import UUID
 
@@ -16,7 +17,7 @@ _IMMUTABLE_TYPES = {
     bytes, tuple, frozenset, FrozenList, FrozenDict,
     Decimal, UUID, datetime, date, time,
     Email, Timestamp,
-    Ellipsis,
+    Ellipsis, Enum,
 }
 
 
