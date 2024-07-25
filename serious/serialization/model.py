@@ -128,12 +128,13 @@ class SeriousModel(Generic[T]):
         dumping: Dumping = Dumping(validating=False) if root else _ctx  # type: ignore # checked above
         try:
             _s = self.keys.to_serialized
-            if self.validate_on_dump:
-                validate(o)
-            return {
+            result = {
                 _s(field): dumping.run(f'.{_s(field)}', serializer, getattr(o, field))
                 for field, serializer in self.serializers_by_field.items()
             }
+            if self.validate_on_dump:
+                validate(self.load(result))
+            return result
         except ValidationError:
             raise
         except Exception as e:

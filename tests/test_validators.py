@@ -1,5 +1,6 @@
 from abc import ABC
 from dataclasses import dataclass
+from decimal import Decimal
 from typing import TypeVar, List
 
 import pytest
@@ -25,6 +26,7 @@ class OrderLine:
 class Order:
     lines: List[OrderLine]
 
+
 class AbstractValidation:
 
     def test_valid(self):
@@ -34,6 +36,7 @@ class AbstractValidation:
     def test_invalid(self):
         with pytest.raises(ValidationError):
             self.model.load(self.invalid_d)
+
 
 class TestSimpleValidation(AbstractValidation):
 
@@ -106,3 +109,14 @@ class TestDictValidationOptions(AbstractValidationOptions):
     new_model = DictModel
     valid_data = {'name': 'Holy Grail', 'blessing': 'happiness, eternal youth, infinite abundance', 'curse': ''}
     invalid_data = {'name': 'Fabergé egg', 'blessing': '', 'curse': ''}
+
+
+@dataclass
+class RequiredDecimal:
+    decimal: Decimal
+
+
+def test_dump_validation():
+    model = DictModel(RequiredDecimal, validate_on_dump=True)
+    with pytest.raises(ValidationError):
+        model.dump(RequiredDecimal(decimal=None))
