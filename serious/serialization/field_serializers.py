@@ -13,6 +13,7 @@ from dataclasses import replace
 from datetime import datetime, date, time
 from decimal import Decimal
 from enum import Enum
+from types import UnionType
 from typing import Any, Optional, Dict, List, Union, Pattern, Iterable, Type, Tuple, Literal, TypeVar
 from uuid import UUID
 
@@ -140,7 +141,7 @@ class UnionSerializer(FieldSerializer[Any, Dict]):
 
     @classmethod
     def fits(cls, desc: TypeDescriptor) -> bool:
-        return desc.cls is Union
+        return desc.cls is Union or isinstance(desc.cls, UnionType)
 
 
 class EnumSerializer(FieldSerializer[Any, Any]):

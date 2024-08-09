@@ -130,21 +130,10 @@ def _describe_generic(cls: Type, generic_params: GenericParams) -> TypeDescripto
 
     if hasattr(cls, '__origin__'):
         origin = cls.__origin__
-        origin_is_dc = is_dataclass(origin)
-        if origin_is_dc:
-            params = _collect_type_vars(cls, generic_params)
-        else:
-            describe_ = lambda arg: describe(Any if type(arg) is TypeVar else arg, generic_params)
-            params = dict(enumerate(map(describe_, getattr(cls, '__args__', []))))
-        if isinstance(origin, type) and len(params) == 0:
-            params = _get_default_generic_params(origin, params)
-        return TypeDescriptor(
-            origin,
-            parameters=FrozenDict(params),
-            is_optional=is_optional,
-            is_dataclass=origin_is_dc,
-            is_typed_dict=is_typed_dict,
-        )
+        return _describe_parametrized(cls, generic_params, is_optional, is_typed_dict, origin)
+
+    if isinstance(cls, UnionType):
+        return _describe_parametrized(cls, generic_params, is_optional, is_typed_dict, Union)
 
     if isinstance(cls, type) and len(params) == 0 and not is_typed_dict:
         params = _get_default_generic_params(cls, params)
@@ -155,6 +144,25 @@ def _describe_generic(cls: Type, generic_params: GenericParams) -> TypeDescripto
         is_dataclass=is_dataclass(cls),
         is_typed_dict=is_typed_dict,
     )
+
+
+def _describe_parametrized(cls, generic_params, is_optional, is_typed_dict, origin):
+    origin_is_dc = is_dataclass(origin)
+    if origin_is_dc:
+        params = _collect_type_vars(cls, generic_params)
+    else:
+        describe_ = lambda arg: describe(Any if type(arg) is TypeVar else arg, generic_params)
+        params = dict(enumerate(map(describe_, getattr(cls, '__args__', []))))
+    if isinstance(origin, type) and len(params) == 0:
+        params = _get_default_generic_params(origin, params)
+    descriptor = TypeDescriptor(
+        origin,
+        parameters=FrozenDict(params),
+        is_optional=is_optional,
+        is_dataclass=origin_is_dc,
+        is_typed_dict=is_typed_dict,
+    )
+    return descriptor
 
 
 def _collect_type_vars(alias: Any, generic_params: GenericParams) -> GenericParams:
