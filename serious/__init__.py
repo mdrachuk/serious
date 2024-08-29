@@ -20,4 +20,4 @@ from .json import JsonModel
 from .types import Timestamp, Email, FrozenList, FrozenDict
 from .validation import validate
 
-__version__ = '1.3.1'
+__version__ = '1.3.2'

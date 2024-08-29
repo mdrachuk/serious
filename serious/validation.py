@@ -43,6 +43,8 @@ def validate(obj: T) -> T:
         validate(invalid)  # raises ValidationError(...)
     """
     if hasattr(obj, '__validate__'):
+        if obj.__validate__.__module__.startswith("pydantic"):
+            return obj.__validate__(obj)
         result = obj.__validate__()  # type: ignore # method presence checked above
         assert result is None, 'Validators should not return anything. Raise ValidationError instead'
     return obj
