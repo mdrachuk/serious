@@ -53,8 +53,7 @@ class SerializationError(Exception):
         return f'Error during serialization of "{self.cls}"'
 
     def __str__(self):
-        exc_type = super().__str__()
-        return f'{exc_type}: {self.message}'
+        return self.message
 
 
 class LoadError(SerializationError):
@@ -86,11 +85,13 @@ class DumpError(SerializationError):
 
     @property
     def message(self):
-        return f'Failed to dump "{self._path}" of {self._object}: {self.__cause__}'
+        result = f'Failed to dump "{self._path}" of {self._object}'
+        if self.__cause__:
+            return f"{result}: {self.__cause__}"
+        return result
 
 
 class UnexpectedItem(LoadError):
-
     def __init__(self, cls: Type[Dataclass], data, fields: Collection[str]):
         self._fields = fields
         super().__init__(cls, [], data)

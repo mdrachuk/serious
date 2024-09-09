@@ -13,7 +13,7 @@ from __future__ import annotations
 __all__ = ['TypeDescriptor', 'describe', 'DescTypes', 'scan_types']
 
 from dataclasses import dataclass, fields, is_dataclass
-from types import UnionType
+from types import UnionType, NoneType
 from typing import Type, Any, TypeVar, get_type_hints, Dict, Mapping, List, Union, Iterable, Optional, cast
 
 from .types import FrozenDict, FrozenList
@@ -39,6 +39,17 @@ class TypeDescriptor:
     is_typed_dict: bool = False
 
     @property
+    def is_sqlalchemy_model(self):
+        from serious.serialization.field_serializers import SQLALCHEMY_INTEGRATION_ENABLED
+
+        if not SQLALCHEMY_INTEGRATION_ENABLED:
+            return False
+
+        from sqlalchemy.orm import DeclarativeMeta
+
+        return isinstance(self.cls, DeclarativeMeta)
+
+    @property
     def cls(self):  # Python fails when providing cls as a keyword parameter to dataclasses
         return self._cls
 
@@ -47,17 +58,46 @@ class TypeDescriptor:
         """A mapping of all dataclass or typed dict field names to their corresponding Type Descriptors.
 
         An empty mapping is returned if the object is not a dataclass."""
-        if self.is_dataclass or self.is_typed_dict:
+        if self.is_dataclass:
             types = get_type_hints(self.cls)  # type: Dict[str, Type]
             descriptors = {name: self.describe(type_) for name, type_ in types.items()}
-            if self.is_dataclass:
-                return {f.name: descriptors[f.name] for f in fields(self.cls)}
+            return {f.name: descriptors[f.name] for f in fields(self.cls)}
+        if self.is_typed_dict:
+            types = get_type_hints(self.cls)  # type: Dict[str, Type]
+            descriptors = {name: self.describe(type_) for name, type_ in types.items()}
             return {key: descriptors[key] for key in self.cls.__annotations__}
+        if self.is_sqlalchemy_model:
+            from sqlalchemy.orm import Mapped
+
+            _fields_names = [p.key for p in self._cls.__mapper__.attrs]
+            mapped_types = get_type_hints(self.cls)  # type: Dict[str, Mapped[Type] | Type]
+            descriptors = {
+                name: self.describe(
+                    type_.__args__[0] if issubclass(getattr(type_, "__origin__", NoneType), Mapped) else type_
+                )
+                for name, type_ in mapped_types.items()
+            }
+            return {f: descriptors[f] for f in _fields_names}
         return {}
 
     def describe(self, type_: Type) -> TypeDescriptor:
         return describe(type_, self.parameters)
 
+    def __repr__(self):
+        return f"<TypeDescriptor {str(self)}>"
+
+    def __str__(self):
+        results = f""
+        if self.is_optional:
+            results += "Optional["
+        results += getattr(self.cls, "__name__", str(self.cls))
+        if self.parameters:
+            results += (
+                "[" + ", ".join(f"{k}={v}" for k, v in self.parameters.items()) + "]"
+            )
+        if self.is_optional:
+            results += "]"
+        return results
 
 def describe(type_: Type, generic_params: Optional[GenericParams] = None) -> TypeDescriptor:
     """Creates a TypeDescriptor for the provided type.

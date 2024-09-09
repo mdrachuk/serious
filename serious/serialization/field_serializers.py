@@ -34,6 +34,12 @@ def field_serializers(custom: Iterable[Type[FieldSerializer]] = tuple()) -> Tupl
     :param custom: a list of custom serializers which are injected into the default list
 
     """
+
+    extras = []
+
+    if SQLALCHEMY_INTEGRATION_ENABLED:
+        extras.append(SqlAlchemyDeclarativeSerializer)
+
     return tuple([
         OptionalSerializer,
         UnionSerializer,
@@ -56,6 +62,7 @@ def field_serializers(custom: Iterable[Type[FieldSerializer]] = tuple()) -> Tupl
         TimeIsoSerializer,
         UuidSerializer,
         DecimalSerializer,
+        *extras,
     ])
 
 
@@ -690,3 +697,40 @@ class DecimalSerializer(FieldSerializer[Decimal, str]):
 
 def _matches(regex: Pattern, value: str) -> bool:
     return regex.match(value) is not None  # type: ignore # caller ensures str
+
+
+try:
+    from sqlalchemy.orm import DeclarativeMeta
+
+    SQLALCHEMY_INTEGRATION_ENABLED = True
+
+    class SqlAlchemyDeclarativeSerializer(
+        FieldSerializer[DeclarativeMeta, Dict[str, Any]]
+    ):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            self._field_serializers = {}
+            for field, desc in self.type.fields.items():
+                self._field_serializers[field] = Alias(self.root.find_serializer(desc))
+
+        @classmethod
+        def fits(cls, desc: TypeDescriptor) -> bool:
+            return desc.is_sqlalchemy_model
+
+        def load(self, data: Dict[str, Any], ctx: Loading) -> DeclarativeMeta:
+            if not isinstance(data, dict):
+                raise ValidationError("Expecting a dictionary")
+            items = {
+                key: ctx.run(f"{key}", serializer(key), data[key])
+                for key, serializer in self._field_serializers.items()
+            }
+            return self.type.cls(**items)
+
+        def dump(self, data: DeclarativeMeta, ctx: Dumping) -> Dict[str, Any]:
+            return {
+                key: ctx.run(f"{key}", serializer(key), getattr(data, key))
+                for key, serializer in self._field_serializers.items()
+            }
+
+except ImportError:
+    SQLALCHEMY_INTEGRATION_ENABLED = False
