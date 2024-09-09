@@ -38,9 +38,9 @@ class SerializationError(Exception):
     """Base for any non-validation error during load or dump."""
 
     def __init__(self, cls: Type, serializer_stack: Collection[SerializationStep]):
-        super().__init__()
         self.cls = cls
         self._path = self.__parse_stack(serializer_stack)
+        super().__init__(self.message)
 
     @staticmethod
     def __parse_stack(serializer_stack: Collection[SerializationStep]) -> str:
@@ -65,8 +65,8 @@ class LoadError(SerializationError):
     """
 
     def __init__(self, cls: Type, serializer_stack: Collection[SerializationStep], data: Mapping):
-        super().__init__(cls, serializer_stack)
         self._data = data
+        super().__init__(cls, serializer_stack)
 
     @property
     def message(self):
@@ -81,8 +81,8 @@ class DumpError(SerializationError):
     """
 
     def __init__(self, obj: Dataclass, serializer_stack: Collection[SerializationStep]):
-        super().__init__(type(obj), serializer_stack)
         self._object = obj
+        super().__init__(type(obj), serializer_stack)
 
     @property
     def message(self):
@@ -92,8 +92,8 @@ class DumpError(SerializationError):
 class UnexpectedItem(LoadError):
 
     def __init__(self, cls: Type[Dataclass], data, fields: Collection[str]):
-        super().__init__(cls, [], data)
         self._fields = fields
+        super().__init__(cls, [], data)
 
     @property
     def message(self):
@@ -107,8 +107,8 @@ class UnexpectedItem(LoadError):
 class MissingField(LoadError):
 
     def __init__(self, cls: Type[Dataclass], data, fields: Collection[str]):
-        super().__init__(cls, [], data)
         self._fields = fields
+        super().__init__(cls, [], data)
 
     @property
     def message(self):
@@ -129,6 +129,7 @@ class ModelError(Exception):
 
     def __init__(self, cls: Type):
         self.cls = cls
+        super().__init__(self.message)
 
     @property
     def message(self):
@@ -138,12 +139,12 @@ class ModelError(Exception):
 class FieldMissingSerializer(ModelError):
 
     def __init__(self, cls: Type, desc: TypeDescriptor):
-        super().__init__(cls)
         self.desc = desc
+        super().__init__(cls)
 
     @property
     def message(self):
-        return (f'{class_path(self.cls)} contains unserializable member: {self.desc}.'
+        return (f'{class_path(self.cls)} contains unserializable member: {self.desc}. '
                 f'Create a serializer fitting the descriptor and pass it to the model ``serializers``.')
 
 
@@ -160,8 +161,8 @@ class ModelContainsAny(ModelError):
 class MutableTypesInModel(ModelError):
 
     def __init__(self, cls: Type, mutable_types: Iterable[Type]):
-        super().__init__(cls)
         self.mutable_types = mutable_types
+        super().__init__(cls)
 
     @property
     def message(self):
