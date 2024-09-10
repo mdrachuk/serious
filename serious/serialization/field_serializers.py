@@ -40,6 +40,9 @@ def field_serializers(custom: Iterable[Type[FieldSerializer]] = tuple()) -> Tupl
     if SQLALCHEMY_INTEGRATION_ENABLED:
         extras.append(SqlAlchemyDeclarativeSerializer)
 
+    if PYDANTIC_INTEGRATION_ENABLED:
+        extras.append(PydanticModelSerializer)
+
     return tuple([
         OptionalSerializer,
         UnionSerializer,
@@ -734,3 +737,23 @@ try:
 
 except ImportError:
     SQLALCHEMY_INTEGRATION_ENABLED = False
+
+try:
+    from pydantic import BaseModel
+
+    PYDANTIC_INTEGRATION_ENABLED = True
+
+
+    class PydanticModelSerializer(FieldSerializer[Type[BaseModel], str]):
+        @classmethod
+        def fits(cls, desc: TypeDescriptor) -> bool:
+            return issubclass(desc.cls, BaseModel)
+
+        def dump(self, value: BaseModel, ctx: Dumping) -> str:
+            return value.model_dump_json()
+
+        def load(self, value: str, ctx: Loading) -> BaseModel:
+            return self.type.cls.parse_raw(value)
+
+except ImportError:
+    PYDANTIC_INTEGRATION_ENABLED = False

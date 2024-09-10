@@ -16,8 +16,8 @@ from serious.errors import ModelContainsAny, MissingField, UnexpectedItem, Valid
 from serious.utils import Dataclass
 from serious.validation import validate
 from .check_immutable import check_immutable
-from .key_mapper import KeyMapper, NoopKeyMapper
 from .context import Loading, Dumping
+from .key_mapper import KeyMapper, NoopKeyMapper
 from .serializer import FieldSerializer
 
 T = TypeVar('T')
@@ -172,15 +172,10 @@ class SeriousModel(Generic[T]):
 
         :param descriptor: descriptor of a field to serialize.
         """
-        serializer = self._find_serializer(descriptor)
-        if not serializer:
-            raise FieldMissingSerializer(self.descriptor.cls, descriptor)
-        return serializer
-
-    def _find_serializer(self, desc: TypeDescriptor) -> Optional[FieldSerializer]:
-        sr_generator = (serializer(desc, self) for serializer in self.serializers if serializer.fits(desc))
-        optional_sr = next(sr_generator, None)
-        return optional_sr
+        for serializer in self.serializers:
+            if serializer.fits(descriptor):
+                return serializer(descriptor, self)
+        raise FieldMissingSerializer(self.descriptor.cls, descriptor)
 
 
 def check_for_missing(cls: Type[Dataclass], data: Mapping) -> None:
