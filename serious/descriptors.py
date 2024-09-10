@@ -63,22 +63,27 @@ class TypeDescriptor:
             descriptors = {name: self.describe(type_) for name, type_ in types.items()}
             return {f.name: descriptors[f.name] for f in fields(self.cls)}
         if self.is_typed_dict:
-            types = get_type_hints(self.cls)  # type: Dict[str, Type]
+            types = get_type_hints(self.cls)
             descriptors = {name: self.describe(type_) for name, type_ in types.items()}
             return {key: descriptors[key] for key in self.cls.__annotations__}
         if self.is_sqlalchemy_model:
-            from sqlalchemy.orm import Mapped
 
             _fields_names = [p.key for p in self._cls.__mapper__.attrs]
-            mapped_types = get_type_hints(self.cls)  # type: Dict[str, Mapped[Type] | Type]
+            mapped_types = get_type_hints(self.cls)
             descriptors = {
-                name: self.describe(
-                    type_.__args__[0] if issubclass(getattr(type_, "__origin__", NoneType), Mapped) else type_
-                )
+                name: self.describe(self._sqlalchemy_mapped_type(type_))
                 for name, type_ in mapped_types.items()
             }
             return {f: descriptors[f] for f in _fields_names}
         return {}
+
+    def _sqlalchemy_mapped_type(self, type_) -> Type:
+        from sqlalchemy.orm import Mapped
+
+        if issubclass(getattr(type_, "__origin__", NoneType), Mapped):
+            return type_.__args__[0]  #type: ignore
+
+        return type_
 
     def describe(self, type_: Type) -> TypeDescriptor:
         return describe(type_, self.parameters)

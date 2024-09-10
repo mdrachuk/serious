@@ -35,7 +35,7 @@ def field_serializers(custom: Iterable[Type[FieldSerializer]] = tuple()) -> Tupl
 
     """
 
-    extras = []
+    extras: List[Type[FieldSerializer]] = []
 
     if SQLALCHEMY_INTEGRATION_ENABLED:
         extras.append(SqlAlchemyDeclarativeSerializer)
@@ -744,7 +744,7 @@ try:
     PYDANTIC_INTEGRATION_ENABLED = True
 
 
-    class PydanticModelSerializer(FieldSerializer[Type[BaseModel], str]):
+    class PydanticModelSerializer(FieldSerializer[BaseModel, str]):
         @classmethod
         def fits(cls, desc: TypeDescriptor) -> bool:
             return issubclass(desc.cls, BaseModel)
