@@ -12,6 +12,9 @@ from __future__ import annotations
 
 __all__ = ['TypeDescriptor', 'describe', 'DescTypes', 'scan_types']
 
+import datetime
+import decimal
+import uuid
 from dataclasses import dataclass, fields, is_dataclass
 from types import UnionType, NoneType
 from typing import Type, Any, TypeVar, get_type_hints, Dict, Mapping, List, Union, Iterable, Optional, cast
@@ -67,13 +70,16 @@ class TypeDescriptor:
             descriptors = {name: self.describe(type_) for name, type_ in types.items()}
             return {key: descriptors[key] for key in self.cls.__annotations__}
         if self.is_sqlalchemy_model:
-
             _fields_names = [p.key for p in self._cls.__mapper__.attrs]
             mapped_types = get_type_hints(self.cls)
             descriptors = {
                 name: self.describe(self._sqlalchemy_mapped_type(type_))
                 for name, type_ in mapped_types.items()
             }
+            for f in _fields_names:
+                if f not in descriptors:
+                    type_ = self.cls.__mapper__.columns[f].type
+                    descriptors[f] = self.describe(_get_sqlalchemy_builtin_type(type_))
             return {f: descriptors[f] for f in _fields_names}
         return {}
 
@@ -115,6 +121,48 @@ def describe(type_: Type, generic_params: Optional[GenericParams] = None) -> Typ
         return param
     return _describe_generic(type_, generic_params)
 
+
+def _get_sqlalchemy_builtin_type(column_type):
+    from sqlalchemy.sql.sqltypes import (
+        String, Enum, Text, Unicode, UnicodeText, VARCHAR, NVARCHAR, CHAR, NCHAR, NullType,
+        Integer, SmallInteger, BigInteger, Float, Double, REAL, NUMERIC, DECIMAL, Numeric,
+        Boolean, DateTime, TIMESTAMP, DATETIME, Date, Time, Interval, LargeBinary, JSON, ARRAY, PickleType, UUID,
+    )
+
+    if isinstance(column_type, (String, Enum, Text, Unicode, UnicodeText, VARCHAR, NVARCHAR, CHAR, NCHAR)):
+        if isinstance(column_type, Enum):
+            return column_type.enum_class  # Return the specific enum class
+        return str
+    elif isinstance(column_type, (Integer, SmallInteger, BigInteger)):
+        return int
+    elif isinstance(column_type, (Float, Double, REAL, NUMERIC, DECIMAL)):
+        return float
+    elif isinstance(column_type, Numeric):
+        return decimal.Decimal
+    elif isinstance(column_type, Boolean):
+        return bool
+    elif isinstance(column_type, (DateTime, TIMESTAMP, DATETIME)):
+        return datetime.datetime
+    elif isinstance(column_type, Date):
+        return datetime.date
+    elif isinstance(column_type, Time):
+        return datetime.time
+    elif isinstance(column_type, Interval):
+        return datetime.timedelta
+    elif isinstance(column_type, LargeBinary):
+        return bytes
+    elif isinstance(column_type, JSON):
+        return dict
+    elif isinstance(column_type, ARRAY):
+        return list
+    elif isinstance(column_type, PickleType):
+        raise NotImplementedError("PickleType is not supported")
+    elif isinstance(column_type, UUID):
+        return uuid.UUID
+    elif isinstance(column_type, NullType):
+        return type(None)
+    else:
+        raise NotImplementedError(f"Type {column_type} is not supported")
 
 _any_type_desc = TypeDescriptor(Any, FrozenDict())  # type: ignore
 _generic_params: Dict[Type, Dict[int, TypeDescriptor]] = {

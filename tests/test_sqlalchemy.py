@@ -1,10 +1,11 @@
 from dataclasses import dataclass
+from datetime import datetime
 from enum import Enum
 
 import sqlalchemy
-from sqlalchemy import Column, String, Integer
+from sqlalchemy import Column, String, Integer, DateTime
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, declared_attr
 
 from serious import DictModel
 
@@ -22,6 +23,10 @@ class User(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     name: Mapped[str]
     type: Mapped[UserType]
+
+    @declared_attr
+    def created_at(cls):
+        return Column(DateTime, nullable=False)
 
 
 @dataclass
@@ -49,12 +54,13 @@ class GroupContainer:
 
 def test_sqlalchemy_mapped_model_is_serialized():
     model = DictModel(UserContainer)
-    container = model.load({"user": {"id": 1, "name": "John", "type": "person"}})
+    container = model.load({"user": {"id": 1, "name": "John", "type": "person", "created_at": "2021-01-01T00:00:00"}})
     assert container.user.type is UserType.person
     assert container.user.name == "John"
+    assert container.user.created_at == datetime.fromisoformat("2021-01-01T00:00:00")
 
     assert model.dump(container) == {
-        "user": {"id": 1, "name": "John", "type": "person"}
+        "user": {"id": 1, "name": "John", "type": "person", "created_at": "2021-01-01T00:00:00"}
     }
 
 
