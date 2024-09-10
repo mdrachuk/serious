@@ -724,14 +724,14 @@ try:
             if not isinstance(data, dict):
                 raise ValidationError("Expecting a dictionary")
             items = {
-                key: ctx.run(f"{key}", serializer(key), data[key])
+                key: ctx.run(f".{key}", serializer(key), data[key])
                 for key, serializer in self._field_serializers.items()
             }
             return self.type.cls(**items)
 
         def dump(self, data: DeclarativeMeta, ctx: Dumping) -> Dict[str, Any]:
             return {
-                key: ctx.run(f"{key}", serializer(key), getattr(data, key))
+                key: ctx.run(f".{key}", serializer(key), getattr(data, key))
                 for key, serializer in self._field_serializers.items()
             }
 
