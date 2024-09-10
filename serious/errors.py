@@ -85,10 +85,9 @@ class DumpError(SerializationError):
 
     @property
     def message(self):
-        result = f'Failed to dump "{self._path}" of {self._object}'
         if self.__cause__:
-            return f"{result}: {self.__cause__}"
-        return result
+            return f"Failed to dump \"{self._path}\": {self.__cause__}. Object: {self._object}"
+        return f'Failed to dump "{self._path}". Object: {self._object}'
 
 
 class UnexpectedItem(LoadError):
