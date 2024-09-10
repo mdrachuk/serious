@@ -750,7 +750,7 @@ try:
             return issubclass(desc.cls, BaseModel)
 
         def dump(self, value: BaseModel, ctx: Dumping) -> str:
-            return value.model_dump_json()
+            return value.json()
 
         def load(self, value: str, ctx: Loading) -> BaseModel:
             return self.type.cls.parse_raw(value)
