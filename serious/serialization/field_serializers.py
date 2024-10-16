@@ -278,6 +278,8 @@ class TypedDictSerializer(FieldSerializer[Dict[str, Any], Dict[str, Any]]):
         return self._serialize_typed_dict(data, ctx)
 
     def _serialize_typed_dict(self, data: Dict[str, Any], ctx: Context) -> Dict[str, Any]:
+        if missing := {field for field in self._field_serializers if field not in data}:
+            raise ValidationError(f"Missing fields: {missing}")
         return {
             key: ctx.run(f'[key]', serializer(key), data[key])
             for key, serializer in self._field_serializers.items()
@@ -714,7 +716,8 @@ try:
             super().__init__(*args, **kwargs)
             self._field_serializers = {}
             for field, desc in self.type.fields.items():
-                self._field_serializers[field] = Alias(self.root.find_serializer(desc))
+                if not (desc.is_sqlalchemy_model or any(p.is_sqlalchemy_model for p in desc.parameters.values())):
+                    self._field_serializers[field] = Alias(self.root.find_serializer(desc))
 
         @classmethod
         def fits(cls, desc: TypeDescriptor) -> bool:
@@ -723,6 +726,8 @@ try:
         def load(self, data: Dict[str, Any], ctx: Loading) -> DeclarativeMeta:
             if not isinstance(data, dict):
                 raise ValidationError("Expecting a dictionary")
+            if missing := {field for field in self._field_serializers if field not in data}:
+                raise ValidationError(f"Missing fields: {missing}")
             items = {
                 key: ctx.run(f".{key}", serializer(key), data[key])
                 for key, serializer in self._field_serializers.items()

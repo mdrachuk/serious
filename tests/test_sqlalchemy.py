@@ -1,11 +1,12 @@
+from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 
 import sqlalchemy
-from sqlalchemy import Column, String, Integer, DateTime
+from sqlalchemy import Column, String, Integer, DateTime, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import Mapped, mapped_column, declared_attr
+from sqlalchemy.orm import Mapped, mapped_column, declared_attr, relationship
 
 from serious import DictModel
 
@@ -24,10 +25,12 @@ class User(Base):
     name: Mapped[str]
     type: Mapped[UserType]
 
+    group_id: Mapped[int | None] = mapped_column(ForeignKey("groups.id"))
+    group: Mapped[Group | None] = relationship("Group", back_populates="users")
+
     @declared_attr
     def created_at(cls):
         return Column(DateTime, nullable=False)
-
 
 @dataclass
 class UserContainer:
@@ -46,6 +49,8 @@ class Group(Base):
     name: str = Column(String(255))
     type: GroupType = Column(sqlalchemy.Enum(GroupType))
 
+    users: Mapped[list[User]] = relationship("User", back_populates="group")
+
 
 @dataclass
 class GroupContainer:
@@ -54,13 +59,13 @@ class GroupContainer:
 
 def test_sqlalchemy_mapped_model_is_serialized():
     model = DictModel(UserContainer)
-    container = model.load({"user": {"id": 1, "name": "John", "type": "person", "created_at": "2021-01-01T00:00:00"}})
+    container = model.load({"user": {"id": 1, "name": "John", "type": "person", "created_at": "2021-01-01T00:00:00", "group_id": 12}})
     assert container.user.type is UserType.person
     assert container.user.name == "John"
     assert container.user.created_at == datetime.fromisoformat("2021-01-01T00:00:00")
 
     assert model.dump(container) == {
-        "user": {"id": 1, "name": "John", "type": "person", "created_at": "2021-01-01T00:00:00"}
+        "user": {"id": 1, "name": "John", "type": "person", "created_at": "2021-01-01T00:00:00", "group_id": 12}
     }
 
 
