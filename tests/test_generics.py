@@ -8,6 +8,7 @@ ID = TypeVar('ID')
 M = TypeVar('M')
 C = TypeVar('C')
 
+NUMBER = TypeVar('NUMBER', int, float)
 
 @dataclass(frozen=True)
 class Envelope(Generic[ID, M]):
@@ -93,6 +94,43 @@ class TestCollectionGeneric:
         self.model = DictModel(Recipe)
         self.o = Recipe([Author('harry'), Author('hermione')], ['magic', 'shrooms'])
         self.d = {'authors': [{'name': 'harry'}, {'name': 'hermione'}], 'tags': ['magic', 'shrooms']}
+
+    def test_load(self):
+        actual = self.model.load(self.d)
+        assert actual == self.o
+
+    def test_dump(self):
+        actual = self.model.dump(self.o)
+        assert actual == self.d
+
+
+@dataclass
+class NumberContainer(Generic[NUMBER]):
+    number: NUMBER
+
+
+class TestConstrainedGeneric:
+
+    def setup_class(self):
+        self.model = DictModel(NumberContainer)
+        self.o = NumberContainer(42)
+        self.d = {'number': {"__type__": "int", "__value__": 42}}
+
+    def test_load(self):
+        actual = self.model.load(self.d)
+        assert actual == self.o
+
+    def test_dump(self):
+        actual = self.model.dump(self.o)
+        assert actual == self.d
+
+
+class TestConstrainedGenericParametrized:
+
+    def setup_class(self):
+        self.model = DictModel(NumberContainer[float])
+        self.o = NumberContainer(42.0)
+        self.d = {'number': 42.0}
 
     def test_load(self):
         actual = self.model.load(self.d)

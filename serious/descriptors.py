@@ -17,7 +17,7 @@ import decimal
 import uuid
 from dataclasses import dataclass, fields, is_dataclass
 from types import UnionType, NoneType
-from typing import Type, Any, TypeVar, get_type_hints, Dict, Mapping, List, Union, Iterable, Optional, cast
+from typing import Type, Any, TypeVar, get_type_hints, Dict, Mapping, List, Union, Iterable, Optional, cast, Generic
 
 from .types import FrozenDict, FrozenList
 
@@ -230,6 +230,10 @@ def _describe_generic(cls: Type, generic_params: GenericParams) -> TypeDescripto
 
     if isinstance(cls, type) and len(params) == 0 and not is_typed_dict:
         params = _get_default_generic_params(cls, params)
+
+    if isinstance(cls, TypeVar) and cls.__constraints__:
+        return _describe_generic(Union[cls.__constraints__], generic_params)
+
     return TypeDescriptor(
         cls,
         parameters=FrozenDict(params),
@@ -244,7 +248,12 @@ def _describe_parametrized(cls, generic_params, is_optional, is_typed_dict, orig
     if origin_is_dc:
         params = _collect_type_vars(cls, generic_params)
     else:
-        describe_ = lambda arg: describe(Any if type(arg) is TypeVar else arg, generic_params)
+        def describe_(arg):
+            if type(arg) is TypeVar:
+                if arg.__constraints__:
+                    return _describe_generic(Union[arg.__constraints__], generic_params)
+                return describe(Any, generic_params)
+            return describe(arg, generic_params)
         params = dict(enumerate(map(describe_, getattr(cls, '__args__', []))))
     if isinstance(origin, type) and len(params) == 0:
         params = _get_default_generic_params(origin, params)
