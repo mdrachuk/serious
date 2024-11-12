@@ -80,7 +80,7 @@ class Context(ABC):
 class Loading(Context):
     """Context used during **load** operations."""
 
-    def __init__(self, *, validating: bool, root: str = '__root__', steps: Deque[SerializationStep] = None):
+    def __init__(self, *, validating: bool, root: str = '__root__', steps: Deque[SerializationStep] | None = None):
         if steps is None:
             steps = deque()
             steps.append(root)
@@ -100,7 +100,7 @@ class Loading(Context):
 class Dumping(Context):
     """Context used during **dump** operations."""
 
-    def __init__(self, *, validating: bool, root: str = '.', steps: Deque[SerializationStep] = None):
+    def __init__(self, *, validating: bool, root: str = '.', steps: Deque[SerializationStep] | None = None):
         if steps is None:
             steps = deque()
             steps.append(root)
