@@ -77,7 +77,7 @@ class AbstractValidationOptions(ABC):
     def test_on_default_is_on_load_only(self):
         model = self.new_model(Treasure)
         assert model.load(self.valid_data)
-        with pytest.raises(ValidationError):
+        with pytest.raises(ValidationError, match="Treasure.__validate__\(\)"):
             model.load(self.invalid_data)
         assert model.dump(self.valid_o)
         assert model.dump(self.invalid_o)
@@ -85,7 +85,7 @@ class AbstractValidationOptions(ABC):
     def test_on_load_only(self):
         model = self.new_model(Treasure, validate_on_load=True, validate_on_dump=False)
         assert model.load(self.valid_data)
-        with pytest.raises(ValidationError):
+        with pytest.raises(ValidationError, match="Treasure.__validate__\(\)"):
             model.load(self.invalid_data)
         assert model.dump(self.valid_o)
         assert model.dump(self.invalid_o)
@@ -95,7 +95,7 @@ class AbstractValidationOptions(ABC):
         assert model.load(self.valid_data)
         assert model.load(self.invalid_data)
         assert model.dump(self.valid_o)
-        with pytest.raises(ValidationError):
+        with pytest.raises(ValidationError, match="Treasure.__validate__\(\)"):
             model.dump(self.invalid_o)
 
 
@@ -118,5 +118,5 @@ class RequiredDecimal:
 
 def test_dump_validation():
     model = DictModel(RequiredDecimal, validate_on_dump=True)
-    with pytest.raises(ValidationError):
+    with pytest.raises(ValidationError, match='RequiredDecimal.decimal'):
         model.dump(RequiredDecimal(decimal=None))

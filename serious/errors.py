@@ -39,14 +39,8 @@ class SerializationError(Exception):
 
     def __init__(self, cls: Type, serializer_stack: Collection[SerializationStep]):
         self.cls = cls
-        self._path = self.__parse_stack(serializer_stack)
+        self._path = "".join(serializer_stack)
         super().__init__(self.message)
-
-    @staticmethod
-    def __parse_stack(serializer_stack: Collection[SerializationStep]) -> str:
-        if len(serializer_stack) == 0:
-            return ''
-        return ''.join(serializer_stack)[1:]
 
     @property
     def message(self):

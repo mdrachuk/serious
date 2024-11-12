@@ -236,7 +236,7 @@ class LiteralSerializer(FieldSerializer[Any, Any]):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._dump_values = {
-            v.cls: self.root.find_serializer(self.type.describe(v.cls.__class__)).dump(v, Dumping(validating=False))
+            v.cls: self.root.find_serializer(self.type.describe(v.cls.__class__)).dump(v, Dumping(validating=False, root='root'))
             for v in self.type.parameters.values()
         }
         self._load_values = {

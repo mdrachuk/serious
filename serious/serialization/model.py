@@ -14,7 +14,6 @@ from serious.descriptors import scan_types, TypeDescriptor
 from serious.errors import ModelContainsAny, MissingField, UnexpectedItem, ValidationError, \
     LoadError, DumpError, FieldMissingSerializer
 from serious.utils import Dataclass
-from serious.validation import validate
 from .check_immutable import check_immutable
 from .context import Loading, Dumping
 from .key_mapper import KeyMapper, NoopKeyMapper
@@ -93,8 +92,10 @@ class SeriousModel(Generic[T]):
 
         check_is_instance(data, Mapping, f'Invalid data for {self.cls}')  # type: ignore
         root = _ctx is None
-        loading: Loading
-        loading = Loading(validating=self.validate_on_load) if root else _ctx  # type: ignore # checked above
+        loading: Loading = Loading(
+            validating=self.validate_on_load,
+            root=self.cls.__name__,
+        ) if root else _ctx  # type: ignore # checked above
         mut_data = {self.keys.to_model(key): value for key, value in data.items()}
         if self.allow_missing:
             for field in fields_missing_from(mut_data, self.cls):
@@ -111,9 +112,11 @@ class SeriousModel(Generic[T]):
             }
             result = self.cls(**init_kwargs)  # type: ignore # not an object
             if self.validate_on_load:
-                validate(result)
+                loading.validate(result)
             return result
-        except ValidationError:
+        except ValidationError as e:
+            if root:
+                raise ValidationError(f"{loading.failed_validation_at()}: {e}") from e
             raise
         except Exception as e:
             if root:
@@ -125,7 +128,10 @@ class SeriousModel(Generic[T]):
 
         check_is_instance(o, self.cls)
         root = _ctx is None
-        dumping: Dumping = Dumping(validating=False) if root else _ctx  # type: ignore # checked above
+        dumping: Dumping = Dumping(
+            validating=False,
+            root=self.cls.__name__,
+        ) if root else _ctx  # type: ignore # checked above
         try:
             _s = self.keys.to_serialized
             result = {
@@ -133,9 +139,11 @@ class SeriousModel(Generic[T]):
                 for field, serializer in self.serializers_by_field.items()
             }
             if self.validate_on_dump:
-                validate(self.load(result))
+                dumping.validate(self.load(result, dumping.validation_proxy()))
             return result
-        except ValidationError:
+        except ValidationError as e:
+            if root:
+                raise ValidationError(f"{dumping.failed_validation_at()}: {e}") from e
             raise
         except Exception as e:
             if root:
