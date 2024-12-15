@@ -281,4 +281,7 @@ def test_decimal_load_validation():
         serializer.load(9.8, ctx)
     with pytest.raises(ValidationError):
         serializer.load('', ctx)
+    assert serializer.load('.5', ctx) == Decimal('0.5')
+    assert serializer.load('-0005', ctx) == Decimal('-5')
+    assert serializer.load('+3.00001', ctx) == Decimal('3.00001')
     assert serializer.load('9.8', ctx) == Decimal('9.8')
