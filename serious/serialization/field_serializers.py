@@ -14,17 +14,17 @@ from datetime import datetime, date, time
 from decimal import Decimal
 from enum import Enum
 from types import UnionType
-from typing import Any, Optional, Dict, List, Union, Pattern, Iterable, Type, Tuple, Literal, TypeVar
+from typing import Any, Optional, Dict, List, Union, Pattern, Iterable, Type, Tuple, Literal
 from uuid import UUID
 
-from serious.descriptors import TypeDescriptor
+from serious.descriptors import Descriptor
 from serious.errors import ValidationError
 from serious.types import Timestamp, FrozenList, FrozenDict
 from .context import Context, Loading, Dumping
-from .serializer import FieldSerializer, Serializer
+from .serializer import Serializer
 
 
-def field_serializers(custom: Iterable[Type[FieldSerializer]] = tuple()) -> Tuple[Type[FieldSerializer], ...]:
+def field_serializers(custom: Iterable[Type[Serializer]] = tuple()) -> Tuple[Type[Serializer], ...]:
     """Default list of Serious field serializers.
 
     Returns a frozen collection of field serializers in the default order.
@@ -35,7 +35,7 @@ def field_serializers(custom: Iterable[Type[FieldSerializer]] = tuple()) -> Tupl
 
     """
 
-    extras: List[Type[FieldSerializer]] = []
+    extras: List[Type[Serializer]] = []
 
     if SQLALCHEMY_INTEGRATION_ENABLED:
         extras.append(SqlAlchemyDeclarativeSerializer)
@@ -69,7 +69,7 @@ def field_serializers(custom: Iterable[Type[FieldSerializer]] = tuple()) -> Tupl
     ])
 
 
-class OptionalSerializer(FieldSerializer[Optional[Any], Optional[Any]]):
+class OptionalSerializer(Serializer[Optional[Any], Optional[Any]]):
     """
     A serializer for field marked as `Optional`. An optional field has internally a serializer for the target type,
     but first checks if the loaded data is `None`.
@@ -93,11 +93,11 @@ class OptionalSerializer(FieldSerializer[Optional[Any], Optional[Any]]):
         return None if value is None else self._serializer.dump(value, ctx)
 
     @classmethod
-    def fits(cls, desc: TypeDescriptor) -> bool:
+    def fits(cls, desc: Descriptor) -> bool:
         return desc.is_optional
 
 
-class UnionSerializer(FieldSerializer[Any, Dict]):
+class UnionSerializer(Serializer[Any, Dict]):
     """
     A serializer for Union fields.
 
@@ -150,11 +150,11 @@ class UnionSerializer(FieldSerializer[Any, Dict]):
         }
 
     @classmethod
-    def fits(cls, desc: TypeDescriptor) -> bool:
+    def fits(cls, desc: Descriptor) -> bool:
         return desc.cls is Union or isinstance(desc.cls, UnionType)
 
 
-class EnumSerializer(FieldSerializer[Any, Any]):
+class EnumSerializer(Serializer[Any, Any]):
     """Enum value serializer. Note that output depends on enum value, so it can be `str`, `int`, etc.
 
     It is possible to serialize enums of non-S type if the enum is supplying this type as parent class.
@@ -183,7 +183,7 @@ class EnumSerializer(FieldSerializer[Any, Any]):
         self._serializer = self._value_serializer()
         self._enum_values = {e.name for e in list(self.type.cls)}
 
-    def _value_serializer(self) -> Optional[FieldSerializer]:
+    def _value_serializer(self) -> Optional[Serializer]:
         cls = self.type.cls
         bases = cls.__bases__
         while len(bases) == 1:
@@ -212,11 +212,11 @@ class EnumSerializer(FieldSerializer[Any, Any]):
         return value.name
 
     @classmethod
-    def fits(cls, desc: TypeDescriptor) -> bool:
+    def fits(cls, desc: Descriptor) -> bool:
         return issubclass(desc.cls, Enum)
 
 
-class AnySerializer(FieldSerializer[Any, Any]):
+class AnySerializer(Serializer[Any, Any]):
     """Serializer for `Any` fields."""
 
     def load(self, value: Any, ctx: Loading) -> Any:
@@ -226,11 +226,11 @@ class AnySerializer(FieldSerializer[Any, Any]):
         return value
 
     @classmethod
-    def fits(cls, desc: TypeDescriptor) -> bool:
+    def fits(cls, desc: Descriptor) -> bool:
         return desc.cls is Any
 
 
-class LiteralSerializer(FieldSerializer[Any, Any]):
+class LiteralSerializer(Serializer[Any, Any]):
     """Serializer for `Any` fields."""
 
     def __init__(self, *args, **kwargs):
@@ -251,21 +251,21 @@ class LiteralSerializer(FieldSerializer[Any, Any]):
         return value
 
     @classmethod
-    def fits(cls, desc: TypeDescriptor) -> bool:
+    def fits(cls, desc: Descriptor) -> bool:
         return desc.cls is Literal
 
 
-class TypedDictSerializer(FieldSerializer[Dict[str, Any], Dict[str, Any]]):
+class TypedDictSerializer(Serializer[Dict[str, Any], Dict[str, Any]]):
     """Serializer for `TypedDict` fields."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._field_serializers = {}
         for field, desc in self.type.fields.items():
-            self._field_serializers[field] = Alias(self.root.find_serializer(desc))
+            self._field_serializers[field] = self.root.find_serializer(desc)
 
     @classmethod
-    def fits(cls, desc: TypeDescriptor) -> bool:
+    def fits(cls, desc: Descriptor) -> bool:
         return desc.is_typed_dict
 
     def load(self, data: Dict[str, Any], ctx: Loading) -> Dict[str, Any]:
@@ -281,12 +281,12 @@ class TypedDictSerializer(FieldSerializer[Dict[str, Any], Dict[str, Any]]):
         if missing := {field for field in self._field_serializers if field not in data}:
             raise ValidationError(f"Missing fields: {missing}")
         return {
-            key: ctx.run(f'[key]', serializer(key), data[key])
+            key: ctx.run(f'[key]', serializer, data[key])
             for key, serializer in self._field_serializers.items()
         }
 
 
-class DictSerializer(FieldSerializer[Dict[str, Any], Dict[str, Any]]):
+class DictSerializer(Serializer[Dict[str, Any], Dict[str, Any]]):
     """Serializer for `dict` fields with `str` keys (`Dict[str, Any]`)."""
 
     def __init__(self, *args, **kwargs):
@@ -298,7 +298,7 @@ class DictSerializer(FieldSerializer[Dict[str, Any], Dict[str, Any]]):
         self._value_serializer = self.root.find_serializer(value_desc)
 
     @classmethod
-    def fits(cls, desc: TypeDescriptor) -> bool:
+    def fits(cls, desc: Descriptor) -> bool:
         return issubclass(desc.cls, dict) or issubclass(desc.cls, FrozenDict)
 
     def load(self, data: Dict[str, Any], ctx: Loading) -> Dict[str, Any]:
@@ -311,10 +311,8 @@ class DictSerializer(FieldSerializer[Dict[str, Any], Dict[str, Any]]):
         return self._serialize_dict(data, ctx)
 
     def _serialize_dict(self, data: Dict[str, Any], ctx: Context) -> Dict[str, Any]:
-        key_serializer = Alias(self._key_serializer)
-        value_serializer = Alias(self._value_serializer)
         return {
-            ctx.run(f'#{key}', key_serializer(key), key): ctx.run(f'[{key}]', value_serializer(key), value)
+            ctx.run(f'#{key}', self._key_serializer, key): ctx.run(f'[{key}]', self._value_serializer, value)
             for key, value in data.items()
         }
 
@@ -322,7 +320,7 @@ class DictSerializer(FieldSerializer[Dict[str, Any], Dict[str, Any]]):
 Collection = Union[list, set, frozenset]
 
 
-class CollectionSerializer(FieldSerializer[Collection, list]):
+class CollectionSerializer(Serializer[Collection, list]):
     """Serializer for lists, sets, and frozensets."""
 
     def __init__(self, *args, **kwargs):
@@ -331,7 +329,7 @@ class CollectionSerializer(FieldSerializer[Collection, list]):
         self._item_type = self._serializer.type
 
     @classmethod
-    def fits(cls, desc: TypeDescriptor) -> bool:
+    def fits(cls, desc: Descriptor) -> bool:
         return (issubclass(desc.cls, (list, set, frozenset, FrozenList))
                 or (issubclass(desc.cls, tuple)
                     and len(desc.parameters) == 2
@@ -347,11 +345,10 @@ class CollectionSerializer(FieldSerializer[Collection, list]):
         return self._serialize_collection(value, ctx)
 
     def _serialize_collection(self, data: Any, ctx: Context) -> List[Any]:
-        serializer = Alias(self._serializer)
-        return [ctx.run(f'[{i}]', serializer(i), item) for i, item in enumerate(data)]
+        return [ctx.run(f'[{i}]', self._serializer, item) for i, item in enumerate(data)]
 
 
-class TupleSerializer(FieldSerializer[tuple, list]):
+class TupleSerializer(Serializer[tuple, list]):
     """Serializer for Python tuples."""
 
     def __init__(self, *args, **kwargs):
@@ -360,7 +357,7 @@ class TupleSerializer(FieldSerializer[tuple, list]):
         self._size = len(self._serializers)
 
     @classmethod
-    def fits(cls, desc: TypeDescriptor) -> bool:
+    def fits(cls, desc: Descriptor) -> bool:
         return issubclass(desc.cls, tuple)
 
     def load(self, value: list, ctx: Loading) -> tuple:
@@ -375,61 +372,15 @@ class TupleSerializer(FieldSerializer[tuple, list]):
         return self._serialize_tuple(value, ctx)
 
     def _serialize_tuple(self, data: Any, ctx: Context) -> List[Any]:
-        serializer = OrdinalAlias(self._serializers)
-        return [ctx.run(f'[{i}]', serializer(i), item) for i, item in enumerate(data)]
+        return [ctx.run(f'[{i}]', self._serializers[i], item) for i, item in enumerate(data)]
 
 
-class Alias(Serializer):
-    """Serializes values using the constructor parameter, but step name via calling instance as a function."""
 
-    def __init__(self, serializer):
-        self._serializer = serializer
-
-    def __call__(self, key: Union[str, int]) -> Alias:
-        self._key = key
-        return self
-
-    def step_name(self) -> str:
-        return f'[{self._key}]'
-
-    def load(self, value: Any, ctx: Loading) -> Any:
-        return self._serializer.load(value, ctx)
-
-    def dump(self, value: Any, ctx: Dumping) -> Any:
-        return self._serializer.dump(value, ctx)
-
-
-S = TypeVar("S", bound=Serializer)
-
-
-class OrdinalAlias(Serializer[Any, Any]):
-    """Serializes values using the provided serializer at the currently set index.
-    The index is set via calling instance as a function.
-    Step name is changed to match the index.
-    """
-
-    def __init__(self, serializers: List[S]):
-        self._serializers = serializers
-
-    def __call__(self, index: int) -> OrdinalAlias:
-        self._index = index
-        return self
-
-    def step_name(self) -> str:
-        return f'[{self._index}]'
-
-    def load(self, value: Any, ctx: Loading) -> Any:
-        return self._serializers[self._index].load(value, ctx)
-
-    def dump(self, value: Any, ctx: Dumping) -> Any:
-        return self._serializers[self._index].dump(value, ctx)
-
-
-class BooleanSerializer(FieldSerializer[bool, bool]):
+class BooleanSerializer(Serializer[bool, bool]):
     """A serializer boolean field values."""
 
     @classmethod
-    def fits(cls, desc: TypeDescriptor) -> bool:
+    def fits(cls, desc: Descriptor) -> bool:
         return issubclass(desc.cls, bool)
 
     def load(self, value: bool, ctx: Loading) -> bool:
@@ -441,11 +392,11 @@ class BooleanSerializer(FieldSerializer[bool, bool]):
         return bool(value)
 
 
-class StringSerializer(FieldSerializer[str, str]):
+class StringSerializer(Serializer[str, str]):
     """A serializer for string field values."""
 
     @classmethod
-    def fits(cls, desc: TypeDescriptor) -> bool:
+    def fits(cls, desc: Descriptor) -> bool:
         return issubclass(desc.cls, str)
 
     def load(self, value: str, ctx: Loading) -> str:
@@ -457,7 +408,7 @@ class StringSerializer(FieldSerializer[str, str]):
         return str(value)
 
 
-class IntegerSerializer(FieldSerializer[int, int]):
+class IntegerSerializer(Serializer[int, int]):
     """A serializer for integer field values.
 
     .. note::
@@ -465,7 +416,7 @@ class IntegerSerializer(FieldSerializer[int, int]):
     """
 
     @classmethod
-    def fits(cls, desc: TypeDescriptor) -> bool:
+    def fits(cls, desc: Descriptor) -> bool:
         return issubclass(desc.cls, int) and not issubclass(desc.cls, bool)
 
     def load(self, value: int, ctx: Loading) -> int:
@@ -477,13 +428,13 @@ class IntegerSerializer(FieldSerializer[int, int]):
         return int(value)
 
 
-class FloatSerializer(FieldSerializer[float, float]):
+class FloatSerializer(Serializer[float, float]):
     """A serializer for float values field values.
 
     During load this can be either an int (1) or float (1.0). Always dumps to float."""
 
     @classmethod
-    def fits(cls, desc: TypeDescriptor) -> bool:
+    def fits(cls, desc: Descriptor) -> bool:
         return issubclass(desc.cls, float)
 
     def load(self, value: float, ctx: Loading) -> float:
@@ -496,7 +447,7 @@ class FloatSerializer(FieldSerializer[float, float]):
         return float(value)
 
 
-class DataclassSerializer(FieldSerializer[Any, Dict[str, Any]]):
+class DataclassSerializer(Serializer[Any, Dict[str, Any]]):
     """A serializer for field values that are dataclasses instances."""
 
     def __init__(self, *args, **kwargs):
@@ -505,7 +456,7 @@ class DataclassSerializer(FieldSerializer[Any, Dict[str, Any]]):
         self._dc_name = self.type.cls.__name__
 
     @classmethod
-    def fits(cls, desc: TypeDescriptor) -> bool:
+    def fits(cls, desc: Descriptor) -> bool:
         return desc.is_dataclass
 
     def load(self, value: Dict[str, Any], ctx: Loading) -> Any:
@@ -517,7 +468,7 @@ class DataclassSerializer(FieldSerializer[Any, Dict[str, Any]]):
         return self._serializer.dump(value, ctx)
 
 
-class UtcTimestampSerializer(FieldSerializer[Timestamp, Union[float, int]]):
+class UtcTimestampSerializer(Serializer[Timestamp, Union[float, int]]):
     """A serializer of UTC timestamp field values to/from float value.
 
         :Example:
@@ -534,7 +485,7 @@ class UtcTimestampSerializer(FieldSerializer[Timestamp, Union[float, int]]):
     """
 
     @classmethod
-    def fits(cls, desc: TypeDescriptor) -> bool:
+    def fits(cls, desc: Descriptor) -> bool:
         return issubclass(desc.cls, Timestamp)
 
     def load(self, value: Union[float, int], ctx: Loading) -> Timestamp:
@@ -562,7 +513,7 @@ _iso_time_re = re.compile(
 )
 
 
-class DateTimeIsoSerializer(FieldSerializer[datetime, str]):
+class DateTimeIsoSerializer(Serializer[datetime, str]):
     """A serializer for datetime field values to a timestamp represented by a `ISO formatted string`_.
 
         :Example:
@@ -590,11 +541,11 @@ class DateTimeIsoSerializer(FieldSerializer[datetime, str]):
         return datetime.isoformat(value)
 
     @classmethod
-    def fits(cls, desc: TypeDescriptor) -> bool:
+    def fits(cls, desc: Descriptor) -> bool:
         return issubclass(desc.cls, datetime)
 
 
-class DateIsoSerializer(FieldSerializer[date, str]):
+class DateIsoSerializer(Serializer[date, str]):
     """A serializer of `date` field values to a timestamp represented by an `ISO formatted string`_.
 
         :Example:
@@ -622,11 +573,11 @@ class DateIsoSerializer(FieldSerializer[date, str]):
         return date.isoformat(value)
 
     @classmethod
-    def fits(cls, desc: TypeDescriptor) -> bool:
+    def fits(cls, desc: Descriptor) -> bool:
         return issubclass(desc.cls, date)
 
 
-class TimeIsoSerializer(FieldSerializer[time, str]):
+class TimeIsoSerializer(Serializer[time, str]):
     """A serializer for `time` field values to an `ISO formatted string`_.
 
         :Example:
@@ -654,14 +605,14 @@ class TimeIsoSerializer(FieldSerializer[time, str]):
         return time.isoformat(value)
 
     @classmethod
-    def fits(cls, desc: TypeDescriptor) -> bool:
+    def fits(cls, desc: Descriptor) -> bool:
         return issubclass(desc.cls, time)
 
 
 _uuid_hex_re = re.compile(r'\A([a-f0-9]{8}-?[a-f0-9]{4}-?[a-f0-9]{4}-?[a-f0-9]{4}-?[a-f0-9]{12})\Z', re.I)
 
 
-class UuidSerializer(FieldSerializer[UUID, str]):
+class UuidSerializer(Serializer[UUID, str]):
     """A `UUID` value serializer to `str`."""
 
     def load(self, value: str, ctx: Loading) -> UUID:
@@ -675,14 +626,14 @@ class UuidSerializer(FieldSerializer[UUID, str]):
         return str(value)
 
     @classmethod
-    def fits(cls, desc: TypeDescriptor) -> bool:
+    def fits(cls, desc: Descriptor) -> bool:
         return issubclass(desc.cls, UUID)
 
 
 _decimal_re = re.compile(r'\A\d+(\.\d+)?\Z')
 
 
-class DecimalSerializer(FieldSerializer[Decimal, str]):
+class DecimalSerializer(Serializer[Decimal, str]):
     """`Decimal` value serializer to `str`."""
 
     def load(self, value: str, ctx: Loading) -> Decimal:
@@ -696,7 +647,7 @@ class DecimalSerializer(FieldSerializer[Decimal, str]):
         return str(value)
 
     @classmethod
-    def fits(cls, desc: TypeDescriptor) -> bool:
+    def fits(cls, desc: Descriptor) -> bool:
         return issubclass(desc.cls, Decimal)
 
 
@@ -710,17 +661,17 @@ try:
     SQLALCHEMY_INTEGRATION_ENABLED = True
 
     class SqlAlchemyDeclarativeSerializer(
-        FieldSerializer[DeclarativeMeta, Dict[str, Any]]
+        Serializer[DeclarativeMeta, Dict[str, Any]]
     ):
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
             self._field_serializers = {}
             for field, desc in self.type.fields.items():
                 if not (desc.is_sqlalchemy_model or any(p.is_sqlalchemy_model for p in desc.parameters.values())):
-                    self._field_serializers[field] = Alias(self.root.find_serializer(desc))
+                    self._field_serializers[field] = self.root.find_serializer(desc)
 
         @classmethod
-        def fits(cls, desc: TypeDescriptor) -> bool:
+        def fits(cls, desc: Descriptor) -> bool:
             return desc.is_sqlalchemy_model
 
         def load(self, data: Dict[str, Any], ctx: Loading) -> DeclarativeMeta:
@@ -729,14 +680,14 @@ try:
             if missing := {field for field in self._field_serializers if field not in data}:
                 raise ValidationError(f"Missing fields: {missing}")
             items = {
-                key: ctx.run(f".{key}", serializer(key), data[key])
+                key: ctx.run(f".{key}", serializer, data[key])
                 for key, serializer in self._field_serializers.items()
             }
             return self.type.cls(**items)
 
         def dump(self, data: DeclarativeMeta, ctx: Dumping) -> Dict[str, Any]:
             return {
-                key: ctx.run(f".{key}", serializer(key), getattr(data, key))
+                key: ctx.run(f".{key}", serializer, getattr(data, key))
                 for key, serializer in self._field_serializers.items()
             }
 
@@ -749,9 +700,9 @@ try:
     PYDANTIC_INTEGRATION_ENABLED = True
 
 
-    class PydanticModelSerializer(FieldSerializer[BaseModel, str]):
+    class PydanticModelSerializer(Serializer[BaseModel, str]):
         @classmethod
-        def fits(cls, desc: TypeDescriptor) -> bool:
+        def fits(cls, desc: Descriptor) -> bool:
             return issubclass(desc.cls, BaseModel)
 
         def dump(self, value: BaseModel, ctx: Dumping) -> str:

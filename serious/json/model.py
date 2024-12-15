@@ -7,7 +7,7 @@ import json
 from typing import Optional, TypeVar, Type, Generic, List, MutableMapping, Collection, Iterable, Any, Union
 
 from serious.descriptors import describe
-from serious.serialization import FieldSerializer, SeriousModel, field_serializers, KeyMapper
+from serious.serialization import Serializer, SeriousModel, field_serializers, KeyMapper
 from serious.utils import class_path
 from serious.json.utils import camel_to_snake, snake_to_camel
 from .checks import check_that_loading_an_object, check_that_loading_a_list
@@ -44,7 +44,7 @@ class JsonModel(Generic[T]):
     def __init__(
             self,
             cls: Type[T],
-            serializers: Iterable[Type[FieldSerializer]] = field_serializers(),
+            serializers: Iterable[Type[Serializer]] = field_serializers(),
             *,
             allow_any: bool = False,
             allow_missing: bool = False,

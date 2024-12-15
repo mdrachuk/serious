@@ -42,7 +42,7 @@ Multiple values can be manipulated by corresponding `#load_many(values)` and `#d
 
 
 ### Field Serializers
-Internally serialization is performed by field serializers (subclasses of `serious.serialization.FieldSerializer`).
+Internally serialization is performed by field serializers (subclasses of `serious.serialization.Serializer`).
 A list of them is provided to the model, each checked for fitness against the dataclass field.
 The first serializer class that fits the field is instantiated and used to load/dump fields values.
 
@@ -68,7 +68,7 @@ def dump(self, value: Any, ctx: Context) -> Primitive:</pre></dt>
 </dl>
 
 ## Custom Field Serializers
-To create a custom field serializer you need to subclass the `FieldSerializer` and 
+To create a custom field serializer you need to subclass the `Serializer` and 
 implement its `fits`, `load` and `dump` methods. 
 
 For a new serializer to be used in model it should be included in the [`serializers`][model-init-serializers]
@@ -80,7 +80,7 @@ when called without parameters.
 You can provide a list of custom field serializers to include them after metadata and optional serializers:
 
 ```python
-def field_serializers(custom: Iterable[Type[FieldSerializer]] = tuple()) -> Tuple[Type[FieldSerializer], ...]:
+def field_serializers(custom: Iterable[Type[Serializer]] = tuple()) -> tuple[Type[Serializer], ...]:
     return tuple([
         OptionalSerializer,
         AnySerializer,
@@ -111,7 +111,7 @@ from decimal import Decimal
 from typing import Union, List
 
 from serious import DictModel, ValidationError, TypeDescriptor
-from serious.serialization import FieldSerializer, field_serializers
+from serious.serialization import Serializer, field_serializers
 
 Number = Union[int, float, Decimal]
 
@@ -128,7 +128,7 @@ class Point:
         return f'<Point x:{self.x} y:{self.y}>'
 
 
-class PointSerializer(FieldSerializer):
+class PointSerializer(Serializer):
 
     @classmethod
     def fits(cls, desc: TypeDescriptor) -> bool:
@@ -140,7 +140,7 @@ class PointSerializer(FieldSerializer):
 
     def dump(self, value, ctx):
         return [str(value.x), str(value.y)]
-    
+
     @staticmethod
     def _validate_raw(value):
         if not isinstance(value, list) or len(value) != 2:

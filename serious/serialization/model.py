@@ -10,14 +10,14 @@ from dataclasses import fields, MISSING, Field, is_dataclass
 from typing import Generic, Iterable, Type, Dict, Any, Union, Mapping, Optional, Iterator, TypeVar
 
 from serious.checks import check_is_instance
-from serious.descriptors import scan_types, TypeDescriptor
+from serious.descriptors import scan_types, Descriptor
 from serious.errors import ModelContainsAny, MissingField, UnexpectedItem, ValidationError, \
     LoadError, DumpError, FieldMissingSerializer
 from serious.utils import Dataclass
 from .check_immutable import check_immutable
 from .context import Loading, Dumping
 from .key_mapper import KeyMapper, NoopKeyMapper
-from .serializer import FieldSerializer
+from .serializer import Serializer
 
 T = TypeVar('T')
 M = TypeVar('M')  # Python model value
@@ -36,8 +36,8 @@ class SeriousModel(Generic[T]):
 
     def __init__(
             self,
-            descriptor: TypeDescriptor,
-            serializers: Iterable[Type[FieldSerializer]],
+            descriptor: Descriptor,
+            serializers: Iterable[Type[Serializer]],
             *,
             allow_any: bool,
             allow_missing: bool,
@@ -46,7 +46,7 @@ class SeriousModel(Generic[T]):
             validate_on_dump: bool,
             ensure_frozen: Union[bool, Iterable[Type]],
             key_mapper: Optional[KeyMapper] = None,
-            _registry: Optional[Dict[TypeDescriptor, SeriousModel]] = None
+            _registry: Optional[Dict[Descriptor, SeriousModel]] = None
     ):
         """Initialize a Serious Model.
 
@@ -150,7 +150,7 @@ class SeriousModel(Generic[T]):
                 raise DumpError(o, dumping.stack) from e
             raise
 
-    def child_model(self, descriptor: TypeDescriptor) -> SeriousModel:
+    def child_model(self, descriptor: Descriptor) -> SeriousModel:
         """
         Creates a `SeriousModel` for dataclass fields nested in the current serializers.
         The preferences of the nested dataclasses match those of the root one.
@@ -174,7 +174,7 @@ class SeriousModel(Generic[T]):
         self.serializer_registry[descriptor] = new_model
         return new_model
 
-    def find_serializer(self, descriptor: TypeDescriptor) -> FieldSerializer:
+    def find_serializer(self, descriptor: Descriptor) -> Serializer:
         """
         Creates a serializer fitting the provided field descriptor.
 

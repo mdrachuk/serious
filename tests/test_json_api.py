@@ -5,8 +5,8 @@ from uuid import UUID
 import pytest
 
 from serious import JsonModel, LoadError
-from serious.descriptors import TypeDescriptor
-from serious.serialization import Loading, Dumping, FieldSerializer, field_serializers
+from serious.descriptors import Descriptor
+from serious.serialization import Loading, Dumping, Serializer, field_serializers
 from tests.entities import DataclassWithDataclass, DataclassWithOptional, DataclassWithOptionalNested, DataclassWithUuid
 
 
@@ -58,7 +58,7 @@ class TestDefaults:
         assert actual == expected
 
 
-class UserIdSerializer(FieldSerializer[UserId, int]):
+class UserIdSerializer(Serializer[UserId, int]):
 
     def load(self, value: int, ctx: Loading) -> UserId:
         return UserId(value)
@@ -67,7 +67,7 @@ class UserIdSerializer(FieldSerializer[UserId, int]):
         return value.value
 
     @classmethod
-    def fits(cls, desc: TypeDescriptor) -> bool:
+    def fits(cls, desc: Descriptor) -> bool:
         return desc.cls is UserId
 
 

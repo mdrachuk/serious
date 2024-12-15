@@ -8,7 +8,7 @@ from enum import Enum
 from typing import Iterable, Type, List, Any, Union
 from uuid import UUID
 
-from serious.descriptors import DescTypes, TypeDescriptor
+from serious.descriptors import DescTypes, Descriptor
 from serious.errors import MutableTypesInModel
 from serious.types import FrozenList, Email, Timestamp, FrozenDict
 
@@ -21,7 +21,7 @@ _IMMUTABLE_TYPES = {
 }
 
 
-def check_immutable(desc: TypeDescriptor, all_types: DescTypes, ensure_frozen: Union[bool, Iterable[Type]]):
+def check_immutable(desc: Descriptor, all_types: DescTypes, ensure_frozen: Union[bool, Iterable[Type]]):
     user_frozen = ensure_frozen if isinstance(ensure_frozen, Iterable) else {}
     mutable_types = extract_mutable(all_types, also_immutable=user_frozen)
     if len(mutable_types):

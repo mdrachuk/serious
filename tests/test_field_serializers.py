@@ -8,20 +8,20 @@ from uuid import UUID
 import pytest
 
 from serious import DictModel, ValidationError
-from serious.descriptors import describe, TypeDescriptor
-from serious.serialization import FieldSerializer, BooleanSerializer, StringSerializer, FloatSerializer, \
+from serious.descriptors import describe, Descriptor
+from serious.serialization import Serializer, BooleanSerializer, StringSerializer, FloatSerializer, \
     IntegerSerializer, EnumSerializer, DictSerializer, AnySerializer, CollectionSerializer, TupleSerializer, \
     DataclassSerializer, UtcTimestampSerializer, OptionalSerializer, DateTimeIsoSerializer, DateIsoSerializer, \
     TimeIsoSerializer, UuidSerializer, DecimalSerializer, Loading
 from serious.types import FrozenList, Timestamp
 
 
-class AbstractSerializer(FieldSerializer):
+class AbstractSerializer(Serializer):
     def __init__(self):
         super().__init__(None, None)
 
 
-class TestFieldSerializer:
+class TestSerializer:
 
     def test_not_implemented(self):
         with pytest.raises(TypeError) as error:
@@ -142,7 +142,7 @@ class TestEnumLoadValidation:
 
 
 class MockModel:
-    def find_serializer(self, desc: TypeDescriptor) -> FieldSerializer:
+    def find_serializer(self, desc: Descriptor) -> Serializer:
         return AnySerializer(desc, self)
 
 

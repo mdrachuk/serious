@@ -34,7 +34,7 @@ Model protocol is defined by 5 methods.
 ## Common Options
 
 ### `serializers`
-_Type:_ `Iterable[Type[FieldSerializer]]` 
+_Type:_ `Iterable[Type[Serializer]]` 
 _Default:_ `serious.serialization.field_serializers()` 
 
 An ordered collection of field serializer classes. Pass a non-default collection to override how particular fields are
@@ -111,7 +111,7 @@ Dinosaur(name='Yoshi', height=None)
     self,
     cls: Type[T],
     *,
-    serializers: Iterable[Type[FieldSerializer]] = field_serializers(),
+    serializers: Iterable[Type[Serializer]] = field_serializers(),
     allow_any: bool = False,
     allow_missing: bool = False,
     allow_unexpected: bool = False,
@@ -142,7 +142,7 @@ Dinosaur(name='Yoshi', height=None)
     self,
     cls: Type[T],
     *,
-    serializers: Iterable[Type[FieldSerializer]] = field_serializers(),
+    serializers: Iterable[Type[Serializer]] = field_serializers(),
     allow_any: bool = False,
     allow_missing: bool = False,
     allow_unexpected: bool = False,
@@ -187,7 +187,7 @@ class JsonModel(Generic[T]):
     def __init__(
             self,
             cls: Type[T],
-            serializers: Iterable[Type[FieldSerializer]] = field_serializers(),
+            serializers: Iterable[Type[Serializer]] = field_serializers(),
             *,
             allow_any: bool = False,
             allow_missing: bool = False,

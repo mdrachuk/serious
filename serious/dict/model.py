@@ -5,8 +5,8 @@ __all__ = ['DictModel']
 
 from typing import TypeVar, Type, Generic, List, Collection, Dict, Iterable, Any, Union
 
-from serious.descriptors import describe, TypeDescriptor
-from serious.serialization import FieldSerializer, SeriousModel, field_serializers
+from serious.descriptors import describe, Descriptor
+from serious.serialization import Serializer, SeriousModel, field_serializers
 from serious.utils import class_path
 
 T = TypeVar('T')
@@ -37,13 +37,13 @@ class DictModel(Generic[T]):
 
     `More on models in docs <https://serious.readthedocs.io/en/latest/models/>`_.
     """
-    descriptor: TypeDescriptor
+    descriptor: Descriptor
     serious_model: SeriousModel
 
     def __init__(
             self,
             cls: Type[T],
-            serializers: Iterable[Type[FieldSerializer]] = field_serializers(),
+            serializers: Iterable[Type[Serializer]] = field_serializers(),
             *,
             allow_any: bool = False,
             allow_missing: bool = False,

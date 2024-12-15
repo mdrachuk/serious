@@ -5,7 +5,7 @@
 [![Supported Python](https://img.shields.io/pypi/pyversions/serious)][pypi]
 [![Documentation](https://img.shields.io/readthedocs/serious)][docs]
 
-A dataclass model toolkit: serialization, validation, and more.
+Serialize and validate anything in python.
 
 [Documentation][docs]
 

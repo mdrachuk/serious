@@ -10,7 +10,7 @@ The data is carried by `TypeDescriptor`s which are created by a call to `serious
 """
 from __future__ import annotations
 
-__all__ = ['TypeDescriptor', 'describe', 'DescTypes', 'scan_types']
+__all__ = ['Descriptor', 'describe', 'DescTypes', 'scan_types']
 
 import datetime
 import decimal
@@ -27,7 +27,7 @@ GenericParams = Mapping[Any, 'TypeDescriptor']
 
 
 @dataclass(frozen=True)
-class TypeDescriptor:
+class Descriptor:
     """A descriptor of a type unwrapping the aliases, optionals, separating generic parameters,
     extracting the parameters from broader context, etc.
 
@@ -36,7 +36,7 @@ class TypeDescriptor:
     A proper way of creating a `TypeDescriptor` is using the `serious.descriptors.describe(cls)` factory.
     """
     _cls: Type
-    parameters: FrozenDict[Any, TypeDescriptor]
+    parameters: FrozenDict[Any, Descriptor]
     is_optional: bool = False
     is_dataclass: bool = False
     is_typed_dict: bool = False
@@ -57,7 +57,7 @@ class TypeDescriptor:
         return self._cls
 
     @property
-    def fields(self) -> Mapping[str, TypeDescriptor]:
+    def fields(self) -> Mapping[str, Descriptor]:
         """A mapping of all dataclass or typed dict field names to their corresponding Type Descriptors.
 
         An empty mapping is returned if the object is not a dataclass."""
@@ -91,7 +91,7 @@ class TypeDescriptor:
 
         return type_
 
-    def describe(self, type_: Type) -> TypeDescriptor:
+    def describe(self, type_: Type) -> Descriptor:
         return describe(type_, self.parameters)
 
     def __repr__(self):
@@ -110,7 +110,7 @@ class TypeDescriptor:
             results += "]"
         return results
 
-def describe(type_: Type, generic_params: Optional[GenericParams] = None) -> TypeDescriptor:
+def describe(type_: Type, generic_params: Optional[GenericParams] = None) -> Descriptor:
     """Creates a TypeDescriptor for the provided type.
 
     Optionally generic params can be designated as a mapping of TypeVar to parameter Type or indexes in Dict/List/etc.
@@ -164,12 +164,12 @@ def _get_sqlalchemy_builtin_type(column_type):
     else:
         raise NotImplementedError(f"Type {column_type} is not supported")
 
-_any_type_desc = TypeDescriptor(Any, FrozenDict())  # type: ignore
-_generic_params: Dict[Type, Dict[int, TypeDescriptor]] = {
+_any_type_desc = Descriptor(Any, FrozenDict())  # type: ignore
+_generic_params: Dict[Type, Dict[int, Descriptor]] = {
     list: {0: _any_type_desc},
     set: {0: _any_type_desc},
     frozenset: {0: _any_type_desc},
-    tuple: {0: _any_type_desc, 1: TypeDescriptor(Ellipsis, FrozenDict())},  # type: ignore
+    tuple: {0: _any_type_desc, 1: Descriptor(Ellipsis, FrozenDict())},  # type: ignore
     dict: {0: _any_type_desc, 1: _any_type_desc},
     FrozenDict: {0: _any_type_desc, 1: _any_type_desc},
 }
@@ -189,7 +189,7 @@ def _get_default_generic_params(cls: Type, params: GenericParams) -> GenericPara
     return params
 
 
-def _describe_generic(cls: Type, generic_params: GenericParams) -> TypeDescriptor:
+def _describe_generic(cls: Type, generic_params: GenericParams) -> Descriptor:
     """Creates a TypeDescriptor for Python _GenericAlias, unwrapping it to its origin/
 
     **Examples**:
@@ -209,11 +209,11 @@ def _describe_generic(cls: Type, generic_params: GenericParams) -> TypeDescripto
         is_typed_dict = False
 
     if hasattr(cls, '__orig_bases__') and is_dataclass(cls):
-        _params: Dict[Any, TypeDescriptor] = {}
+        _params: Dict[Any, Descriptor] = {}
         for item in (_describe_generic(base, generic_params).parameters for base in getattr(cls, '__orig_bases__', [])):
             _params.update(item)
 
-        return TypeDescriptor(
+        return Descriptor(
             cls,
             parameters=FrozenDict(_params),
             is_optional=is_optional,
@@ -234,7 +234,7 @@ def _describe_generic(cls: Type, generic_params: GenericParams) -> TypeDescripto
     if isinstance(cls, TypeVar) and cls.__constraints__:
         return _describe_generic(Union[cls.__constraints__], generic_params)
 
-    return TypeDescriptor(
+    return Descriptor(
         cls,
         parameters=FrozenDict(params),
         is_optional=is_optional,
@@ -257,7 +257,7 @@ def _describe_parametrized(cls, generic_params, is_optional, is_typed_dict, orig
         params = dict(enumerate(map(describe_, getattr(cls, '__args__', []))))
     if isinstance(origin, type) and len(params) == 0:
         params = _get_default_generic_params(origin, params)
-    descriptor = TypeDescriptor(
+    descriptor = Descriptor(
         origin,
         parameters=FrozenDict(params),
         is_optional=is_optional,
@@ -279,7 +279,7 @@ class DescTypes:
         super().__setattr__('types', FrozenList(types))
 
     @classmethod
-    def scan(cls, desc: TypeDescriptor, *, known: List[TypeDescriptor]) -> 'DescTypes':
+    def scan(cls, desc: Descriptor, *, known: List[Descriptor]) -> 'DescTypes':
         if desc in known:
             return _empty_desc_types
         known.append(desc)
@@ -302,7 +302,7 @@ class DescTypes:
 _empty_desc_types = DescTypes({})
 
 
-def scan_types(desc: TypeDescriptor) -> DescTypes:
+def scan_types(desc: Descriptor) -> DescTypes:
     """Create a `DescTypes` object for the provided descriptor.
 
     `DescTypes` allow checks of the descriptor tree."""

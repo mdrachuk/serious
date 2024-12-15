@@ -10,9 +10,9 @@ from uuid import UUID
 import pytest
 
 from serious import FrozenList, JsonModel, DictModel, Email, Timestamp, FrozenDict
-from serious.descriptors import TypeDescriptor
+from serious.descriptors import Descriptor
 from serious.errors import MutableTypesInModel, ModelContainsAny
-from serious.serialization import FieldSerializer, field_serializers
+from serious.serialization import Serializer, field_serializers
 from tests.utils import with_
 
 
@@ -148,9 +148,9 @@ class TestEnsureFrozenTrue:
         assert new_model(FrozenEvent[cls], field_serializers([FrozenNodeSerializer]), ensure_frozen=[FrozenNode])
 
 
-class FrozenNodeSerializer(FieldSerializer[FrozenNode, list]):
+class FrozenNodeSerializer(Serializer[FrozenNode, list]):
     @classmethod
-    def fits(cls, desc: TypeDescriptor) -> bool:
+    def fits(cls, desc: Descriptor) -> bool:
         return desc.cls is FrozenNode
 
     def load(self, value, ctx):

@@ -31,7 +31,7 @@ from .utils import class_path, Dataclass
 
 if TYPE_CHECKING:
     from .serialization.context import SerializationStep
-    from .descriptors import TypeDescriptor
+    from .descriptors import Descriptor
 
 
 class SerializationError(Exception):
@@ -132,7 +132,7 @@ class ModelError(Exception):
 
 class FieldMissingSerializer(ModelError):
 
-    def __init__(self, cls: Type, desc: TypeDescriptor):
+    def __init__(self, cls: Type, desc: Descriptor):
         self.desc = desc
         super().__init__(cls)
 

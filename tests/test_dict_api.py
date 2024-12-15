@@ -5,9 +5,9 @@ from uuid import UUID
 import pytest
 
 from serious import DictModel, LoadError
-from serious.descriptors import TypeDescriptor
+from serious.descriptors import Descriptor
 from serious.errors import FieldMissingSerializer
-from serious.serialization import Loading, Dumping, FieldSerializer, field_serializers
+from serious.serialization import Loading, Dumping, Serializer, field_serializers
 from tests.entities import DataclassWithDataclass, DataclassWithOptional, DataclassWithOptionalNested, DataclassWithUuid
 
 
@@ -24,7 +24,7 @@ class User:
     age: Optional[int]
 
 
-class UserIdSerializer(FieldSerializer[UserId, int]):
+class UserIdSerializer(Serializer[UserId, int]):
 
     def load(self, value: int, ctx: Loading) -> UserId:
         return UserId(value)
@@ -33,7 +33,7 @@ class UserIdSerializer(FieldSerializer[UserId, int]):
         return value.value
 
     @classmethod
-    def fits(cls, desc: TypeDescriptor) -> bool:
+    def fits(cls, desc: Descriptor) -> bool:
         return desc.cls is UserId
 
 
