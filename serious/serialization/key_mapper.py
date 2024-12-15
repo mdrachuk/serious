@@ -6,13 +6,13 @@ We honor foreign traditions, so the JSON model does by default.
 Remapping is implementing by creating a custom KeyMapper and passing it as a parameter to `SeriousModel`.
 """
 
-__all__ = ['KeyMapper', 'NoopKeyMapper']
+__all__ = ["KeyMapper", "NoopKeyMapper"]
 
 from abc import ABC, abstractmethod
 
 
 class KeyMapper(ABC):
-    """A two way mapping of field names to serialized data keys.
+    """A two-way mapping of field names to serialized data keys.
 
     Implement this abstract base class and pass it to `SeriousModel`.
     """

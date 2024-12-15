@@ -1,7 +1,7 @@
 """Checks performed in other places, throwing errors when unsatisfied. """
 from typing import TypeVar, Type, Optional
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 def check_is_instance(value: T, type_: Type[T], message: Optional[str] = None) -> T:

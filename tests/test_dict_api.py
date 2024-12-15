@@ -6,8 +6,8 @@ import pytest
 
 from serious import DictModel, LoadError
 from serious.descriptors import Descriptor
-from serious.errors import FieldMissingSerializer
-from serious.serialization import Loading, Dumping, Serializer, field_serializers
+from serious.errors import MissingSerializer
+from serious.serialization import Serializer, field_serializers
 from tests.entities import DataclassWithDataclass, DataclassWithOptional, DataclassWithOptionalNested, DataclassWithUuid
 
 
@@ -26,10 +26,10 @@ class User:
 
 class UserIdSerializer(Serializer[UserId, int]):
 
-    def load(self, value: int, ctx: Loading) -> UserId:
+    def load(self, value: int, _) -> UserId:
         return UserId(value)
 
-    def dump(self, value: UserId, ctx: Dumping) -> int:
+    def dump(self, value: UserId, _) -> int:
         return value.value
 
     @classmethod
@@ -152,5 +152,5 @@ class TestAllowUnexpected:
 
 
 def test_missing_serializer():
-    with pytest.raises(FieldMissingSerializer):
+    with pytest.raises(MissingSerializer):
         DictModel(User, serializers=[])

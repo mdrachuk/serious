@@ -1,10 +1,21 @@
 """A module with `JsonModule` -- Serious model to transform between dataclasses and JSON strings."""
 from __future__ import annotations
 
-__all__ = ['JsonModel']
+__all__ = ["JsonModel"]
 
 import json
-from typing import Optional, TypeVar, Type, Generic, List, MutableMapping, Collection, Iterable, Any, Union
+from typing import (
+    Optional,
+    TypeVar,
+    Type,
+    Generic,
+    List,
+    MutableMapping,
+    Collection,
+    Iterable,
+    Any,
+    Union,
+)
 
 from serious.descriptors import describe
 from serious.serialization import Serializer, SeriousModel, field_serializers, KeyMapper
@@ -12,7 +23,7 @@ from serious.utils import class_path
 from serious.json.utils import camel_to_snake, snake_to_camel
 from .checks import check_that_loading_an_object, check_that_loading_a_list
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 class JsonModel(Generic[T]):
@@ -42,18 +53,18 @@ class JsonModel(Generic[T]):
     """
 
     def __init__(
-            self,
-            cls: Type[T],
-            serializers: Iterable[Type[Serializer]] = field_serializers(),
-            *,
-            allow_any: bool = False,
-            allow_missing: bool = False,
-            allow_unexpected: bool = False,
-            validate_on_load: bool = True,
-            validate_on_dump: bool = False,
-            ensure_frozen: Union[bool, Iterable[Type]] = False,
-            camel_case: bool = True,
-            indent: Optional[int] = None,
+        self,
+        cls: Type[T],
+        serializers: Iterable[Type[Serializer]] = field_serializers(),
+        *,
+        allow_any: bool = False,
+        allow_missing: bool = False,
+        allow_unexpected: bool = False,
+        validate_on_load: bool = True,
+        validate_on_dump: bool = False,
+        ensure_frozen: Union[bool, Iterable[Type]] = False,
+        camel_case: bool = True,
+        indent: Optional[int] = None,
     ):
         """Initialize a JSON model.
 
@@ -113,25 +124,26 @@ class JsonModel(Generic[T]):
 
     def _dump_to_str(self, dict_items: Any) -> str:
         """Override to customize JSON dumping behaviour."""
-        return json.dumps(dict_items,
-                          skipkeys=False,
-                          ensure_ascii=False,
-                          check_circular=True,
-                          allow_nan=False,
-                          indent=self._dump_indentation,
-                          separators=None,
-                          default=None,
-                          sort_keys=False)
+        return json.dumps(
+            dict_items,
+            skipkeys=False,
+            ensure_ascii=False,
+            check_circular=True,
+            allow_nan=False,
+            indent=self._dump_indentation,
+            separators=None,
+            default=None,
+            sort_keys=False,
+        )
 
     def __repr__(self):
         path = class_path(type(self))
-        if path == 'serious.json.model.JsonModel':
-            path = 'serious.JsonModel'
-        return f'<{path}[{class_path(self.cls)}] at {hex(id(self))}>'
+        if path == "serious.json.model.JsonModel":
+            path = "serious.JsonModel"
+        return f"<{path}[{class_path(self.cls)}] at {hex(id(self))}>"
 
 
 class JsonKeyMapper(KeyMapper):
-
     def to_model(self, key: str) -> str:
         return camel_to_snake(key)
 

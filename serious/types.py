@@ -8,7 +8,7 @@
 
 from __future__ import annotations
 
-__all__ = ['Timestamp', 'Email', 'FrozenList', 'FrozenDict']
+__all__ = ["Timestamp", "Email", "FrozenList", "FrozenDict"]
 
 import re
 from datetime import datetime, timezone
@@ -16,8 +16,8 @@ from typing import TypeVar, Generic, overload, Optional, Mapping, Iterator
 
 from .errors import ValidationError
 
-KT = TypeVar('KT')  # Key type.
-VT = TypeVar('VT')  # Value type.
+KT = TypeVar("KT")  # Key type.
+VT = TypeVar("VT")  # Value type.
 
 
 class FrozenDict(Mapping[KT, VT]):
@@ -27,7 +27,9 @@ class FrozenDict(Mapping[KT, VT]):
     Does not check for immutability of its members.
     """
 
-    def __init__(self, mapping: Optional[Mapping[KT, VT]] = None, **kwargs: Mapping[KT, VT]) -> None:
+    def __init__(
+        self, mapping: Optional[Mapping[KT, VT]] = None, **kwargs: Mapping[KT, VT]
+    ) -> None:
         if mapping is not None:
             self.__internal_mapping__ = dict(mapping)
         else:
@@ -49,18 +51,19 @@ class FrozenDict(Mapping[KT, VT]):
         return hash_
 
     def __or__(self, other: Mapping) -> FrozenDict:
-        if hasattr(other, 'items'):
+        if hasattr(other, "items"):
             result = dict(self)
             result.update(other)
             return FrozenDict(result)
-        raise TypeError(f'Cannot merge {type(self)} with {type(other)}')
+        raise TypeError(f"Cannot merge {type(self)} with {type(other)}")
 
     def __repr__(self):
-        return f'FrozenDict({self.__internal_mapping__})'
+        return f"FrozenDict({self.__internal_mapping__})"
 
 
 class FrozenList(tuple, Generic[VT]):
     """A list that cannot be changed. `FrozenList[VT]` is equal to saying `Tuple[VT, ...]`."""
+
     pass
 
 
@@ -99,22 +102,22 @@ class Timestamp:
         pass
 
     @overload
-    def __init__(self, timestamp: 'Timestamp'):
+    def __init__(self, timestamp: "Timestamp"):
         """Creates a copy of a timestamp."""
         pass
 
     def __init__(self, value):
         if isinstance(value, Timestamp):
-            super().__setattr__('value', value.value)
+            super().__setattr__("value", value.value)
         elif isinstance(value, datetime):
-            super().__setattr__('value', self._datetime_value(value))
+            super().__setattr__("value", self._datetime_value(value))
         elif isinstance(value, str):
             dt = datetime.fromisoformat(value)
-            super().__setattr__('value', self._datetime_value(dt))
+            super().__setattr__("value", self._datetime_value(dt))
         elif isinstance(value, int):
-            super().__setattr__('value', float(value))
+            super().__setattr__("value", float(value))
         elif isinstance(value, float):
-            super().__setattr__('value', value)
+            super().__setattr__("value", value)
         else:
             raise ValueError(f'Timestamp cannot be created from "{value}"')
 
@@ -135,32 +138,44 @@ class Timestamp:
 
     def __setattr__(self, name, value):
         """Restricts mutation of object value"""
-        raise AttributeError('Cannot change timestamp. Timestamp objects are immutable.')
+        raise AttributeError(
+            "Cannot change timestamp. Timestamp objects are immutable."
+        )
 
     def __eq__(self, other: object):
         """Overrides the default implementation"""
         if not isinstance(other, Timestamp):
-            raise NotImplementedError('Cannot compare Timestamp to anything other than Timestamp.')
+            raise NotImplementedError(
+                "Cannot compare Timestamp to anything other than Timestamp."
+            )
         return self.value == other.value
 
-    def __lt__(self, other: 'Timestamp'):
+    def __lt__(self, other: "Timestamp"):
         if not isinstance(other, Timestamp):
-            raise NotImplementedError('Cannot compare Timestamp to anything other than Timestamp.')
+            raise NotImplementedError(
+                "Cannot compare Timestamp to anything other than Timestamp."
+            )
         return self.value < other.value
 
-    def __le__(self, other: 'Timestamp'):
+    def __le__(self, other: "Timestamp"):
         if not isinstance(other, Timestamp):
-            raise NotImplementedError('Cannot compare Timestamp to anything other than Timestamp.')
+            raise NotImplementedError(
+                "Cannot compare Timestamp to anything other than Timestamp."
+            )
         return self.value <= other.value
 
-    def __ge__(self, other: 'Timestamp'):
+    def __ge__(self, other: "Timestamp"):
         if not isinstance(other, Timestamp):
-            raise NotImplementedError('Cannot compare Timestamp to anything other than Timestamp.')
+            raise NotImplementedError(
+                "Cannot compare Timestamp to anything other than Timestamp."
+            )
         return self.value >= other.value
 
-    def __gt__(self, other: 'Timestamp'):
+    def __gt__(self, other: "Timestamp"):
         if not isinstance(other, Timestamp):
-            raise NotImplementedError('Cannot compare Timestamp to anything other than Timestamp.')
+            raise NotImplementedError(
+                "Cannot compare Timestamp to anything other than Timestamp."
+            )
         return self.value > other.value
 
     def __str__(self):
@@ -170,11 +185,12 @@ class Timestamp:
     def __repr__(self):
         """An unambiguous representation of an object."""
         iso_str = self.as_iso()
-        return f'<{self.__class__.__name__} {iso_str} ({self.value})>'
+        return f"<{self.__class__.__name__} {iso_str} ({self.value})>"
 
 
-_email_regex = re.compile(r'^\w(\.|\w|-)*\+?(\.|\w|-)*@\w(\.|\w|-)*(\.\w+)$',
-                          re.IGNORECASE | re.UNICODE)
+_email_regex = re.compile(
+    r"^\w(\.|\w|-)*\+?(\.|\w|-)*@\w(\.|\w|-)*(\.\w+)$", re.IGNORECASE | re.UNICODE
+)
 
 
 class Email(str):
@@ -185,22 +201,22 @@ class Email(str):
 
     @property
     def username(self) -> str:
-        return self.split('@')[0].split('+')[0]
+        return self.split("@")[0].split("+")[0]
 
     @property
     def label(self) -> Optional[str]:
-        user_and_label = self.split('@')[0].split('+')
+        user_and_label = self.split("@")[0].split("+")
         if len(user_and_label) == 1:
             return None
         return user_and_label[1]
 
     @property
     def domain(self) -> str:
-        return self.split('@')[1]
+        return self.split("@")[1]
 
     def __validate__(self):
         if _email_regex.match(self) is None:
-            raise ValidationError('Invalid email format')
+            raise ValidationError("Invalid email format")
 
     def __repr__(self):
-        return f'<{self.__class__.__name__} {str(self)}>'
+        return f"<{self.__class__.__name__} {str(self)}>"

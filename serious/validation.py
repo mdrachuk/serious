@@ -12,11 +12,11 @@ This can be overridden by passing `validate_on_load` and `validate_on_dump` to m
 
 You can run validation yourself by calling `serious.validation.validate(obj)` whenever you need.
 """
-__all__ = ['validate']
+__all__ = ["validate"]
 
 from typing import TypeVar
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 def validate(obj: T) -> T:
@@ -42,9 +42,11 @@ def validate(obj: T) -> T:
         invalid = Note('', '')
         validate(invalid)  # raises ValidationError(...)
     """
-    if hasattr(obj, '__validate__'):
+    if hasattr(obj, "__validate__"):
         if obj.__validate__.__module__.startswith("pydantic"):
             return obj.__validate__(obj)
         result = obj.__validate__()  # type: ignore # method presence checked above
-        assert result is None, 'Validators should not return anything. Raise ValidationError instead'
+        assert (
+            result is None
+        ), "Validators should not return anything. Raise ValidationError instead"
     return obj

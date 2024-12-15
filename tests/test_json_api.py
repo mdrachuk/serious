@@ -6,7 +6,7 @@ import pytest
 
 from serious import JsonModel, LoadError
 from serious.descriptors import Descriptor
-from serious.serialization import Loading, Dumping, Serializer, field_serializers
+from serious.serialization import Serializer, field_serializers
 from tests.entities import DataclassWithDataclass, DataclassWithOptional, DataclassWithOptionalNested, DataclassWithUuid
 
 
@@ -60,10 +60,10 @@ class TestDefaults:
 
 class UserIdSerializer(Serializer[UserId, int]):
 
-    def load(self, value: int, ctx: Loading) -> UserId:
+    def load(self, value: int, ctx: "Loading") -> UserId:
         return UserId(value)
 
-    def dump(self, value: UserId, ctx: Dumping) -> int:
+    def dump(self, value: UserId, ctx: "Dumping") -> int:
         return value.value
 
     @classmethod

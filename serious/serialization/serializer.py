@@ -1,18 +1,12 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TypeVar, Generic, TYPE_CHECKING
+from typing import Generic, TypeVar
 
 from serious.descriptors import Descriptor
 
-OBJECT_TYPE = TypeVar('OBJECT_TYPE')  # Python model value
-PRIMITIVE_TYPE = TypeVar('PRIMITIVE_TYPE')  # Serialized value
-
-
-
-if TYPE_CHECKING:
-    from .model import SeriousModel
-    from .context import Loading, Dumping
+OBJECT_TYPE = TypeVar("OBJECT_TYPE")  # Python model value
+PRIMITIVE_TYPE = TypeVar("PRIMITIVE_TYPE")  # Serialized value
 
 
 class Serializer(Generic[OBJECT_TYPE, PRIMITIVE_TYPE], ABC):
@@ -29,7 +23,7 @@ class Serializer(Generic[OBJECT_TYPE, PRIMITIVE_TYPE], ABC):
     .. _YamlModel: serious.yaml.model.YamlModel
     """
 
-    def __init__(self, descriptor: Descriptor, root_model: 'SeriousModel'):
+    def __init__(self, descriptor, root_model):
         self.type = descriptor
         self.root = root_model
 
@@ -47,9 +41,25 @@ class Serializer(Generic[OBJECT_TYPE, PRIMITIVE_TYPE], ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def load(self, value: PRIMITIVE_TYPE, ctx: Loading) -> OBJECT_TYPE:
-        raise NotImplementedError
+    def load(self, primitive, _):
+        ...
 
     @abstractmethod
-    def dump(self, value: OBJECT_TYPE, ctx: Dumping) -> PRIMITIVE_TYPE:
-        raise NotImplementedError
+    def dump(self, o, _):
+        ...
+
+    def load_nested(self, step, primitive, ctx):
+        ctx.enter(step, primitive)
+        result = self.load(primitive, ctx)
+        if ctx.validating:
+            ctx.validate(result)
+        ctx.exit()
+        return result
+
+    def dump_nested(self, step, o, ctx):
+        ctx.enter(step, o)
+        if ctx.validating:
+            ctx.validate(o)
+        result = self.dump(o, ctx)
+        ctx.exit()
+        return result

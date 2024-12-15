@@ -1,7 +1,7 @@
 """A module with `DictModel` -- Serious model to transform between dataclasses and dictionaries."""
 from __future__ import annotations
 
-__all__ = ['DictModel']
+__all__ = ["DictModel"]
 
 from typing import TypeVar, Type, Generic, List, Collection, Dict, Iterable, Any, Union
 
@@ -9,7 +9,7 @@ from serious.descriptors import describe, Descriptor
 from serious.serialization import Serializer, SeriousModel, field_serializers
 from serious.utils import class_path
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 class DictModel(Generic[T]):
@@ -37,20 +37,21 @@ class DictModel(Generic[T]):
 
     `More on models in docs <https://serious.readthedocs.io/en/latest/models/>`_.
     """
+
     descriptor: Descriptor
     serious_model: SeriousModel
 
     def __init__(
-            self,
-            cls: Type[T],
-            serializers: Iterable[Type[Serializer]] = field_serializers(),
-            *,
-            allow_any: bool = False,
-            allow_missing: bool = False,
-            allow_unexpected: bool = False,
-            validate_on_load: bool = True,
-            validate_on_dump: bool = False,
-            ensure_frozen: Union[bool, Iterable[Type]] = False,
+        self,
+        cls: Type[T],
+        serializers: Iterable[Type[Serializer]] = field_serializers(),
+        *,
+        allow_any: bool = False,
+        allow_missing: bool = False,
+        allow_unexpected: bool = False,
+        validate_on_load: bool = True,
+        validate_on_dump: bool = False,
+        ensure_frozen: Union[bool, Iterable[Type]] = False,
     ):
         """Initialize a dictionary model.
 
@@ -96,6 +97,6 @@ class DictModel(Generic[T]):
 
     def __repr__(self):
         path = class_path(type(self))
-        if path == 'serious.dict.model.DictModel':
-            path = 'serious.DictModel'
-        return f'<{path}[{class_path(self.cls)}] at {hex(id(self))}>'
+        if path == "serious.dict.model.DictModel":
+            path = "serious.DictModel"
+        return f"<{path}[{class_path(self.cls)}] at {hex(id(self))}>"

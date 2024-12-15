@@ -10,20 +10,33 @@ The data is carried by `TypeDescriptor`s which are created by a call to `serious
 """
 from __future__ import annotations
 
-__all__ = ['Descriptor', 'describe', 'DescTypes', 'scan_types']
+__all__ = ["Descriptor", "describe", "DescTypes", "scan_types"]
 
 import datetime
 import decimal
 import uuid
 from dataclasses import dataclass, fields, is_dataclass
 from types import UnionType, NoneType
-from typing import Type, Any, TypeVar, get_type_hints, Dict, Mapping, List, Union, Iterable, Optional, cast, Generic
+from typing import (
+    Type,
+    Any,
+    TypeVar,
+    get_type_hints,
+    Dict,
+    Mapping,
+    List,
+    Union,
+    Iterable,
+    Optional,
+    cast,
+    Generic,
+)
 
 from .types import FrozenDict, FrozenList
 
-T = TypeVar('T')
+T = TypeVar("T")
 
-GenericParams = Mapping[Any, 'TypeDescriptor']
+GenericParams = Mapping[Any, "Descriptor"]
 
 
 @dataclass(frozen=True)
@@ -35,6 +48,7 @@ class Descriptor:
 
     A proper way of creating a `TypeDescriptor` is using the `serious.descriptors.describe(cls)` factory.
     """
+
     _cls: Type
     parameters: FrozenDict[Any, Descriptor]
     is_optional: bool = False
@@ -43,7 +57,9 @@ class Descriptor:
 
     @property
     def is_sqlalchemy_model(self):
-        from serious.serialization.field_serializers import SQLALCHEMY_INTEGRATION_ENABLED
+        from serious.serialization.field_serializers import (
+            SQLALCHEMY_INTEGRATION_ENABLED,
+        )
 
         if not SQLALCHEMY_INTEGRATION_ENABLED:
             return False
@@ -53,7 +69,9 @@ class Descriptor:
         return isinstance(self.cls, DeclarativeMeta)
 
     @property
-    def cls(self):  # Python fails when providing cls as a keyword parameter to dataclasses
+    def cls(
+        self,
+    ):  # Python fails when providing cls as a keyword parameter to dataclasses
         return self._cls
 
     @property
@@ -87,7 +105,7 @@ class Descriptor:
         from sqlalchemy.orm import Mapped
 
         if issubclass(getattr(type_, "__origin__", NoneType), Mapped):
-            return type_.__args__[0]  #type: ignore
+            return type_.__args__[0]  # type: ignore
 
         return type_
 
@@ -110,6 +128,7 @@ class Descriptor:
             results += "]"
         return results
 
+
 def describe(type_: Type, generic_params: Optional[GenericParams] = None) -> Descriptor:
     """Creates a TypeDescriptor for the provided type.
 
@@ -124,12 +143,43 @@ def describe(type_: Type, generic_params: Optional[GenericParams] = None) -> Des
 
 def _get_sqlalchemy_builtin_type(column_type):
     from sqlalchemy.sql.sqltypes import (
-        String, Enum, Text, Unicode, UnicodeText, VARCHAR, NVARCHAR, CHAR, NCHAR, NullType,
-        Integer, SmallInteger, BigInteger, Float, Double, REAL, NUMERIC, DECIMAL, Numeric,
-        Boolean, DateTime, TIMESTAMP, DATETIME, Date, Time, Interval, LargeBinary, JSON, ARRAY, PickleType, UUID,
+        String,
+        Enum,
+        Text,
+        Unicode,
+        UnicodeText,
+        VARCHAR,
+        NVARCHAR,
+        CHAR,
+        NCHAR,
+        NullType,
+        Integer,
+        SmallInteger,
+        BigInteger,
+        Float,
+        Double,
+        REAL,
+        NUMERIC,
+        DECIMAL,
+        Numeric,
+        Boolean,
+        DateTime,
+        TIMESTAMP,
+        DATETIME,
+        Date,
+        Time,
+        Interval,
+        LargeBinary,
+        JSON,
+        ARRAY,
+        PickleType,
+        UUID,
     )
 
-    if isinstance(column_type, (String, Enum, Text, Unicode, UnicodeText, VARCHAR, NVARCHAR, CHAR, NCHAR)):
+    if isinstance(
+        column_type,
+        (String, Enum, Text, Unicode, UnicodeText, VARCHAR, NVARCHAR, CHAR, NCHAR),
+    ):
         if isinstance(column_type, Enum):
             return column_type.enum_class  # Return the specific enum class
         return str
@@ -163,6 +213,7 @@ def _get_sqlalchemy_builtin_type(column_type):
         return type(None)
     else:
         raise NotImplementedError(f"Type {column_type} is not supported")
+
 
 _any_type_desc = Descriptor(Any, FrozenDict())  # type: ignore
 _generic_params: Dict[Type, Dict[int, Descriptor]] = {
@@ -204,13 +255,18 @@ def _describe_generic(cls: Type, generic_params: GenericParams) -> Descriptor:
         cls = cast(Type, Union[tuple(_args)])
 
     try:
-        is_typed_dict = issubclass(cls, dict) and bool(getattr(cls, '__annotations__', None))
+        is_typed_dict = issubclass(cls, dict) and bool(
+            getattr(cls, "__annotations__", None)
+        )
     except TypeError:
         is_typed_dict = False
 
-    if hasattr(cls, '__orig_bases__') and is_dataclass(cls):
+    if hasattr(cls, "__orig_bases__") and is_dataclass(cls):
         _params: Dict[Any, Descriptor] = {}
-        for item in (_describe_generic(base, generic_params).parameters for base in getattr(cls, '__orig_bases__', [])):
+        for item in (
+            _describe_generic(base, generic_params).parameters
+            for base in getattr(cls, "__orig_bases__", [])
+        ):
             _params.update(item)
 
         return Descriptor(
@@ -221,12 +277,16 @@ def _describe_generic(cls: Type, generic_params: GenericParams) -> Descriptor:
             is_typed_dict=False,
         )
 
-    if hasattr(cls, '__origin__'):
+    if hasattr(cls, "__origin__"):
         origin = cls.__origin__
-        return _describe_parametrized(cls, generic_params, is_optional, is_typed_dict, origin)
+        return _describe_parametrized(
+            cls, generic_params, is_optional, is_typed_dict, origin
+        )
 
     if isinstance(cls, UnionType):
-        return _describe_parametrized(cls, generic_params, is_optional, is_typed_dict, Union)
+        return _describe_parametrized(
+            cls, generic_params, is_optional, is_typed_dict, Union
+        )
 
     if isinstance(cls, type) and len(params) == 0 and not is_typed_dict:
         params = _get_default_generic_params(cls, params)
@@ -248,13 +308,15 @@ def _describe_parametrized(cls, generic_params, is_optional, is_typed_dict, orig
     if origin_is_dc:
         params = _collect_type_vars(cls, generic_params)
     else:
+
         def describe_(arg):
             if type(arg) is TypeVar:
                 if arg.__constraints__:
                     return _describe_generic(Union[arg.__constraints__], generic_params)
                 return describe(Any, generic_params)
             return describe(arg, generic_params)
-        params = dict(enumerate(map(describe_, getattr(cls, '__args__', []))))
+
+        params = dict(enumerate(map(describe_, getattr(cls, "__args__", []))))
     if isinstance(origin, type) and len(params) == 0:
         params = _get_default_generic_params(origin, params)
     descriptor = Descriptor(
@@ -268,18 +330,22 @@ def _describe_parametrized(cls, generic_params, is_optional, is_typed_dict, orig
 
 
 def _collect_type_vars(alias: Any, generic_params: GenericParams) -> GenericParams:
-    return dict(zip(alias.__origin__.__parameters__,
-                    (describe(arg, generic_params) for arg in alias.__args__)))
+    return dict(
+        zip(
+            alias.__origin__.__parameters__,
+            (describe(arg, generic_params) for arg in alias.__args__),
+        )
+    )
 
 
 class DescTypes:
     types: FrozenList[Type]
 
     def __init__(self, types: Iterable[Type]):
-        super().__setattr__('types', FrozenList(types))
+        super().__setattr__("types", FrozenList(types))
 
     @classmethod
-    def scan(cls, desc: Descriptor, *, known: List[Descriptor]) -> 'DescTypes':
+    def scan(cls, desc: Descriptor, *, known: List[Descriptor]) -> "DescTypes":
         if desc in known:
             return _empty_desc_types
         known.append(desc)
@@ -293,7 +359,7 @@ class DescTypes:
         return cls(types)
 
     def __setattr__(self, key, value):
-        raise AttributeError('Attempt to modify an immutable object')
+        raise AttributeError("Attempt to modify an immutable object")
 
     def __contains__(self, item):
         return item in self.types
@@ -311,6 +377,8 @@ def scan_types(desc: Descriptor) -> DescTypes:
 
 def _is_optional(cls: Type) -> bool:
     """Returns True if the provided type is `Optional`."""
-    return (getattr(cls, '__origin__', None) == Union or isinstance(cls, UnionType)) \
-        and len(cls.__args__) > 1 \
+    return (
+        (getattr(cls, "__origin__", None) == Union or isinstance(cls, UnionType))
+        and len(cls.__args__) > 1
         and type(None) in set(cls.__args__)
+    )

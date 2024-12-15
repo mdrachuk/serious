@@ -13,16 +13,16 @@ When no serializer found for field, etc.
 from __future__ import annotations
 
 __all__ = [
-    'SerializationError',
-    'LoadError',
-    'DumpError',
-    'UnexpectedItem',
-    'MissingField',
-    'ModelError',
-    'FieldMissingSerializer',
-    'ModelContainsAny',
-    'MutableTypesInModel',
-    'ValidationError',
+    "SerializationError",
+    "LoadError",
+    "DumpError",
+    "UnexpectedItem",
+    "MissingField",
+    "ModelError",
+    "MissingSerializer",
+    "ModelContainsAny",
+    "MutableTypesInModel",
+    "ValidationError",
 ]
 
 from typing import Type, Mapping, Collection, TYPE_CHECKING, Iterable
@@ -30,16 +30,16 @@ from typing import Type, Mapping, Collection, TYPE_CHECKING, Iterable
 from .utils import class_path, Dataclass
 
 if TYPE_CHECKING:
-    from .serialization.context import SerializationStep
+    from .serialization.context import SerializationContext
     from .descriptors import Descriptor
 
 
 class SerializationError(Exception):
     """Base for any non-validation error during load or dump."""
 
-    def __init__(self, cls: Type, serializer_stack: Collection[SerializationStep]):
+    def __init__(self, cls: Type, ctx: SerializationContext):
         self.cls = cls
-        self._path = "".join(serializer_stack)
+        self._path = ctx.path
         super().__init__(self.message)
 
     @property
@@ -57,9 +57,14 @@ class LoadError(SerializationError):
     Either invalid data is supplied, or the serializers are handling data incorrectly.
     """
 
-    def __init__(self, cls: Type, serializer_stack: Collection[SerializationStep], data: Mapping):
+    def __init__(
+        self,
+        cls: Type,
+        ctx: SerializationContext,
+        data: Mapping,
+    ):
         self._data = data
-        super().__init__(cls, serializer_stack)
+        super().__init__(cls, ctx)
 
     @property
     def message(self):
@@ -73,21 +78,21 @@ class DumpError(SerializationError):
     an invalid dataclass object got into serializers hands or serializers behave incorrectly.
     """
 
-    def __init__(self, obj: Dataclass, serializer_stack: Collection[SerializationStep]):
+    def __init__(self, obj: Dataclass, ctx: SerializationContext):
         self._object = obj
-        super().__init__(type(obj), serializer_stack)
+        super().__init__(type(obj), ctx)
 
     @property
     def message(self):
         if self.__cause__:
-            return f"Failed to dump \"{self._path}\": {self.__cause__}. Object: {self._object}"
+            return f'Failed to dump "{self._path}": {self.__cause__}. Object: {self._object}'
         return f'Failed to dump "{self._path}". Object: {self._object}'
 
 
 class UnexpectedItem(LoadError):
-    def __init__(self, cls: Type[Dataclass], data, fields: Collection[str]):
+    def __init__(self, cls: Type[Dataclass], data, fields: Collection[str], ctx: SerializationContext):
         self._fields = fields
-        super().__init__(cls, [], data)
+        super().__init__(cls, ctx, data)
 
     @property
     def message(self):
@@ -95,14 +100,13 @@ class UnexpectedItem(LoadError):
             field = next(iter(self._fields))
             return f'Unexpected field "{field}" in loaded {class_path(self.cls)}'
         else:
-            return f'Unexpected fields {self._fields} in loaded {class_path(self.cls)}'
+            return f"Unexpected fields {self._fields} in loaded {class_path(self.cls)}"
 
 
 class MissingField(LoadError):
-
-    def __init__(self, cls: Type[Dataclass], data, fields: Collection[str]):
+    def __init__(self, cls: Type[Dataclass], data, fields: Collection[str], ctx: SerializationContext):
         self._fields = fields
-        super().__init__(cls, [], data)
+        super().__init__(cls, ctx, data)
 
     @property
     def message(self):
@@ -110,7 +114,7 @@ class MissingField(LoadError):
             field = next(iter(self._fields))
             return f'Missing field "{field}" in loaded {class_path(self.cls)}'
         else:
-            return f'Missing fields {self._fields} in loaded {class_path(self.cls)}'
+            return f"Missing fields {self._fields} in loaded {class_path(self.cls)}"
 
 
 class ModelError(Exception):
@@ -130,41 +134,44 @@ class ModelError(Exception):
         return f'Model error in class "{self.cls}ю"'
 
 
-class FieldMissingSerializer(ModelError):
-
+class MissingSerializer(ModelError):
     def __init__(self, cls: Type, desc: Descriptor):
         self.desc = desc
         super().__init__(cls)
 
     @property
     def message(self):
-        return (f'{class_path(self.cls)} contains unserializable member: {self.desc}. '
-                f'Create a serializer fitting the descriptor and pass it to the model ``serializers``.')
+        return (
+            f"{class_path(self.cls)} contains unserializable member: {self.desc}. "
+            f"Create a serializer fitting the descriptor and pass it to the model ``serializers``."
+        )
 
 
 class ModelContainsAny(ModelError):
-
     @property
     def message(self):
-        return (f'{class_path(self.cls)} contains fields annotated as Any or missing type annotation. '
-                f'Provide a type annotation or pass `allow_any=True` to the serializer. '
-                f'This may also be an ambiguous ``Generic`` definitions like `x: list`, `x: List` '
-                f'which are resolved as `List[Any]`. ')
+        return (
+            f"{class_path(self.cls)} contains fields annotated as Any or missing type annotation. "
+            f"Provide a type annotation or pass `allow_any=True` to the serializer. "
+            f"This may also be an ambiguous ``Generic`` definitions like `x: list`, `x: List` "
+            f"which are resolved as `List[Any]`. "
+        )
 
 
 class MutableTypesInModel(ModelError):
-
     def __init__(self, cls: Type, mutable_types: Iterable[Type]):
         self.mutable_types = mutable_types
         super().__init__(cls)
 
     @property
     def message(self):
-        return (f'{class_path(self.cls)} is has mutable members: {self.mutable_types}.'
-                f'If there are immutable types pass them to model as `ensure_frozen=[Type1, Type2]`.'
-                f'Replace mutable types with frozen ones. '
-                f'Set @dataclass(frozen=True). \n'
-                f'Alternatively, allow mutable fields by passing `ensure_frozen=False` to model. ')
+        return (
+            f"{class_path(self.cls)} is has mutable members: {self.mutable_types}."
+            f"If there are immutable types pass them to model as `ensure_frozen=[Type1, Type2]`."
+            f"Replace mutable types with frozen ones. "
+            f"Set @dataclass(frozen=True). \n"
+            f"Alternatively, allow mutable fields by passing `ensure_frozen=False` to model. "
+        )
 
 
 class ValidationError(Exception):
@@ -175,5 +182,5 @@ class ValidationError(Exception):
     Contains the stack pointing to an exact point where validation failed in data structure.
     """
 
-    def __init__(self, message='Failed validation'):
+    def __init__(self, message="Failed validation"):
         super().__init__(message)
