@@ -705,7 +705,7 @@ class UuidSerializer(Serializer[UUID, str]):
         return issubclass(desc.cls, UUID)
 
 
-_decimal_re = re.compile(r"\A\d+(\.\d+)?\Z")
+_decimal_re = re.compile(r"\A[+-]?(\d+(\.\d+)?|\.\d+)\Z")
 
 
 class DecimalSerializer(Serializer[Decimal, str]):
@@ -718,7 +718,7 @@ class DecimalSerializer(Serializer[Decimal, str]):
             raise ValidationError(
                 'Invalid decimal format. A number with a "." as a decimal separator is expected'
             )
-        return Decimal(value)  # type: ignore # expecting str
+        return Decimal(value)
 
     def dump(self, value: Decimal, _) -> str:
         return str(value)
